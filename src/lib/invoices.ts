@@ -14,6 +14,7 @@ import {
   type PaymentMethod,
 } from "@/lib/invoice-shared";
 import { nextReceiptNumber } from "@/lib/payments";
+import { newViewNonce } from "@/lib/invoice-view";
 import { getSettings } from "@/lib/settings";
 import { logActivity } from "@/lib/activity";
 
@@ -306,8 +307,8 @@ export async function createInvoice(input: InvoiceInput, actor?: string) {
       `INSERT INTO invoices
         (invoice_number, customer_id, customer_name, customer_phone, customer_address,
          delivery_area, subtotal, discount_type, discount_value, discount_amount,
-         delivery_fee, total, paid_amount, status, payment_method, notes, due_date)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+         delivery_fee, total, paid_amount, status, payment_method, notes, due_date, view_nonce)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)
        RETURNING id`,
       [
         invoiceNumber,
@@ -327,6 +328,7 @@ export async function createInvoice(input: InvoiceInput, actor?: string) {
         input.paymentMethod,
         input.notes || null,
         dueDate,
+        newViewNonce(),
       ],
     );
     const invoiceId = String(inserted.rows[0].id);
@@ -529,6 +531,116 @@ export async function updateInvoice(id: string, patch: InvoicePatch, actor?: str
       );
     }
 
+    await client.query("COMMIT");
+    return { id, total: totals.total, status };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Full invoice edit: customer, items, pricing, notes and dates are all
+ * replaced in one transaction. Prices are always re-read from the database,
+ * never trusted from the browser, and recorded payments are left untouched.
+ */
+export async function updateInvoiceWithItems(id: string, input: InvoiceInput, actor?: string) {
+  await ensureInvoiceTables();
+  const existingResult = await db.query("SELECT * FROM invoices WHERE id = $1", [id]);
+  const existing = existingResult.rows[0];
+  if (!existing) return null;
+
+  const items = await resolveInvoiceItems(input.items);
+  const subtotal = roundMoney(items.reduce((sum, item) => sum + item.lineTotal, 0));
+  const totals = buildInvoiceTotals(subtotal, input.discountType, input.discountValue, input.deliveryFee);
+
+  // The collections ledger is the source of truth for what was paid.
+  const paidAmount = roundMoney(Number(existing.paid_amount || 0));
+  const cancelled = existing.status === "cancelled";
+  const status = deriveInvoiceStatus(totals.total, paidAmount, cancelled);
+  const dueDate =
+    input.dueDate ??
+    existing.due_date ??
+    new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+
+  const client = await db.connect();
+  try {
+    await client.query("BEGIN");
+    const lock = await client.query("SELECT id FROM invoices WHERE id = $1 FOR UPDATE", [id]);
+    if (!lock.rowCount) {
+      await client.query("ROLLBACK");
+      return null;
+    }
+
+    await client.query(
+      `UPDATE invoices SET
+         customer_id = $1, customer_name = $2, customer_phone = $3, customer_address = $4,
+         delivery_area = $5, subtotal = $6, discount_type = $7, discount_value = $8,
+         discount_amount = $9, delivery_fee = $10, total = $11, paid_amount = $12,
+         status = $13, payment_method = $14, notes = $15, due_date = $16, updated_at = NOW()
+       WHERE id = $17`,
+      [
+        input.customerId,
+        input.customerName,
+        input.customerPhone || null,
+        input.customerAddress || null,
+        input.deliveryArea || null,
+        totals.subtotal,
+        input.discountType,
+        input.discountValue,
+        totals.discountAmount,
+        totals.deliveryFee,
+        totals.total,
+        paidAmount,
+        status,
+        input.paymentMethod,
+        input.notes || null,
+        dueDate,
+        id,
+      ],
+    );
+
+    await client.query("DELETE FROM invoice_items WHERE invoice_id = $1", [id]);
+    for (const [index, item] of items.entries()) {
+      await client.query(
+        `INSERT INTO invoice_items
+          (invoice_id, item_type, product_id, product_variant_id, package_id, package_variant_id,
+           name, description, sku, image_url, unit_before, unit_price, quantity,
+           line_before, line_total, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+        [
+          id,
+          item.itemType,
+          item.productId,
+          item.productVariantId,
+          item.packageId,
+          item.packageVariantId,
+          item.name,
+          item.description,
+          item.sku,
+          item.imageUrl,
+          item.unitBefore,
+          item.unitPrice,
+          item.quantity,
+          item.lineBefore,
+          item.lineTotal,
+          index,
+        ],
+      );
+    }
+
+    await logActivity(
+      {
+        entityType: "invoice",
+        entityId: id,
+        action: "invoice.updated",
+        summary: `تعديل الفاتورة ${existing.invoice_number} — إجمالي ${totals.total}، ${items.length} عنصر`,
+        actor,
+      },
+      client,
+    );
     await client.query("COMMIT");
     return { id, total: totals.total, status };
   } catch (error) {

@@ -66,7 +66,7 @@ export default function ProductsList({ products }: { products: Product[] }) {
     <>
       <div className="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva catalogue</p>
+          <p className="eyebrow">كتالوج لونيفا</p>
           <h1 className="page-title mt-1">المنتجات</h1>
           <p className="page-subtitle mt-2 max-w-xl">نظّمي المنتجات ومتغيرات اللون والمقاس والأسعار في كتالوج واحد مرتب.</p>
         </div>

@@ -60,7 +60,7 @@ export default function CustomersList({ customers }: { customers: Customer[] }) 
     <>
       <div className="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva directory</p>
+          <p className="eyebrow">دليل العملاء</p>
           <h1 className="page-title mt-1">العملاء</h1>
           <p className="page-subtitle mt-2 max-w-xl">تعرّفي على عميلاتك واحتفظي ببياناتهن وملاحظاتهن قريبة منك.</p>
         </div>

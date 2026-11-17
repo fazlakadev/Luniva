@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, CalendarDays, ReceiptText } from "lucide-react";
+import { ArrowRight, CalendarDays, Pencil, ReceiptText } from "lucide-react";
 import InvoiceActions from "@/components/invoice-actions";
 import InvoiceDocument, { type InvoiceDocumentData } from "@/components/invoice-document";
 import PrintInvoiceButton from "@/components/invoice-print-button";
+import InvoiceShareCard from "@/components/invoice-share-card";
 import { getInvoiceDetail } from "@/lib/invoice-queries";
+import { getPublicInvoiceUrl, invoiceQrDataUrl } from "@/lib/invoice-view";
 import { formatDate } from "@/lib/format";
 import { invoiceStatusLabels, type InvoiceStatus, type PaymentMethod } from "@/lib/invoices";
 import { daysOverdue } from "@/lib/invoice-shared";
@@ -37,6 +39,9 @@ export default async function InvoiceDetailPage({
   const created = query.created === "1";
   const autoPrint = query.print === "1";
 
+  const shareUrl = await getPublicInvoiceUrl(invoice.id);
+  const shareQr = shareUrl ? await invoiceQrDataUrl(shareUrl) : "";
+
   const document: InvoiceDocumentData = {
     invoice_number: invoice.invoice_number,
     customer_name: invoice.customer_name,
@@ -57,6 +62,7 @@ export default async function InvoiceDetailPage({
     due_date: invoice.due_date,
     items: invoice.items,
     company: settings,
+    qrImage: shareQr || undefined,
   };
 
   const overdue = daysOverdue(invoice.due_date, status);
@@ -69,7 +75,7 @@ export default async function InvoiceDetailPage({
             <ArrowRight size={13} />كل الفواتير
           </Link>
           <div className="flex flex-wrap items-center gap-2.5">
-            <p className="eyebrow">Invoice document</p>
+            <p className="eyebrow">مستند الفاتورة</p>
             <span className={`badge ${statusStyle[status] ?? "badge-muted"}`}>{invoiceStatusLabels[status] ?? status}</span>
             {overdue > 0 && <span className="badge badge-danger">متأخرة {overdue} يوم</span>}
           </div>
@@ -81,6 +87,7 @@ export default async function InvoiceDetailPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`/invoices/${invoice.id}/edit`} className="btn btn-outline"><Pencil size={15} />تعديل الفاتورة</Link>
           <PrintInvoiceButton autoPrint={autoPrint} />
           <Link href="/invoices/new" className="btn btn-soft"><ReceiptText size={15} />فاتورة جديدة</Link>
         </div>
@@ -96,7 +103,15 @@ export default async function InvoiceDetailPage({
         <div className="min-w-0">
           <InvoiceDocument invoice={document} />
         </div>
-        <div className="print-hidden">
+        <div className="print-hidden space-y-4">
+          {shareUrl && shareQr && (
+            <InvoiceShareCard
+              id={invoice.id}
+              invoiceNumber={invoice.invoice_number}
+              initialUrl={shareUrl}
+              initialQr={shareQr}
+            />
+          )}
           <InvoiceActions
             id={invoice.id}
             invoiceNumber={invoice.invoice_number}

@@ -440,7 +440,7 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
           <button type="button" onClick={() => router.back()} className="mb-4 inline-flex items-center gap-1 text-xs font-extrabold" style={{ color: "var(--brand-strong)" }}>
             <ChevronRight size={15} />العودة للبكدجات
           </button>
-          <p className="eyebrow">Luniva offers studio</p>
+          <p className="eyebrow">استوديو عروض لونيفا</p>
           <h1 className="page-title mt-1">{editing ? "تعديل البكدج" : "إنشاء بكدج جديد"}</h1>
           <p className="page-subtitle mt-2 max-w-2xl">اختاري المنتجات، ولّدي البكدجات الفرعية بكل الألوان والمقاسات، وسيُحسب السعر قبل الخصم وبعده تلقائيًا.</p>
         </div>
@@ -797,7 +797,7 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
         <aside className="space-y-4 xl:sticky xl:top-6">
           <section className="app-card overflow-hidden">
             <div className="p-5" style={{ background: "linear-gradient(135deg, var(--plum), var(--brand-strong))", color: "#fff" }}>
-              <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-widest text-white/70"><Sparkles size={13} />LIVE SUMMARY</div>
+              <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-widest text-white/70"><Sparkles size={13} />ملخص مباشر</div>
               <p className="mt-2 text-lg font-extrabold">{name || "بكدج بدون اسم"}</p>
               <p className="mono mt-1 text-[11px] text-white/65" dir="ltr">{sku || "LNV-PKG-000"}</p>
               <div className="mt-4 flex items-end justify-between gap-2">

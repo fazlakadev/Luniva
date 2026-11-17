@@ -159,7 +159,7 @@ export default function ProductShowcase({
                 <div className="grid h-full min-h-[280px] place-items-center">
                   <div className="text-center">
                     <Tag size={54} className="mx-auto" style={{ color: "var(--lav-strong)" }} />
-                    <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--lav-strong)" }}>Luniva product</p>
+                    <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--lav-strong)" }}>منتج لونيفا</p>
                   </div>
                 </div>
               )}
@@ -397,7 +397,7 @@ export default function ProductShowcase({
       <section className="mt-6">
         <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="eyebrow">Variants</p>
+            <p className="eyebrow">المتغيرات</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>الألوان والمقاسات</h2>
             <p className="mt-1 text-xs muted">اختاري أي متغير لعرض صورته وسعره بالتفصيل — كل الأسعار تشمل الخصم.</p>
           </div>

@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import bcrypt from "bcryptjs";
 
@@ -80,26 +81,47 @@ export function ensureUsersTable() {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         email VARCHAR(254) UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
-        display_name VARCHAR(120) NOT NULL DEFAULT 'Luniva Admin',
+        display_name VARCHAR(120) NOT NULL DEFAULT 'منه',
+        username VARCHAR(80),
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(80)");
+    await db.query("CREATE UNIQUE INDEX IF NOT EXISTS users_username_key ON users (LOWER(username))");
   });
 }
 
 export async function ensureInitialAdmin() {
   await ensureUsersTable();
-  const email = process.env.LUNIVA_ADMIN_EMAIL?.toLowerCase().trim();
+  const username = (process.env.LUNIVA_ADMIN_USERNAME || "منه").trim();
   const password = process.env.LUNIVA_ADMIN_PASSWORD;
-  if (!email || !password) throw new Error("Admin credentials are not configured.");
+  if (!username || !password) throw new Error("Admin credentials are not configured.");
 
-  const existing = await db.query("SELECT id FROM users WHERE email = $1", [email]);
-  if (existing.rowCount) return;
+  // Existing installations already have an email-based admin. Promote that row
+  // instead of creating a second account so the password keeps working.
+  const byUsername = await db.query("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", [username]);
+  if (byUsername.rowCount) return;
+
+  const legacyEmail = process.env.LUNIVA_ADMIN_EMAIL?.toLowerCase().trim();
+  const candidates = [
+    legacyEmail
+      ? db.query("SELECT id FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1", [legacyEmail])
+      : Promise.resolve({ rows: [] as Array<{ id: string }> }),
+    db.query("SELECT id FROM users ORDER BY created_at LIMIT 1"),
+  ];
+  const found = await Promise.all(candidates);
+  const existing = found[0].rows[0] ?? found[1].rows[0];
+  if (existing) {
+    await db.query("UPDATE users SET username = $1, display_name = $1 WHERE id = $2", [username, existing.id]);
+    return;
+  }
 
   const passwordHash = await bcrypt.hash(password, 12);
   await db.query(
-    "INSERT INTO users (email, password_hash, display_name) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING",
-    [email, passwordHash, "Luniva Admin"],
+    `INSERT INTO users (email, password_hash, display_name, username)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (email) DO UPDATE SET username = EXCLUDED.username, display_name = EXCLUDED.display_name`,
+    ["admin@luniva.local", passwordHash, username, username],
   );
 }
 
@@ -305,6 +327,17 @@ export function ensureInvoiceTables() {
 
     // Existing databases predate these columns/tables; keep upgrades automatic.
     await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS due_date DATE");
+    await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS view_nonce VARCHAR(64)");
+
+    // Every invoice gets its own random nonce. It is only useful together with
+    // the server secret, so the public share link cannot be derived from the DB.
+    const missingNonce = await db.query("SELECT id FROM invoices WHERE view_nonce IS NULL");
+    for (const row of missingNonce.rows) {
+      await db.query(
+        "UPDATE invoices SET view_nonce = $1 WHERE id = $2 AND view_nonce IS NULL",
+        [randomBytes(24).toString("hex"), row.id],
+      );
+    }
 
     await db.query(`
       CREATE SEQUENCE IF NOT EXISTS invoice_receipts_number_seq START 1

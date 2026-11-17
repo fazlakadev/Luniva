@@ -347,7 +347,7 @@ export default function PackageVariants({
                   <div className="grid h-full place-items-center">
                     <div className="text-center">
                       <Layers3 size={34} style={{ color: "var(--lav-strong)" }} />
-                      <p className="mt-2 text-[10px] font-extrabold" style={{ color: "var(--lav-strong)" }}>Luniva package</p>
+                      <p className="mt-2 text-[10px] font-extrabold" style={{ color: "var(--lav-strong)" }}>بكدج لونيفا</p>
                     </div>
                   </div>
                 )}
@@ -491,7 +491,7 @@ export default function PackageVariants({
             <div className="p-5 sm:p-6">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[10px] font-black tracking-[0.16em]" style={{ color: "var(--brand)" }}>PACKAGE VARIANT</p>
+                  <p className="text-[10px] font-black tracking-[0.16em]" style={{ color: "var(--brand)" }}>متغير البكدج</p>
                   <h3 className="mt-1 text-xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>{variantTitle(active)}</h3>
                   <p className="mono mt-1 text-[11px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{active.sku}</p>
                 </div>
@@ -558,7 +558,7 @@ function GiftMark() {
   return (
     <div className="text-center">
       <Layers3 size={40} style={{ color: "var(--lav-strong)" }} />
-      <p className="mt-2 text-xs font-extrabold" style={{ color: "var(--lav-strong)" }}>Luniva package</p>
+      <p className="mt-2 text-xs font-extrabold" style={{ color: "var(--lav-strong)" }}>بكدج لونيفا</p>
     </div>
   );
 }

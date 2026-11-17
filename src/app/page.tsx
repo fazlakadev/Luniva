@@ -13,8 +13,8 @@ import {
   Layers3,
   LoaderCircle,
   LockKeyhole,
-  Mail,
   ShieldCheck,
+  UserRound,
   Sparkles,
   UsersRound,
 } from "lucide-react";
@@ -47,7 +47,7 @@ export default function LoginPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: form.get("email"),
+          username: form.get("username"),
           password: form.get("password"),
           remember: form.get("remember") === "on",
         }),
@@ -106,9 +106,9 @@ export default function LoginPage() {
         {/* Login */}
         <div className="relative flex flex-col justify-center px-5 py-9 sm:px-10 sm:py-12 lg:px-14">
           <div className="mb-8 flex items-center justify-between lg:hidden">
-            <Image src="/luniva-logo-v2.png" alt="Luniva" width={128} height={128} priority className="h-11 w-11 rounded-xl object-contain" />
+            <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} priority className="h-11 w-11 rounded-xl object-contain" />
             <div className="flex items-center gap-2">
-              <span className="badge badge-brand">LUNIVA EMS</span>
+              <span className="badge badge-brand">لونيفا · من تأسيس منه</span>
               <ThemeToggle showLabel={false} />
             </div>
           </div>
@@ -119,22 +119,25 @@ export default function LoginPage() {
                 className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black tracking-[0.16em]"
                 style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}
               >
-                <Sparkles size={12} />LUNIVA EMS
+                <Sparkles size={12} />لونيفا · من تأسيس منه
               </span>
               <ThemeToggle />
             </div>
 
             <div className="mt-7 lg:mt-8">
-              <p className="eyebrow">بوابة الدخول</p>
-              <h1 className="page-title mt-1.5 text-[2rem] sm:text-[2.35rem]">أهلًا بعودتك</h1>
+              <p className="eyebrow">بوابة الدخول · لونيفا</p>
+              <h1 className="page-title mt-1.5 text-[2rem] sm:text-[2.35rem]">أهلًا بعودتك، منه ✨</h1>
               <p className="page-subtitle mt-2 max-w-sm">
-                سجّلي الدخول لمتابعة عملائك، منتجاتك، وبكدجاتك من مساحة واحدة منظمة وأنيقة.
+                مساحتك الخاصة يا منه لمتابعة العملاء والمنتجات والبكدجات والفواتير والتحصيل من مكان واحد، بتصميم يحمل روح علامتك.
               </p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
+                <Sparkles size={12} />اسم المستخدم: <span className="mono">منه</span>
+              </div>
             </div>
 
             <form onSubmit={login} className="mt-8 space-y-4" noValidate={false}>
-              <label className="block" htmlFor="login-email">
-                <span className="field-label">البريد الإلكتروني</span>
+              <label className="block" htmlFor="login-username">
+                <span className="field-label">اسم المستخدم</span>
                 <span
                   className="group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 transition focus-within:border-[var(--brand)] focus-within:ring-4 focus-within:ring-[var(--brand-ring)]"
                   style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
@@ -143,19 +146,19 @@ export default function LoginPage() {
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-xl transition group-focus-within:scale-105"
                     style={{ background: "var(--surface)", color: "var(--brand-strong)", border: "1px solid var(--line)" }}
                   >
-                    <Mail size={17} />
+                    <UserRound size={17} />
                   </span>
                   <input
-                    id="login-email"
+                    id="login-username"
                     required
-                    name="email"
-                    type="email"
-                    autoComplete="email"
+                    name="username"
+                    type="text"
+                    autoComplete="username"
                     autoFocus
                     disabled={saving}
-                    placeholder="name@luniva.com"
-                    className="w-full min-w-0 bg-transparent py-1.5 text-left text-sm outline-none placeholder:text-[var(--muted-2)] disabled:opacity-60"
-                    dir="ltr"
+                    placeholder="منه"
+                    className="w-full min-w-0 bg-transparent py-1.5 text-right text-sm font-bold outline-none placeholder:text-[var(--muted-2)] disabled:opacity-60"
+                    dir="rtl"
                     style={{ color: "var(--ink)" }}
                   />
                 </span>
@@ -266,7 +269,7 @@ export default function LoginPage() {
             </div>
 
             <p className="mt-6 text-center text-[10px] lg:hidden" style={{ color: "var(--muted-2)" }}>
-              © {new Date().getFullYear()} Luniva Studio · جميع الحقوق محفوظة
+              © {new Date().getFullYear()} لونيفا · من تأسيس منه · جميع الحقوق محفوظة
             </p>
           </div>
         </div>
@@ -295,15 +298,15 @@ export default function LoginPage() {
             className="pointer-events-none absolute -bottom-6 left-2 select-none text-[8rem] font-black leading-none tracking-tighter text-white/[0.04]"
             aria-hidden="true"
           >
-            LUNIVA
+            لونيفا
           </span>
 
           <div className="relative flex items-center justify-between">
             <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-xl">
-              <Image src="/luniva-logo-v2.png" alt="Luniva" width={120} height={120} priority className="h-12 w-12 object-contain" />
+              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={120} height={120} priority className="h-12 w-12 object-contain" />
             </span>
-            <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[9px] font-black tracking-[0.2em] text-rose-100 backdrop-blur">
-              ENTERPRISE SUITE
+            <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black text-rose-100 backdrop-blur">
+              من تأسيس منه
             </span>
           </div>
 
@@ -316,7 +319,7 @@ export default function LoginPage() {
               <span className="font-extrabold text-[#ffd9e3]"> كل تفاصيل عملك.</span>
             </h2>
             <p className="mt-3 max-w-sm text-sm leading-7 text-rose-100/85">
-              من ملفات العميلات إلى المنتجات والبكدجات — تجربة إدارة هادئة، منظمة، ومصممة بهوية Luniva.
+              صمّمتها منه لتجمع ملفات العميلات والمنتجات والبكدجات في تجربة إدارة هادئة، منظمة، تحمل روح Luniva.
             </p>
 
             <div className="mt-7 space-y-2">
@@ -339,7 +342,7 @@ export default function LoginPage() {
           </div>
 
           <div className="relative flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-[10px] text-rose-100/60">
-            <span>© {new Date().getFullYear()} Luniva Studio</span>
+            <span>© {new Date().getFullYear()} لونيفا · من تأسيس منه</span>
             <span className="flex items-center gap-1.5"><ShieldCheck size={12} />بيانات محمية</span>
           </div>
         </div>

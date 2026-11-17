@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   Eye,
   MapPin,
+  Pencil,
   ReceiptText,
   Search,
   Wallet,
@@ -227,6 +228,9 @@ export default function InvoicesList({
                     </Link>
                     <Link href={`/invoices/${invoice.id}#manage`} className="btn btn-soft flex-1 px-3 py-2 text-[11px] lg:flex-none">
                       <CircleDollarSign size={14} />تحصيل
+                    </Link>
+                    <Link href={`/invoices/${invoice.id}/edit`} className="btn btn-outline flex-1 px-3 py-2 text-[11px] lg:flex-none">
+                      <Pencil size={14} />تعديل
                     </Link>
                   </div>
                 </div>

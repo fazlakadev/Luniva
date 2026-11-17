@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 const SESSION_COOKIE = "luniva_session";
 const encoder = new TextEncoder();
 
-type SessionPayload = { userId: string; email: string; name: string };
+type SessionPayload = { userId: string; username: string; name: string };
 
 function secret() {
   const value = process.env.SESSION_SECRET;
@@ -25,8 +25,16 @@ export async function getSession(): Promise<SessionPayload | null> {
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret());
-    if (typeof payload.userId !== "string" || typeof payload.email !== "string" || typeof payload.name !== "string") return null;
-    return { userId: payload.userId, email: payload.email, name: payload.name };
+    if (typeof payload.userId !== "string") return null;
+    // Sessions issued before the username migration carried an email instead.
+    const username = typeof payload.username === "string"
+      ? payload.username
+      : typeof payload.email === "string"
+        ? payload.email
+        : null;
+    if (!username) return null;
+    const name = typeof payload.name === "string" && payload.name.trim() ? payload.name : username;
+    return { userId: payload.userId, username, name };
   } catch {
     return null;
   }

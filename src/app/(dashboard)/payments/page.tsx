@@ -14,7 +14,7 @@ export default async function PaymentsPage() {
     <div className="page-enter">
       <div className="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva collections</p>
+          <p className="eyebrow">تحصيلات لونيفا</p>
           <h1 className="page-title mt-1">سجل التحصيل</h1>
           <p className="page-subtitle mt-2 max-w-xl">كل الدفعات والإيصالات في مكان واحد، مع رابط سريع للفاتورة المرتبطة.</p>
         </div>

@@ -21,15 +21,18 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const email = typeof body.email === "string" ? body.email.toLowerCase().trim() : "";
+    const username = typeof body.username === "string" ? body.username.trim() : "";
     const password = typeof body.password === "string" ? body.password : "";
     const remember = body.remember === true;
-    if (!email || !password || email.length > 254 || password.length > 200) {
-      return NextResponse.json({ error: "أدخلي البريد الإلكتروني وكلمة المرور." }, { status: 400 });
+    if (!username || !password || username.length > 80 || password.length > 200) {
+      return NextResponse.json({ error: "أدخلي اسم المستخدم وكلمة المرور." }, { status: 400 });
     }
 
     await ensureInitialAdmin();
-    const result = await db.query("SELECT id, email, password_hash, display_name FROM users WHERE email = $1", [email]);
+    const result = await db.query(
+      "SELECT id, username, password_hash, display_name FROM users WHERE LOWER(username) = LOWER($1)",
+      [username],
+    );
     const user = result.rows[0];
     const valid = user && await bcrypt.compare(password, user.password_hash);
     if (!valid) {
@@ -38,8 +41,9 @@ export async function POST(request: Request) {
     }
 
     attempts.delete(key);
-    const token = await createSession({ userId: user.id, email: user.email, name: user.display_name }, remember);
-    const response = NextResponse.json({ user: { name: user.display_name, email: user.email } });
+    const displayName = String(user.display_name || user.username || "منه");
+    const token = await createSession({ userId: user.id, username: user.username, name: displayName }, remember);
+    const response = NextResponse.json({ user: { name: displayName, username: user.username } });
     response.cookies.set(sessionCookie.name, token, sessionCookieOptions(remember));
     return response;
   } catch (error) {

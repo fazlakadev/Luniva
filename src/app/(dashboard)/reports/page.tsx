@@ -35,7 +35,7 @@ export default async function ReportsPage() {
     <div className="page-enter">
       <div className="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva analytics</p>
+          <p className="eyebrow">تحليلات لونيفا</p>
           <h1 className="page-title mt-1">التقارير والتحصيل</h1>
           <p className="page-subtitle mt-2 max-w-xl">نظرة شاملة على المبيعات والتحصيل وأعمار المتأخرات وأعلى العملاء مديونية.</p>
         </div>

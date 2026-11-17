@@ -27,7 +27,7 @@ export default async function NewInvoicePage({
           <Link href="/invoices" className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold" style={{ color: "var(--brand-strong)" }}>
             <ArrowRight size={13} />رجوع إلى الفواتير
           </Link>
-          <p className="eyebrow">Luniva invoicing</p>
+          <p className="eyebrow">فواتير لونيفا</p>
           <h1 className="page-title mt-1">فاتورة جديدة</h1>
           <p className="page-subtitle mt-2 max-w-xl">
             اختاري العميلة والمنتجات أو البكدجات، وحددي الخصم والتوصيل والدفع — الأسعار تُثبَّت من قاعدة البيانات لحظة الحفظ.

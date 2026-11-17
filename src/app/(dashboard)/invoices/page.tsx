@@ -70,7 +70,7 @@ export default async function InvoicesPage({
     <div className="page-enter">
       <div className="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva invoicing</p>
+          <p className="eyebrow">فواتير لونيفا</p>
           <h1 className="page-title mt-1">الفواتير والتحصيل</h1>
           <p className="page-subtitle mt-2 max-w-xl">
             أنشئي فواتير المنتجات والبكدجات ومتغيراتها، طباعيها، وطبّقي الخصم والتوصيل وتابعي المدفوع والمتبقي.

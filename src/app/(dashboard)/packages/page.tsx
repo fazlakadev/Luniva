@@ -24,7 +24,7 @@ export default async function PackagesPage() {
     <>
       <div className="mb-7 flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva offers studio</p>
+          <p className="eyebrow">استوديو عروض لونيفا</p>
           <h1 className="page-title mt-1">البكدجات والعروض</h1>
           <p className="page-subtitle mt-2 max-w-xl">أنشئي بكدجًا رئيسيًا من عدة منتجات، ثم ولّدي بكدجات فرعية بكل الألوان والمقاسات مع حساب الخصم والسعر تلقائيًا.</p>
         </div>

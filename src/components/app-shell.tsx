@@ -101,7 +101,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
           {/* Logo */}
           <Link
             href="/workspace"
-            title="Luniva"
+            title="شعار لونيفا"
             className={`relative flex shrink-0 items-center overflow-hidden rounded-2xl transition hover:brightness-[1.02] ${
               collapsed ? "h-14 justify-center" : "gap-3 px-3 py-3"
             }`}
@@ -116,7 +116,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
             />
             <Image
               src="/luniva-logo-v2.png"
-              alt="Luniva"
+              alt="شعار لونيفا"
               width={128}
               height={128}
               priority
@@ -125,10 +125,10 @@ export default function AppShell({ children, name }: { children: React.ReactNode
             {!collapsed && (
               <span className="relative min-w-0 leading-tight">
                 <span className="block text-[13px] font-black tracking-[0.12em]" style={{ color: "var(--ink)" }}>
-                  LUNIVA
+                  لونيفا
                 </span>
-                <span className="mt-1 block whitespace-nowrap text-[8px] font-extrabold tracking-[0.12em]" style={{ color: "var(--brand-strong)" }}>
-                  ENTERPRISE STUDIO
+                <span className="mt-1 block whitespace-nowrap text-[8px] font-extrabold" style={{ color: "var(--brand-strong)" }}>
+                  من تأسيس منه
                 </span>
               </span>
             )}
@@ -268,7 +268,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
               {!collapsed && (
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[13px] font-extrabold leading-5" style={{ color: "var(--ink)" }}>{name}</p>
-                  <p className="text-[10px]" style={{ color: "var(--muted-2)" }}>مسؤولة النظام</p>
+                  <p className="text-[10px]" style={{ color: "var(--muted-2)" }}>مؤسّسة لونيفا</p>
                 </div>
               )}
               {!collapsed && (
@@ -305,11 +305,34 @@ export default function AppShell({ children, name }: { children: React.ReactNode
         }`}
       >
         <header
+          className="hidden items-center justify-between gap-3 border-b px-6 py-3 xl:flex print:hidden"
+          style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 88%, transparent)" }}
+        >
+          <div className="flex items-center gap-3">
+            <span
+              className="grid h-10 w-10 place-items-center rounded-2xl text-sm font-black text-white shadow-sm"
+              style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-strong))" }}
+            >
+              {name.trim().charAt(0) || "م"}
+            </span>
+            <div>
+              <p className="text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>مساحة العمل · لونيفا</p>
+              <p className="text-sm font-extrabold" style={{ color: "var(--ink)" }}>أهلًا، {name} ✨</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="badge badge-brand">أسّستها {name}</span>
+            <span className="badge badge-success"><ShieldCheck size={11} />جلسة آمنة</span>
+          </div>
+        </header>
+
+        <header
           className="z-20 flex items-center justify-between gap-3 border-b px-4 py-2.5 xl:hidden print:hidden"
           style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 90%, transparent)" }}
         >
-          <Link href="/workspace" className="flex items-center gap-2">
-            <Image src="/luniva-logo-v2.png" alt="Luniva" width={128} height={128} className="h-9 w-9 object-contain" />
+          <Link href="/workspace" className="flex min-w-0 items-center gap-2">
+            <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-9 w-9 shrink-0 object-contain" />
+            <span className="truncate text-xs font-extrabold" style={{ color: "var(--ink)" }}>أهلًا، {name}</span>
           </Link>
           <div className="flex items-center gap-1.5">
             <Link href="/invoices/new" className="btn btn-primary px-3 py-2 text-[11px]">

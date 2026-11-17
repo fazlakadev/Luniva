@@ -27,7 +27,7 @@ export default async function ReceiptPage({
           <Link href={`/invoices/${payment.invoice_id}`} className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold" style={{ color: "var(--brand-strong)" }}>
             <ArrowRight size={13} />الفاتورة المرتبطة
           </Link>
-          <p className="eyebrow">Payment receipt</p>
+          <p className="eyebrow">إيصال دفع</p>
           <h1 className="page-title mono mt-1" dir="ltr" style={{ textAlign: "right" }}>{payment.receipt_number}</h1>
           <p className="page-subtitle mt-2">إيصال تحصيل قابل للطباعة.</p>
         </div>

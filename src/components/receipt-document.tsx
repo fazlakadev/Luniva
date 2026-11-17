@@ -37,7 +37,7 @@ export default function ReceiptDocument({ receipt, settings }: { receipt: Receip
       <div className="p-6 sm:p-9">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-5" style={{ borderColor: LINE }}>
           <div className="flex items-center gap-3">
-            <Image src="/luniva-logo-v2.png" alt="Luniva" width={128} height={128} className="h-14 w-14 object-contain" />
+            <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-14 w-14 object-contain" />
             <div>
               <p className="text-lg font-black tracking-[0.14em]" style={{ color: INK }}>{settings.companyName}</p>
               <p className="mt-0.5 text-[10px] font-extrabold" style={{ color: BRAND }}>{settings.companyTagline}</p>

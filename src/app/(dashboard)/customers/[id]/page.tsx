@@ -160,7 +160,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       <section className="mt-6">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">Customer invoices</p>
+            <p className="eyebrow">فواتير العميلة</p>
             <h2 className="mt-1 text-lg font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>فواتير العميلة</h2>
           </div>
           <Link href="/invoices" className="inline-flex items-center gap-1 text-xs font-extrabold" style={{ color: "var(--brand-strong)" }}>

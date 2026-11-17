@@ -9,7 +9,7 @@ export default async function SettingsPage() {
   return (
     <div className="page-enter">
       <div className="mb-7">
-        <p className="eyebrow">Luniva settings</p>
+        <p className="eyebrow">إعدادات لونيفا</p>
         <h1 className="page-title mt-1">الإعدادات</h1>
         <p className="page-subtitle mt-2 max-w-xl">اضبطي بيانات الشركة وشروط التحصيل مرة واحدة، لتظهر تلقائيًا في كل مستند.</p>
       </div>

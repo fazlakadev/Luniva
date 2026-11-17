@@ -277,7 +277,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
             <span className="hidden h-8 w-px sm:block" style={{ background: "var(--line)" }} />
             <div className="min-w-0">
               <p className="text-[9px] font-black tracking-[0.18em]" style={{ color: "var(--lav-strong)" }}>
-                LUNIVA PRODUCTS
+                منتجات لونيفا
               </p>
               <h1 className="truncate text-sm font-extrabold leading-5 sm:text-base" style={{ color: "var(--ink)" }}>
                 {editing ? "تعديل المنتج" : "إضافة منتج جديد"}
@@ -310,7 +310,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
 
       <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva catalogue</p>
+          <p className="eyebrow">كتالوج لونيفا</p>
           <h2 className="page-title mt-1">{editing ? product?.name || "تعديل المنتج" : "منتج جديد"}</h2>
           <p className="page-subtitle mt-1.5 max-w-2xl">
             عرّفي المنتج، وأضيفي متغيرات الألوان والمقاسات مع خصم مستقل لكل متغير.
@@ -501,7 +501,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
         <aside className="space-y-4 xl:sticky xl:top-24">
           <section className="app-card overflow-hidden">
             <div className="p-5" style={{ background: "linear-gradient(135deg, var(--lav-strong), var(--plum))", color: "#fff" }}>
-              <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-widest text-white/70"><Sparkles size={13} />LIVE SUMMARY</div>
+              <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-widest text-white/70"><Sparkles size={13} />ملخص مباشر</div>
               <p className="mt-2 truncate text-lg font-extrabold">{product?.name || "منتج جديد"}</p>
               <p className="mono mt-1 text-[11px] text-white/65" dir="ltr">{product?.primary_sku || "LNV-PRD-000"}</p>
               <div className="mt-4 flex items-end justify-between gap-2">

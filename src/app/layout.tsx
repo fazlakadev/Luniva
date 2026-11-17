@@ -3,8 +3,8 @@ import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Luniva | إدارة العملاء",
-  description: "نظام Luniva لإدارة علاقات العملاء",
+  title: "لونيفا | إدارة العملاء",
+  description: "نظام لونيفا لإدارة علاقات العملاء، من تأسيس منه",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { getRecentActivity } from "@/lib/activity";
+import { getSession } from "@/lib/auth";
 import { db, ensureCustomersTable, ensureInvoiceTables, ensurePackagesTables } from "@/lib/db";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
@@ -45,6 +46,8 @@ const invoiceStatusStyle: Record<InvoiceStatus, string> = {
 
 export default async function WorkspacePage() {
   await Promise.all([ensureCustomersTable(), ensurePackagesTables(), ensureInvoiceTables()]);
+  const session = await getSession();
+  const founder = session?.name || "منه";
 
   const overviewResult = await db.query(`
     SELECT
@@ -189,16 +192,27 @@ export default async function WorkspacePage() {
         <div className="absolute -left-16 -top-20 h-56 w-56 rounded-full border-[30px] border-white/10" />
         <div className="absolute -bottom-24 right-24 h-52 w-52 rounded-full border-[30px] border-white/10" />
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-xl">
+          <div className="max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/85">
-              <Sparkles size={14} />Luniva Management System
+              <Sparkles size={14} />نظام لونيفا · من تأسيس {founder}
             </span>
             <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-              مرحبًا بك في مساحة العمل
+              أهلًا، {founder} 👋
             </h1>
-            <p className="mt-3 max-w-lg text-sm leading-7 text-white/75">
-              كل تفاصيل العملاء والمنتجات والبكدجات في مكان واحد. ابدئي من حيث توقفتِ وواصلي بناء عروضك.
+            <p className="mt-3 max-w-xl text-sm leading-7 text-white/75">
+              هذه مساحتك يا {founder} لكل تفاصيل العملاء والمنتجات والبكدجات والفواتير والتحصيل. ابدئي من حيث توقفتِ وواصلي بناء علامتك بخطوة واحدة.
             </p>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/85">
+                {formatNumber(overview.invoices)} فاتورة
+              </span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/85">
+                {formatMoney(overview.collected)} محصّل
+              </span>
+              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/85">
+                {formatNumber(overview.customers)} عميلة
+              </span>
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Link href="/invoices/new" className="btn bg-white text-[#7c4354] hover:bg-white/90">
@@ -261,7 +275,7 @@ export default async function WorkspacePage() {
       <section className="mt-8">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">Your workspaces</p>
+            <p className="eyebrow">مساحات العمل</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>الأنظمة</h2>
           </div>
           <span className="badge badge-brand">{formatNumber(systems.length)} أنظمة نشطة</span>
@@ -289,7 +303,7 @@ export default async function WorkspacePage() {
       <section className="mt-8">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">Invoices &amp; payments</p>
+            <p className="eyebrow">الفواتير والتحصيل</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>الفواتير والتحصيل</h2>
           </div>
           <Link href="/invoices" className="inline-flex items-center gap-1 text-xs font-extrabold" style={{ color: "var(--brand-strong)" }}>
@@ -357,7 +371,7 @@ export default async function WorkspacePage() {
       <section className="mt-8">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">Latest offers</p>
+            <p className="eyebrow">أحدث العروض</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>أحدث البكدجات</h2>
           </div>
           <Link href="/packages" className="inline-flex items-center gap-1 text-xs font-extrabold" style={{ color: "var(--brand-strong)" }}>
@@ -403,7 +417,7 @@ export default async function WorkspacePage() {
       <section className="mt-8">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">Recent activity</p>
+            <p className="eyebrow">آخر النشاطات</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>آخر النشاطات</h2>
           </div>
           <Link href="/payments" className="inline-flex items-center gap-1 text-xs font-extrabold" style={{ color: "var(--brand-strong)" }}>

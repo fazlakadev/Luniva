@@ -64,7 +64,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
           <Link href={`/customers/${id}`} className="mb-3 inline-flex items-center gap-1.5 text-[11px] font-extrabold" style={{ color: "var(--brand-strong)" }}>
             <ArrowRight size={13} />ملف العميلة
           </Link>
-          <p className="eyebrow">Customer statement</p>
+          <p className="eyebrow">كشف حساب العميلة</p>
           <h1 className="page-title mt-1">كشف حساب العميلة</h1>
           <p className="page-subtitle mt-2">{customer.full_name} · <span className="mono" dir="ltr">{customer.phone}</span></p>
         </div>

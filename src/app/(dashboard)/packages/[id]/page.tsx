@@ -72,7 +72,7 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
               <div className="grid h-full min-h-64 place-items-center">
                 <div className="text-center">
                   <Gift size={52} className="mx-auto" style={{ color: "var(--brand)" }} />
-                  <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--brand-strong)" }}>Luniva offer</p>
+                  <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--brand-strong)" }}>عرض لونيفا</p>
                 </div>
               </div>
             )}
@@ -178,7 +178,7 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
       <section className="mt-6">
         <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
-            <p className="eyebrow">Variations</p>
+            <p className="eyebrow">المتغيرات</p>
             <h2 className="mt-1 text-xl font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>البكدجات الفرعية</h2>
             <p className="mt-1 text-xs muted">كل توليفة لون ومقاس بسعرها ومخزونها وصورتها — افتحي التفاصيل لرؤية المكونات كاملة.</p>
           </div>

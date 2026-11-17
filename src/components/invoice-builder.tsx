@@ -74,7 +74,7 @@ export type BuilderPackage = {
   }>;
 };
 
-type CartItem = {
+export type CartItem = {
   key: string;
   type: "product" | "package";
   variantId: string | null;
@@ -181,6 +181,10 @@ export default function InvoiceBuilder({
   initialPackageVariantId,
   initialPackageId,
   initialCustomerId,
+  invoiceId,
+  initialCart,
+  initialValues,
+  currentPaid,
 }: {
   customers: BuilderCustomer[];
   products: BuilderProduct[];
@@ -189,31 +193,49 @@ export default function InvoiceBuilder({
   initialPackageVariantId?: string;
   initialPackageId?: string;
   initialCustomerId?: string;
+  invoiceId?: string;
+  initialCart?: CartItem[];
+  initialValues?: {
+    customerId?: string | null;
+    customerName?: string;
+    customerPhone?: string;
+    customerAddress?: string;
+    deliveryArea?: string;
+    deliveryFee?: string | number;
+    discountType?: DiscountType;
+    discountValue?: string | number;
+    dueDate?: string | null;
+    notes?: string | null;
+    paymentMethod?: PaymentMethod;
+  };
+  currentPaid?: string | number;
 }) {
   const router = useRouter();
   const toast = useToast();
+  const editing = Boolean(invoiceId);
+  const values = initialValues ?? {};
 
-  const preselectedCustomer = customers.find((customer) => customer.id === initialCustomerId) ?? null;
+  const preselectedCustomer = customers.find((customer) => customer.id === (values.customerId ?? initialCustomerId)) ?? null;
 
-  const initialCart = buildInitialCart({ products, packages, initialProductVariantId, initialPackageVariantId, initialPackageId });
+  const catalogCart = buildInitialCart({ products, packages, initialProductVariantId, initialPackageVariantId, initialPackageId });
 
-  const [cart, setCart] = useState<CartItem[]>(initialCart);
-  const [tab, setTab] = useState<"products" | "packages">(initialPackageVariantId || initialPackageId ? "packages" : "products");
+  const [cart, setCart] = useState<CartItem[]>(initialCart?.length ? initialCart : catalogCart);
+  const [tab, setTab] = useState<"products" | "packages">(initialPackageVariantId || initialPackageId || initialCart?.some((item) => item.type === "package") ? "packages" : "products");
   const [query, setQuery] = useState("");
   const [expanded, setExpanded] = useState<string | null>(initialProductVariantId ? products.find((product) => product.variants.some((variant) => variant.id === initialProductVariantId))?.id ?? null : null);
 
-  const [customerId, setCustomerId] = useState<string>(preselectedCustomer?.id ?? "");
-  const [customerName, setCustomerName] = useState(preselectedCustomer?.full_name ?? "");
-  const [customerPhone, setCustomerPhone] = useState(preselectedCustomer?.phone ?? "");
-  const [customerAddress, setCustomerAddress] = useState(preselectedCustomer?.address ?? "");
-  const [deliveryArea, setDeliveryArea] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState("0");
-  const [discountType, setDiscountType] = useState<DiscountType>("amount");
-  const [discountValue, setDiscountValue] = useState("0");
-  const [paidAmount, setPaidAmount] = useState("0");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-  const [dueDate, setDueDate] = useState("");
-  const [notes, setNotes] = useState("");
+  const [customerId, setCustomerId] = useState<string>(values.customerId ?? preselectedCustomer?.id ?? "");
+  const [customerName, setCustomerName] = useState(values.customerName ?? preselectedCustomer?.full_name ?? "");
+  const [customerPhone, setCustomerPhone] = useState(values.customerPhone ?? preselectedCustomer?.phone ?? "");
+  const [customerAddress, setCustomerAddress] = useState(values.customerAddress ?? preselectedCustomer?.address ?? "");
+  const [deliveryArea, setDeliveryArea] = useState(values.deliveryArea ?? "");
+  const [deliveryFee, setDeliveryFee] = useState(String(values.deliveryFee ?? "0"));
+  const [discountType, setDiscountType] = useState<DiscountType>(values.discountType ?? "amount");
+  const [discountValue, setDiscountValue] = useState(String(values.discountValue ?? "0"));
+  const [paidAmount, setPaidAmount] = useState(String(currentPaid ?? "0"));
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(values.paymentMethod ?? "cash");
+  const [dueDate, setDueDate] = useState(values.dueDate ?? "");
+  const [notes, setNotes] = useState(values.notes ?? "");
   const [saving, setSaving] = useState(false);
 
   const subtotal = useMemo(
@@ -327,44 +349,51 @@ export default function InvoiceBuilder({
       toast.error("الفاتورة فارغة", "أضيفي منتجًا أو بكدجًا واحدًا على الأقل.");
       return;
     }
-    if (Number(paidAmount) > total + 0.001) {
+    if (!editing && Number(paidAmount) > total + 0.001) {
       toast.error("المبلغ المدفوع أكبر من الإجمالي", "قلّلي المبلغ المدفوع أو راجعي الخصم والتوصيل.");
       return;
     }
 
     setSaving(true);
-    const toastId = toast.loading("جارِ حفظ الفاتورة", "بنجهّز الأرقام ونثبّت الأسعار من قاعدة البيانات…");
+    const toastId = toast.loading(editing ? "جارِ حفظ التعديلات" : "جارِ حفظ الفاتورة", "بنجهّز الأرقام ونثبّت الأسعار من قاعدة البيانات…");
     try {
-      const response = await fetch("/api/invoices", {
-        method: "POST",
+      const payload: Record<string, unknown> = {
+        customerId: customerId || null,
+        customerName,
+        customerPhone,
+        customerAddress,
+        deliveryArea,
+        deliveryFee: Number(deliveryFee) || 0,
+        discountType,
+        discountValue: Number(discountValue) || 0,
+        paymentMethod,
+        dueDate: dueDate || null,
+        notes,
+        items: cart.map((item) => ({
+          type: item.type,
+          variantId: item.variantId,
+          packageVariantId: item.packageVariantId,
+          quantity: item.quantity,
+        })),
+      };
+      // On edit, recorded payments stay in the ledger and are never re-sent.
+      if (!editing) payload.paidAmount = Number(paidAmount) || 0;
+
+      const response = await fetch(editing ? `/api/invoices/${invoiceId}` : "/api/invoices", {
+        method: editing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: customerId || null,
-          customerName,
-          customerPhone,
-          customerAddress,
-          deliveryArea,
-          deliveryFee: Number(deliveryFee) || 0,
-          discountType,
-          discountValue: Number(discountValue) || 0,
-          paidAmount: Number(paidAmount) || 0,
-          paymentMethod,
-          dueDate: dueDate || null,
-          notes,
-          items: cart.map((item) => ({
-            type: item.type,
-            variantId: item.variantId,
-            packageVariantId: item.packageVariantId,
-            quantity: item.quantity,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "تعذر إنشاء الفاتورة.");
-      toast.update(toastId, { tone: "success", title: "تم إنشاء الفاتورة", description: "بفتح لكِ الفاتورة للطباعة والتحصيل." });
-      router.push(`/invoices/${data.invoice.id}?created=1`);
+      if (!response.ok) throw new Error(data.error || (editing ? "تعذر تعديل الفاتورة." : "تعذر إنشاء الفاتورة."));
+      toast.update(toastId, {
+        tone: "success",
+        title: editing ? "تم حفظ تعديلات الفاتورة" : "تم إنشاء الفاتورة",
+        description: editing ? "تم تحديث العناصر والأسعار مع الحفاظ على الدفعات المسجّلة." : "بفتح لكِ الفاتورة للطباعة والتحصيل.",
+      });
+      router.push(editing ? `/invoices/${invoiceId}` : `/invoices/${data.invoice.id}?created=1`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "تعذر إنشاء الفاتورة.";
+      const message = error instanceof Error ? error.message : (editing ? "تعذر تعديل الفاتورة." : "تعذر إنشاء الفاتورة.");
       toast.update(toastId, { tone: "error", title: "لم يتم حفظ الفاتورة", description: message });
       setSaving(false);
     }
@@ -374,6 +403,11 @@ export default function InvoiceBuilder({
 
   return (
     <form onSubmit={submit} aria-busy={saving} className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      {editing && (
+        <div className="rounded-2xl px-4 py-3 text-[11px] font-bold leading-6 xl:col-span-2" style={{ background: "var(--lav-soft)", color: "var(--lav-strong)", border: "1px solid color-mix(in srgb, var(--lav) 24%, transparent)" }}>
+          وضع التعديل: يمكنك تغيير العميلة والعناصر والكميات والخصم والتوصيل. يتم إعادة تسعير العناصر من قاعدة البيانات، وتبقى الدفعات والإيصالات المسجّلة كما هي.
+        </div>
+      )}
       <div className="space-y-5">
         {/* Customer */}
         <section className="app-card p-4 sm:p-6">
@@ -644,17 +678,27 @@ export default function InvoiceBuilder({
           </div>
 
           <div className="mt-4 grid gap-2">
-            <label>
-              <span className="field-label">المبلغ المدفوع</span>
-              <span className="relative block">
-                <Wallet size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-2)" }} />
-                <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} type="number" min={0} step="0.01" inputMode="decimal" className="field pr-8 money" />
-              </span>
-            </label>
-            <div className="flex gap-1.5">
-              <button type="button" onClick={() => setPaidAmount(String(total))} className="btn btn-outline flex-1 px-2 py-1.5 text-[10px]"><Check size={12} />دفع كامل</button>
-              <button type="button" onClick={() => setPaidAmount("0")} className="btn btn-outline flex-1 px-2 py-1.5 text-[10px]">بدون دفع</button>
-            </div>
+            {editing ? (
+              <div className="rounded-xl px-3 py-2.5" style={{ background: "var(--success-soft)", color: "var(--success)" }}>
+                <p className="text-[10px] font-bold">المدفوع المسجّل (غير قابل للتعديل هنا)</p>
+                <p className="money mt-1 text-sm">{formatMoney(paidAmount)}</p>
+                <p className="mt-1 text-[9px] leading-4">إضافة الدفعات أو تعديلها تتم من صفحة الفاتورة بعد الحفظ.</p>
+              </div>
+            ) : (
+              <>
+                <label>
+                  <span className="field-label">المبلغ المدفوع</span>
+                  <span className="relative block">
+                    <Wallet size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2" style={{ color: "var(--muted-2)" }} />
+                    <input value={paidAmount} onChange={(event) => setPaidAmount(event.target.value)} type="number" min={0} step="0.01" inputMode="decimal" className="field pr-8 money" />
+                  </span>
+                </label>
+                <div className="flex gap-1.5">
+                  <button type="button" onClick={() => setPaidAmount(String(total))} className="btn btn-outline flex-1 px-2 py-1.5 text-[10px]"><Check size={12} />دفع كامل</button>
+                  <button type="button" onClick={() => setPaidAmount("0")} className="btn btn-outline flex-1 px-2 py-1.5 text-[10px]">بدون دفع</button>
+                </div>
+              </>
+            )}
             <label>
               <span className="field-label">طريقة الدفع</span>
               <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)} className="field py-2 text-[11px]">
@@ -663,7 +707,7 @@ export default function InvoiceBuilder({
             </label>
             <label>
               <span className="field-label">تاريخ الاستحقاق (اختياري)</span>
-              <input value={dueDate} onChange={(event) => setDueDate(event.target.value)} type="date" className="field py-2 text-[11px]" />
+              <input value={dueDate ?? ""} onChange={(event) => setDueDate(event.target.value)} type="date" className="field py-2 text-[11px]" />
             </label>
           </div>
 
@@ -676,10 +720,10 @@ export default function InvoiceBuilder({
             {saving ? (
               <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />جارِ الحفظ…</>
             ) : (
-              <><ReceiptText size={16} />حفظ وإصدار الفاتورة</>
+              <><ReceiptText size={16} />{editing ? "حفظ تعديلات الفاتورة" : "حفظ وإصدار الفاتورة"}</>
             )}
           </button>
-          <Link href="/invoices" className="btn btn-outline mt-2 w-full">إلغاء</Link>
+          <Link href={editing ? `/invoices/${invoiceId}` : "/invoices"} className="btn btn-outline mt-2 w-full">إلغاء</Link>
         </section>
       </aside>
     </form>

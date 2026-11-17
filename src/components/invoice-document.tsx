@@ -42,6 +42,7 @@ export type InvoiceDocumentData = {
   due_date?: string | null;
   items: InvoiceDocumentItem[];
   company?: CompanySettings;
+  qrImage?: string;
 };
 
 const INK = "#2b2228";
@@ -76,10 +77,10 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
       <div className="p-6 sm:p-9">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-5" style={{ borderColor: LINE }}>
           <div className="flex items-center gap-3">
-            <Image src="/luniva-logo-v2.png" alt="Luniva" width={128} height={128} className="h-14 w-14 object-contain" />
+            <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-14 w-14 object-contain" />
             <div>
-              <p className="text-lg font-black tracking-[0.14em]" style={{ color: INK }}>{invoice.company?.companyName ?? "LUNIVA"}</p>
-              <p className="mt-0.5 text-[10px] font-extrabold" style={{ color: BRAND }}>{invoice.company?.companyTagline ?? "ENTERPRISE STUDIO"}</p>
+              <p className="text-lg font-black tracking-[0.14em]" style={{ color: INK }}>{invoice.company?.companyName ?? "لونيفا"}</p>
+              <p className="mt-0.5 text-[10px] font-extrabold" style={{ color: BRAND }}>{invoice.company?.companyTagline ?? "من تأسيس منه"}</p>
               {(invoice.company?.companyPhone || invoice.company?.companyAddress || invoice.company?.taxNumber) && (
                 <p className="mt-1 text-[10px]" style={{ color: MUTED }}>
                   {[
@@ -212,8 +213,17 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
           </div>
         </section>
 
-        <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t pt-4 text-[9px]" style={{ borderColor: LINE, color: MUTED }}>
-          <span>{invoice.company?.receiptFooter ?? "شكرًا لتعاملك معنا"}</span>
+        <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-[9px]" style={{ borderColor: LINE, color: MUTED }}>
+          <div className="flex items-center gap-3">
+            {invoice.qrImage && (
+              <div className="flex items-center gap-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={invoice.qrImage} alt={`رمز معاينة الفاتورة ${invoice.invoice_number}`} className="h-14 w-14" />
+                <span>امسحي الرمز لمعاينة الفاتورة</span>
+              </div>
+            )}
+            <span>{invoice.company?.receiptFooter ?? "شكرًا لتعاملك معنا"}</span>
+          </div>
           <span className="mono" dir="ltr">{invoice.company?.companyName ?? "Luniva"} · {invoice.invoice_number}</span>
         </footer>
       </div>

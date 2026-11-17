@@ -152,7 +152,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
             <span className="hidden h-8 w-px sm:block" style={{ background: "var(--line)" }} />
             <div className="min-w-0">
               <p className="text-[9px] font-black tracking-[0.18em]" style={{ color: "var(--brand-strong)" }}>
-                LUNIVA CLIENTS
+                عميلات لونيفا
               </p>
               <h1 className="truncate text-sm font-extrabold leading-5 sm:text-base" style={{ color: "var(--ink)" }}>
                 {editing ? "تعديل بيانات العميلة" : "إضافة عميلة جديدة"}
@@ -185,7 +185,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
 
       <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <p className="eyebrow">Luniva client book</p>
+          <p className="eyebrow">دفتر عميلات لونيفا</p>
           <h2 className="page-title mt-1">{editing ? customer?.full_name || "تعديل العميلة" : "عميلة جديدة"}</h2>
           <p className="page-subtitle mt-1.5 max-w-2xl">
             أضيفي الاسم وأرقام التواصل والعنوان لبناء ملف عميلة متكامل.
@@ -323,7 +323,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
         <aside className="space-y-4 xl:sticky xl:top-24">
           <section className="app-card overflow-hidden">
             <div className="p-5" style={{ background: "linear-gradient(135deg, var(--brand-strong), var(--plum))", color: "#fff" }}>
-              <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-widest text-white/70"><Sparkles size={13} />CLIENT PROFILE</div>
+              <div className="flex items-center gap-2 text-[11px] font-extrabold tracking-widest text-white/70"><Sparkles size={13} />ملف العميلة</div>
               <p className="mt-2 truncate text-lg font-extrabold">{customer?.full_name || "عميلة جديدة"}</p>
               <p className="mono mt-1 text-[11px] text-white/65" dir="ltr">{customer?.customer_code || "LNV-C-…"}</p>
               <div className="mt-4 flex items-center gap-2">

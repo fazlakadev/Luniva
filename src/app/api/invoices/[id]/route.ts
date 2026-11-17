@@ -3,7 +3,7 @@ import { logActivity } from "@/lib/activity";
 import { getSession } from "@/lib/auth";
 import { db, ensureInvoiceTables } from "@/lib/db";
 import { getInvoiceDetail } from "@/lib/invoice-queries";
-import { updateInvoice, type InvoicePatch } from "@/lib/invoices";
+import { normalizeInvoicePayload, updateInvoice, updateInvoiceWithItems, type InvoicePatch } from "@/lib/invoices";
 
 export const runtime = "nodejs";
 
@@ -52,6 +52,24 @@ export async function PATCH(request: Request, { params }: Context) {
   } catch (error) {
     console.error("Unable to update invoice", error);
     const message = error instanceof Error ? error.message : "تعذر تحديث الفاتورة.";
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
+}
+
+/** Full edit of an existing invoice (customer, items and pricing). */
+export async function PUT(request: Request, { params }: Context) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "غير مصرح." }, { status: 401 });
+  try {
+    await ensureInvoiceTables();
+    const { id } = await params;
+    const input = normalizeInvoicePayload(await request.json());
+    const result = await updateInvoiceWithItems(id, input, session.name);
+    if (!result) return NextResponse.json({ error: "الفاتورة غير موجودة." }, { status: 404 });
+    return NextResponse.json({ invoice: result });
+  } catch (error) {
+    console.error("Unable to edit invoice", error);
+    const message = error instanceof Error ? error.message : "تعذر تعديل الفاتورة.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 }
