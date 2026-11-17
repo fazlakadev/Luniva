@@ -1,0 +1,30 @@
+"use client";
+
+import { Printer } from "lucide-react";
+import { useEffect, useState } from "react";
+
+export default function PrintButton({
+  label = "طباعة",
+  autoPrint = false,
+  className = "btn btn-primary",
+}: {
+  label?: string;
+  autoPrint?: boolean;
+  className?: string;
+}) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setReady(true);
+    if (!autoPrint) return;
+    const timer = window.setTimeout(() => window.print(), 450);
+    return () => window.clearTimeout(timer);
+  }, [autoPrint]);
+
+  return (
+    <button type="button" onClick={() => window.print()} disabled={!ready} className={className}>
+      <Printer size={16} />{label}
+    </button>
+  );
+}
