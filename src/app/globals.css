@@ -150,6 +150,13 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   .muted { color: var(--muted); }
   .muted-2 { color: var(--muted-2); }
 
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+
   .field {
     width: 100%;
     border: 1px solid var(--line);
@@ -368,7 +375,11 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
     color: #2b2228 !important;
   }
 
-  main { padding: 0 !important; }
+  main {
+    padding: 0 !important;
+    background: #fff !important;
+    overflow: visible !important;
+  }
 
   main > div {
     max-width: none !important;
@@ -376,7 +387,14 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
     padding: 0 !important;
   }
 
-  .print-hidden, .print\:hidden { display: none !important; }
+  /* Site chrome and every control disappear, leaving only the document. */
+  .site-header,
+  .site-footer,
+  button,
+  [data-print-button],
+  .print-hidden,
+  .print\:hidden,
+  .no-scrollbar { display: none !important; }
 
   .invoice-sheet {
     max-width: none !important;
@@ -389,6 +407,13 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   .invoice-sheet * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .invoice-sheet thead { display: table-header-group; }
+  .invoice-sheet tr,
+  .invoice-sheet .invoice-item {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   a { color: inherit !important; text-decoration: none !important; }

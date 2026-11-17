@@ -9,7 +9,6 @@ import {
   List,
   LockKeyhole,
   Package,
-  Printer,
   ReceiptText,
   ShieldCheck,
   Sparkles,
@@ -17,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import InvoiceDocument, { type InvoiceDocumentData } from "@/components/invoice-document";
+import PrintInvoiceButton from "@/components/invoice-print-button";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import {
   deliveryStatusLabels,
@@ -184,9 +184,6 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-black text-white/90">
                 <Truck size={12} />{data.deliveryStatusLabel}
               </span>
-              <button type="button" onClick={() => window.print()} className="btn bg-white text-[#7c4354] hover:bg-white/90 print-hidden">
-                <Printer size={15} />طباعة الفاتورة
-              </button>
             </div>
           </div>
         </section>
@@ -347,9 +344,7 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
             <h2 className="section-title flex items-center gap-2"><ReceiptText size={17} />الفاتورة الرسمية</h2>
             <p className="mt-1 text-[11px] muted-2">النسخة الكاملة كما تُطبع، ومعها رمز QR للمعاينة ومتابعة التوصيل.</p>
           </div>
-          <button type="button" onClick={() => window.print()} className="btn btn-primary">
-            <Printer size={15} />طباعة الفاتورة كاملة
-          </button>
+          <PrintInvoiceButton />
         </section>
 
         <div className="mt-3">

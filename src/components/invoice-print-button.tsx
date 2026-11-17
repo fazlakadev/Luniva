@@ -1,22 +1,20 @@
 "use client";
 
-import { Printer } from "lucide-react";
-import { useEffect, useState } from "react";
+import PrintButton from "@/components/print-button";
 
+/**
+ * The single invoice print action used by both the admin invoice page and the
+ * customer-facing invoice view. Keeping it in one place guarantees the same
+ * label, icon, accessibility text and print behaviour everywhere.
+ */
 export default function PrintInvoiceButton({ autoPrint = false }: { autoPrint?: boolean }) {
-  const [ready, setReady] = useState(false);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setReady(true);
-    if (!autoPrint) return;
-    const timer = window.setTimeout(() => window.print(), 450);
-    return () => window.clearTimeout(timer);
-  }, [autoPrint]);
-
   return (
-    <button type="button" onClick={() => window.print()} disabled={!ready} className="btn btn-primary">
-      <Printer size={16} />طباعة الفاتورة
-    </button>
+    <PrintButton
+      label="طباعة الفاتورة"
+      title="طباعة نسخة كاملة من الفاتورة"
+      autoPrint={autoPrint}
+      className="btn btn-primary"
+      iconSize={16}
+    />
   );
 }
