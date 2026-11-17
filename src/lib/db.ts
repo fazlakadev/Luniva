@@ -113,7 +113,7 @@ export async function ensureInitialAdmin() {
   ]);
 
   // Migrate the old Arabic username in place. Only the login name changes:
-  // the password hash and the "منه" display name/greeting are preserved.
+  // the password hash and the display name used by the welcome dialog are preserved.
   const target = byUsername.rows[0] ?? legacyUsername.rows[0];
   if (target) {
     await db.query(

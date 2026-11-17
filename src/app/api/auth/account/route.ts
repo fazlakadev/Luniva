@@ -111,7 +111,7 @@ async function updateAccount(request: Request) {
 
     attempts.delete(session.userId);
 
-    const displayName = String(user.display_name || "منه");
+    const displayName = String(user.display_name || "مدير النظام");
     const token = await createSession(
       { userId: user.id, username: nextUsername, name: displayName },
       session.remembered,

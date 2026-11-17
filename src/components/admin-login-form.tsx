@@ -19,6 +19,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
+import { WELCOME_SESSION_KEY } from "@/components/welcome-dialog";
 
 const highlights = [
   { icon: UsersRound, title: "دليل العملاء", text: "ملفات وأرقام وتفاصيل مرتبة في مكان واحد." },
@@ -54,6 +55,13 @@ export default function AdminLoginForm() {
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error || "تعذر تسجيل الدخول.");
+      // A fresh login always gets one welcome dialog, then the flag keeps it
+      // from reappearing on refresh or navigation inside the same session.
+      try {
+        window.sessionStorage.removeItem(WELCOME_SESSION_KEY);
+      } catch {
+        // Storage can be unavailable; the dialog simply shows on arrival.
+      }
       router.push("/workspace");
       router.refresh();
     } catch (reason) {
@@ -106,7 +114,7 @@ export default function AdminLoginForm() {
           <div className="mb-8 flex items-center justify-between lg:hidden">
             <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} priority className="h-11 w-11 rounded-xl object-contain" />
             <div className="flex items-center gap-2">
-              <span className="badge badge-brand">لونيفا · من تأسيس منه</span>
+              <span className="badge badge-brand">لونيفا · تأسست عام 2026</span>
               <ThemeToggle showLabel={false} />
             </div>
           </div>
@@ -117,7 +125,7 @@ export default function AdminLoginForm() {
                 className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black tracking-[0.16em]"
                 style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}
               >
-                <Sparkles size={12} />لونيفا · من تأسيس منه
+                <Sparkles size={12} />لونيفا · تأسست عام 2026
               </span>
               <ThemeToggle />
             </div>
@@ -267,7 +275,7 @@ export default function AdminLoginForm() {
             </div>
 
             <p className="mt-6 text-center text-[10px] lg:hidden" style={{ color: "var(--muted-2)" }}>
-              © {new Date().getFullYear()} لونيفا · من تأسيس منه · جميع الحقوق محفوظة
+              © {new Date().getFullYear()} لونيفا · تأسست عام 2026 · جميع الحقوق محفوظة
             </p>
           </div>
         </div>
@@ -303,7 +311,7 @@ export default function AdminLoginForm() {
               <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={120} height={120} priority className="h-12 w-12 object-contain" />
             </span>
             <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black text-rose-100 backdrop-blur">
-              من تأسيس منه
+              تأسست عام 2026
             </span>
           </div>
 
@@ -316,7 +324,7 @@ export default function AdminLoginForm() {
               <span className="font-extrabold text-[#ffd9e3]"> كل تفاصيل عملك.</span>
             </h2>
             <p className="mt-3 max-w-sm text-sm leading-7 text-rose-100/85">
-              صمّمتها منه لتجمع ملفات العميلات والمنتجات والبكدجات في تجربة إدارة هادئة، منظمة، تحمل روح Luniva.
+              صُمّمت لتجمع ملفات العميلات والمنتجات والبكدجات في تجربة إدارة هادئة ومنظمة، تحمل روح لونيفا.
             </p>
 
             <div className="mt-7 space-y-2">
@@ -339,7 +347,7 @@ export default function AdminLoginForm() {
           </div>
 
           <div className="relative flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-[10px] text-rose-100/60">
-            <span>© {new Date().getFullYear()} لونيفا · من تأسيس منه</span>
+            <span>© {new Date().getFullYear()} لونيفا · تأسست عام 2026</span>
             <span className="flex items-center gap-1.5"><ShieldCheck size={12} />بيانات محمية</span>
           </div>
         </div>

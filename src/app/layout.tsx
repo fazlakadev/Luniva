@@ -4,7 +4,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "لونيفا | إدارة العملاء",
-  description: "نظام لونيفا لإدارة علاقات العملاء، من تأسيس منه",
+  description: "نظام لونيفا لإدارة العملاء والمنتجات والبكدجات والفواتير والتحصيل.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

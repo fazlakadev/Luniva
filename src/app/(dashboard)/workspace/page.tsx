@@ -16,7 +16,6 @@ import {
   Wallet,
 } from "lucide-react";
 import { getRecentActivity } from "@/lib/activity";
-import { getSession } from "@/lib/auth";
 import { db, ensureCustomersTable, ensureInvoiceTables, ensurePackagesTables } from "@/lib/db";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
@@ -46,9 +45,6 @@ const invoiceStatusStyle: Record<InvoiceStatus, string> = {
 
 export default async function WorkspacePage() {
   await Promise.all([ensureCustomersTable(), ensurePackagesTables(), ensureInvoiceTables()]);
-  const session = await getSession();
-  const founder = session?.name || "منه";
-
   const overviewResult = await db.query(`
     SELECT
       (SELECT COUNT(*)::int FROM customers) AS customers,
@@ -194,13 +190,13 @@ export default async function WorkspacePage() {
         <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/85">
-              <Sparkles size={14} />نظام لونيفا · من تأسيس {founder}
+              <Sparkles size={14} />نظام لونيفا · مساحة الإدارة
             </span>
             <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-              أهلًا، {founder} 👋
+              مساحة عمل لونيفا
             </h1>
             <p className="mt-3 max-w-xl text-sm leading-7 text-white/75">
-              هذه مساحتك يا {founder} لكل تفاصيل العملاء والمنتجات والبكدجات والفواتير والتحصيل. ابدئي من حيث توقفتِ وواصلي بناء علامتك بخطوة واحدة.
+              تابعي العملاء والمنتجات والبكدجات والفواتير والتحصيل من مكان واحد، وابدئي من حيث توقفتِ.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/85">

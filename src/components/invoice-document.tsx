@@ -80,7 +80,7 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
             <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-14 w-14 object-contain" />
             <div>
               <p className="text-lg font-black tracking-[0.14em]" style={{ color: INK }}>{invoice.company?.companyName ?? "لونيفا"}</p>
-              <p className="mt-0.5 text-[10px] font-extrabold" style={{ color: BRAND }}>{invoice.company?.companyTagline ?? "من تأسيس منه"}</p>
+              <p className="mt-0.5 text-[10px] font-extrabold" style={{ color: BRAND }}>{invoice.company?.companyTagline ?? "شركة ملابس نسائية مصرية"}</p>
               {(invoice.company?.companyPhone || invoice.company?.companyAddress || invoice.company?.taxNumber) && (
                 <p className="mt-1 text-[10px]" style={{ color: MUTED }}>
                   {[

@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/theme-toggle";
+import WelcomeDialog from "@/components/welcome-dialog";
 
 const nav = [
   { href: "/workspace", label: "مساحة العمل", short: "الرئيسية", hint: "لوحة البداية", icon: LayoutGrid },
@@ -128,7 +129,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
                   لونيفا
                 </span>
                 <span className="mt-1 block whitespace-nowrap text-[8px] font-extrabold" style={{ color: "var(--brand-strong)" }}>
-                  من تأسيس منه
+                  تأسست عام 2026
                 </span>
               </span>
             )}
@@ -263,12 +264,12 @@ export default function AppShell({ children, name }: { children: React.ReactNode
                 className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm font-black text-white shadow-sm"
                 style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-strong))" }}
               >
-                {name.trim().charAt(0).toUpperCase() || "L"}
+                ل
               </span>
               {!collapsed && (
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-extrabold leading-5" style={{ color: "var(--ink)" }}>{name}</p>
-                  <p className="text-[10px]" style={{ color: "var(--muted-2)" }}>مؤسّسة لونيفا</p>
+                  <p className="truncate text-[13px] font-extrabold leading-5" style={{ color: "var(--ink)" }}>مساحة الإدارة</p>
+                  <p className="text-[10px]" style={{ color: "var(--muted-2)" }}>لونيفا · تأسست عام 2026</p>
                 </div>
               )}
               {!collapsed && (
@@ -313,15 +314,15 @@ export default function AppShell({ children, name }: { children: React.ReactNode
               className="grid h-10 w-10 place-items-center rounded-2xl text-sm font-black text-white shadow-sm"
               style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-strong))" }}
             >
-              {name.trim().charAt(0) || "م"}
+              ل
             </span>
             <div>
               <p className="text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>مساحة العمل · لونيفا</p>
-              <p className="text-sm font-extrabold" style={{ color: "var(--ink)" }}>أهلًا، {name} ✨</p>
+              <p className="text-sm font-extrabold" style={{ color: "var(--ink)" }}>مرحبًا بك في لوحة التحكم</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="badge badge-brand">أسّستها {name}</span>
+            <span className="badge badge-brand">شركة ملابس نسائية مصرية</span>
             <span className="badge badge-success"><ShieldCheck size={11} />جلسة آمنة</span>
           </div>
         </header>
@@ -332,7 +333,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
         >
           <Link href="/workspace" className="flex min-w-0 items-center gap-2">
             <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-9 w-9 shrink-0 object-contain" />
-            <span className="truncate text-xs font-extrabold" style={{ color: "var(--ink)" }}>أهلًا، {name}</span>
+            <span className="truncate text-xs font-extrabold" style={{ color: "var(--ink)" }}>مساحة العمل</span>
           </Link>
           <div className="flex items-center gap-1.5">
             <Link href="/invoices/new" className="btn btn-primary px-3 py-2 text-[11px]">
@@ -375,6 +376,8 @@ export default function AppShell({ children, name }: { children: React.ReactNode
           );
         })}
       </nav>
+
+      <WelcomeDialog name={name} />
     </div>
   );
 }

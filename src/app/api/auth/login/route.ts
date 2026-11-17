@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     attempts.delete(key);
-    const displayName = String(user.display_name || user.username || "منه");
+    const displayName = String(user.display_name || user.username || "مدير النظام");
     const token = await createSession({ userId: user.id, username: user.username, name: displayName }, remember);
     const response = NextResponse.json({ user: { name: displayName, username: user.username } });
     response.cookies.set(sessionCookie.name, token, sessionCookieOptions(remember));

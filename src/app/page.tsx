@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
 import {
   BadgePercent,
   Boxes,
@@ -19,7 +21,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "لونيفا | المنتجات والبكدجات",
-  description: "تصفّحي منتجات لونيفا والبكدجات المتاحة في مكان واحد، من تأسيس منه.",
+  description: "تصفّحي تشكيلة لونيفا من المنتجات والبكدجات، بأسعار واضحة وتفاصيل كاملة في دليل عرض عام.",
 };
 
 function priceStats(variants: CatalogVariant[]) {
@@ -98,19 +100,27 @@ export default async function PublicCatalogPage() {
 
       <div className="relative mx-auto w-full max-w-7xl px-3 pb-10 sm:px-6 sm:pb-14">
         <header className="flex items-center justify-between gap-3 py-5 sm:py-7">
-          <div className="flex min-w-0 items-center gap-3">
+          <Link href="/" className="flex min-w-0 items-center gap-3">
             <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white shadow-sm" style={{ border: "1px solid var(--line)" }}>
-              <img src="/luniva-logo-v2.png" alt="شعار لونيفا" className="h-10 w-10 object-contain" />
+              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} priority className="h-10 w-10 object-contain" />
             </span>
-            <div className="min-w-0">
-              <p className="truncate text-lg font-black tracking-tight" style={{ color: "var(--ink)" }}>لونيفا</p>
-              <p className="truncate text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>من تأسيس منه</p>
-            </div>
-          </div>
-          <ThemeToggle showLabel={false} />
+            <span className="min-w-0">
+              <span className="block truncate text-lg font-black tracking-tight" style={{ color: "var(--ink)" }}>لونيفا</span>
+              <span className="block truncate text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>شركة ملابس نسائية مصرية</span>
+            </span>
+          </Link>
+          <nav className="flex shrink-0 items-center gap-2">
+            <Link href="/about" className="btn btn-outline px-3 py-2 text-[11px]">
+              من نحن
+            </Link>
+            <ThemeToggle showLabel={false} />
+          </nav>
         </header>
 
-        <section className="page-enter relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14">
+        <section
+          className="page-enter relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14"
+          style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 88%, transparent)" }}
+        >
           <div
             className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-3xl"
             style={{ background: "var(--lav-soft)" }}
@@ -119,18 +129,58 @@ export default async function PublicCatalogPage() {
             className="pointer-events-none absolute -bottom-28 -right-16 h-72 w-72 rounded-full opacity-60 blur-3xl"
             style={{ background: "var(--brand-soft)" }}
           />
-          <div className="relative max-w-2xl">
-            <span className="badge badge-brand"><Sparkles size={13} />لونيفا · من تأسيس منه</span>
-            <h1 className="page-title mt-5 text-[2.1rem] leading-[1.2] sm:text-[2.9rem]">
-              دليل المنتجات والبكدجات
-            </h1>
-            <p className="page-subtitle mt-3 max-w-xl text-sm leading-8 sm:text-base">
-              تصفّحي تشكيلة لونيفا من المنتجات والألوان والمقاسات، والبكدجات الجاهزة بأسعارها بعد الخصم — عرض واضح ومرتب بلا أي بيانات خاصة.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-2">
-              <span className="badge badge-lav"><Package size={12} />{formatNumber(products.length)} منتج</span>
-              <span className="badge badge-brand"><Gift size={12} />{formatNumber(packages.length)} بكدج</span>
-              <span className="badge badge-success"><BadgePercent size={12} />{formatNumber(offerCount)} بكدج بخصم</span>
+          <div className="relative grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+            <div className="min-w-0">
+              <span className="badge badge-brand"><Sparkles size={13} />لونيفا · تأسست عام 2026</span>
+              <h1 className="page-title mt-5 text-[2.1rem] leading-[1.18] sm:text-[3rem]">
+                قطع مختارة
+                <span className="mt-1 block" style={{ color: "var(--brand-strong)" }}>بروح مصرية</span>
+              </h1>
+              <p className="page-subtitle mt-4 max-w-xl text-sm leading-9 sm:text-base">
+                اكتشفي تشكيلة تجمع القطع اليومية والبكدجات المُنسّقة، بألوان ومقاسات واضحة وأسعار نهائية، لتجدي ما يناسب ذوقك بثقة وسهولة.
+              </p>
+              <div className="mt-7 flex flex-wrap gap-2">
+                <span className="badge badge-lav"><Package size={12} />{formatNumber(products.length)} منتج</span>
+                <span className="badge badge-brand"><Gift size={12} />{formatNumber(packages.length)} بكدج</span>
+                <span className="badge badge-success"><BadgePercent size={12} />{formatNumber(offerCount)} بكدج بخصم</span>
+              </div>
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link href="#products" className="btn btn-primary px-5 py-3 text-sm">
+                  <Package size={16} />تصفّح المنتجات
+                </Link>
+                <Link href="/about" className="btn btn-outline px-5 py-3 text-sm">
+                  <Sparkles size={16} />قصتنا
+                </Link>
+              </div>
+            </div>
+
+            <div className="relative hidden min-h-[20rem] lg:block">
+              <div
+                className="absolute inset-0 rounded-[2rem] border"
+                style={{ borderColor: "var(--line)", background: "linear-gradient(145deg, var(--brand-soft), var(--lav-soft))" }}
+              />
+              <div
+                className="absolute inset-5 grid place-items-center overflow-hidden rounded-[1.6rem]"
+                style={{ background: "color-mix(in srgb, var(--surface) 82%, transparent)", border: "1px solid var(--line)" }}
+              >
+                <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={240} height={240} priority className="h-36 w-36 object-contain drop-shadow-sm" />
+              </div>
+              <div
+                className="absolute -bottom-3 right-5 rounded-2xl border px-4 py-3 shadow-lg"
+                style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+              >
+                <p className="text-[10px] font-bold muted-2">تشكيلة اليوم</p>
+                <p className="mt-1 text-sm font-extrabold" style={{ color: "var(--ink)" }}>
+                  {formatNumber(products.length)} منتج · {formatNumber(packages.length)} بكدج
+                </p>
+              </div>
+              <div
+                className="absolute -top-3 left-5 rounded-2xl border px-4 py-3 shadow-lg"
+                style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+              >
+                <p className="text-[10px] font-bold muted-2">شركة ملابس نسائية مصرية</p>
+                <p className="mt-1 text-sm font-extrabold" style={{ color: "var(--brand-strong)" }}>تأسست عام 2026</p>
+              </div>
             </div>
           </div>
         </section>
@@ -274,9 +324,12 @@ export default async function PublicCatalogPage() {
           )}
         </section>
 
-        <footer className="mt-14 flex flex-col items-center justify-between gap-2 border-t pt-6 text-center text-[11px] sm:flex-row sm:text-right" style={{ borderColor: "var(--line)", color: "var(--muted-2)" }}>
-          <span>© {new Date().getFullYear()} لونيفا · من تأسيس منه · جميع الحقوق محفوظة</span>
-          <span className="flex items-center gap-1.5"><ShieldCheck size={13} />صفحة عرض عامة — لا تتضمن بيانات إدارة</span>
+        <footer className="mt-14 flex flex-col items-center justify-between gap-3 border-t pt-6 text-center text-[11px] sm:flex-row sm:text-right" style={{ borderColor: "var(--line)", color: "var(--muted-2)" }}>
+          <span>© {new Date().getFullYear()} لونيفا · شركة ملابس نسائية مصرية · جميع الحقوق محفوظة</span>
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
+            <Link href="/about" className="font-bold" style={{ color: "var(--brand-strong)" }}>من نحن</Link>
+            <span className="flex items-center gap-1.5"><ShieldCheck size={13} />صفحة عرض عامة للكتالوج</span>
+          </div>
         </footer>
       </div>
     </main>
