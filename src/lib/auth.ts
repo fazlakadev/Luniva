@@ -4,7 +4,12 @@ import { cookies } from "next/headers";
 const SESSION_COOKIE = "luniva_session";
 const encoder = new TextEncoder();
 
-type SessionPayload = { userId: string; username: string; name: string };
+type SessionPayload = {
+  userId: string;
+  username: string;
+  name: string;
+  remembered?: boolean;
+};
 
 function secret() {
   const value = process.env.SESSION_SECRET;
@@ -13,7 +18,7 @@ function secret() {
 }
 
 export async function createSession(payload: SessionPayload, remembered = false) {
-  return new SignJWT(payload)
+  return new SignJWT({ ...payload, remembered })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(remembered ? "30d" : "12h")
@@ -34,7 +39,8 @@ export async function getSession(): Promise<SessionPayload | null> {
         : null;
     if (!username) return null;
     const name = typeof payload.name === "string" && payload.name.trim() ? payload.name : username;
-    return { userId: payload.userId, username, name };
+    const remembered = typeof payload.remembered === "boolean" ? payload.remembered : false;
+    return { userId: payload.userId, username, name, remembered };
   } catch {
     return null;
   }

@@ -83,25 +83,48 @@ export function ensureUsersTable() {
         password_hash TEXT NOT NULL,
         display_name VARCHAR(120) NOT NULL DEFAULT 'منه',
         username VARCHAR(80),
+        username_initialized BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
     await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(80)");
+    await db.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS username_initialized BOOLEAN NOT NULL DEFAULT FALSE");
     await db.query("CREATE UNIQUE INDEX IF NOT EXISTS users_username_key ON users (LOWER(username))");
   });
 }
 
+const LEGACY_ADMIN_USERNAME = "منه";
+
 export async function ensureInitialAdmin() {
   await ensureUsersTable();
-  const username = (process.env.LUNIVA_ADMIN_USERNAME || "منه").trim();
+  const username = (process.env.LUNIVA_ADMIN_USERNAME || "luniva").trim();
   const password = process.env.LUNIVA_ADMIN_PASSWORD;
   if (!username || !password) throw new Error("Admin credentials are not configured.");
 
+  // The flag is set once, after the first migration. From then on the username
+  // belongs to the account owner and settings can change it without login
+  // ever resetting it back to the environment default.
+  const initialized = await db.query("SELECT id FROM users WHERE username_initialized = TRUE LIMIT 1");
+  if (initialized.rowCount) return;
+
+  const [byUsername, legacyUsername] = await Promise.all([
+    db.query("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", [username]),
+    db.query("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", [LEGACY_ADMIN_USERNAME]),
+  ]);
+
+  // Migrate the old Arabic username in place. Only the login name changes:
+  // the password hash and the "منه" display name/greeting are preserved.
+  const target = byUsername.rows[0] ?? legacyUsername.rows[0];
+  if (target) {
+    await db.query(
+      "UPDATE users SET username = $1, username_initialized = TRUE WHERE id = $2",
+      [username, target.id],
+    );
+    return;
+  }
+
   // Existing installations already have an email-based admin. Promote that row
   // instead of creating a second account so the password keeps working.
-  const byUsername = await db.query("SELECT id FROM users WHERE LOWER(username) = LOWER($1)", [username]);
-  if (byUsername.rowCount) return;
-
   const legacyEmail = process.env.LUNIVA_ADMIN_EMAIL?.toLowerCase().trim();
   const candidates = [
     legacyEmail
@@ -112,16 +135,19 @@ export async function ensureInitialAdmin() {
   const found = await Promise.all(candidates);
   const existing = found[0].rows[0] ?? found[1].rows[0];
   if (existing) {
-    await db.query("UPDATE users SET username = $1, display_name = $1 WHERE id = $2", [username, existing.id]);
+    await db.query(
+      "UPDATE users SET username = $1, username_initialized = TRUE WHERE id = $2",
+      [username, existing.id],
+    );
     return;
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
   await db.query(
-    `INSERT INTO users (email, password_hash, display_name, username)
-     VALUES ($1, $2, $3, $4)
-     ON CONFLICT (email) DO UPDATE SET username = EXCLUDED.username, display_name = EXCLUDED.display_name`,
-    ["admin@luniva.local", passwordHash, username, username],
+    `INSERT INTO users (email, password_hash, display_name, username, username_initialized)
+     VALUES ($1, $2, $3, $4, TRUE)
+     ON CONFLICT (email) DO UPDATE SET username = EXCLUDED.username, username_initialized = TRUE`,
+    ["admin@luniva.local", passwordHash, "منه", username],
   );
 }
 

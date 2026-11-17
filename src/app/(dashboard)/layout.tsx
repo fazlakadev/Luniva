@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
-  if (!session) redirect("/");
+  if (!session) redirect("/admin-login");
   return (
     <ToastProvider>
       <AppShell name={session.name}>{children}</AppShell>

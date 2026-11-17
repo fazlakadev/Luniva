@@ -1,352 +1,284 @@
-"use client";
-
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { FormEvent, KeyboardEvent, useState } from "react";
+import type { Metadata } from "next";
 import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
-  Eye,
-  EyeOff,
+  BadgePercent,
+  Boxes,
   Gift,
   Layers3,
-  LoaderCircle,
-  LockKeyhole,
+  Package,
+  Palette,
   ShieldCheck,
-  UserRound,
   Sparkles,
-  UsersRound,
+  Tag,
 } from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
+import { getPublicCatalog, type CatalogVariant } from "@/lib/catalog";
+import { formatMoney, formatNumber } from "@/lib/format";
+import { discountPercent } from "@/lib/packages";
 
-const highlights = [
-  { icon: UsersRound, title: "دليل العملاء", text: "ملفات وأرقام وتفاصيل مرتبة في مكان واحد." },
-  { icon: Layers3, title: "المنتجات والمتغيرات", text: "ألوان ومقاسات وأسعار محسوبة بدقة." },
-  { icon: Gift, title: "البكدجات", text: "توليد تلقائي للتوليفات مع تسعير ذكي." },
-];
+export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [capsLock, setCapsLock] = useState(false);
+export const metadata: Metadata = {
+  title: "لونيفا | المنتجات والبكدجات",
+  description: "تصفّحي منتجات لونيفا والبكدجات المتاحة في مكان واحد، من تأسيس منه.",
+};
 
-  function syncCapsLock(event: KeyboardEvent<HTMLInputElement>) {
-    setCapsLock(event.getModifierState?.("CapsLock") ?? false);
+function priceStats(variants: CatalogVariant[]) {
+  const prices = variants.map((variant) => Number(variant.price) || 0);
+  const befores = variants.map((variant) => Number(variant.priceBeforeDiscount) || 0);
+  const topDiscount = variants.reduce(
+    (best, variant, index) =>
+      Math.max(best, discountPercent(befores[index], prices[index])),
+    0,
+  );
+  return {
+    min: prices.length ? Math.min(...prices) : 0,
+    max: prices.length ? Math.max(...prices) : 0,
+    topDiscount,
+  };
+}
+
+function CardImage({
+  src,
+  alt,
+  icon: Icon,
+}: {
+  src: string | null;
+  alt: string;
+  icon: typeof Gift;
+}) {
+  if (src) {
+    return <img src={src} alt={alt} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" />;
+  }
+  return (
+    <div className="grid h-full w-full place-items-center" style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--lav-soft))" }}>
+      <Icon size={40} style={{ color: "var(--brand-strong)" }} />
+    </div>
+  );
+}
+
+export default async function PublicCatalogPage() {
+  let products: Awaited<ReturnType<typeof getPublicCatalog>>["products"] = [];
+  let packages: Awaited<ReturnType<typeof getPublicCatalog>>["packages"] = [];
+  let loadError = false;
+
+  try {
+    const catalog = await getPublicCatalog();
+    products = catalog.products;
+    packages = catalog.packages;
+  } catch (error) {
+    console.error("Public catalog failed to load", error);
+    loadError = true;
   }
 
-  async function login(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSaving(true);
-    setError("");
-    const form = new FormData(event.currentTarget);
-    try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: form.get("username"),
-          password: form.get("password"),
-          remember: form.get("remember") === "on",
-        }),
-      });
-      const body = await response.json();
-      if (!response.ok) throw new Error(body.error || "تعذر تسجيل الدخول.");
-      router.push("/workspace");
-      router.refresh();
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "تعذر تسجيل الدخول.");
-      setSaving(false);
-    }
-  }
+  const offerCount = packages.filter((item) => priceStats(item.variants).topDiscount > 0).length;
 
   return (
     <main
       dir="rtl"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden p-3 sm:p-6 lg:p-8"
+      className="relative min-h-screen overflow-x-clip"
       style={{ background: "var(--bg)", color: "var(--ink)" }}
     >
-      {/* Ambient background */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(circle at 12% 8%, var(--brand-soft) 0, transparent 38%), radial-gradient(circle at 90% 92%, var(--lav-soft) 0, transparent 36%), radial-gradient(circle at 70% 10%, color-mix(in srgb, var(--brand-soft) 55%, transparent) 0, transparent 28%)",
+            "radial-gradient(circle at 10% 0%, var(--brand-soft) 0, transparent 36%), radial-gradient(circle at 92% 18%, var(--lav-soft) 0, transparent 32%)",
         }}
       />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        className="pointer-events-none absolute inset-0 opacity-[0.3]"
         style={{
           backgroundImage:
-            "radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--brand) 26%, transparent) 1px, transparent 0)",
-          backgroundSize: "26px 26px",
-          maskImage: "radial-gradient(ellipse at center, black, transparent 78%)",
-          WebkitMaskImage: "radial-gradient(ellipse at center, black, transparent 78%)",
+            "radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--brand) 22%, transparent) 1px, transparent 0)",
+          backgroundSize: "28px 28px",
+          maskImage: "radial-gradient(ellipse at top, black, transparent 70%)",
+          WebkitMaskImage: "radial-gradient(ellipse at top, black, transparent 70%)",
         }}
       />
-      <div
-        className="pointer-events-none absolute -right-24 top-10 h-64 w-64 rounded-full opacity-50 blur-3xl sm:h-80 sm:w-80"
-        style={{ background: "var(--brand-soft)", animation: "float-soft 10s ease-in-out infinite" }}
-      />
-      <div
-        className="pointer-events-none absolute -left-20 bottom-0 h-72 w-72 rounded-full opacity-40 blur-3xl"
-        style={{ background: "var(--lav-soft)", animation: "float-soft 13s ease-in-out infinite reverse" }}
-      />
 
-      <section
-        className="page-enter relative z-10 grid w-full max-w-6xl overflow-hidden rounded-[1.75rem] border shadow-2xl backdrop-blur-xl sm:rounded-[2rem] lg:min-h-[min(780px,calc(100dvh-4rem))] lg:grid-cols-[1fr_0.92fr]"
-        style={{
-          borderColor: "var(--line)",
-          background: "color-mix(in srgb, var(--surface) 92%, transparent)",
-          boxShadow: "var(--shadow-lg)",
-        }}
-      >
-        {/* Login */}
-        <div className="relative flex flex-col justify-center px-5 py-9 sm:px-10 sm:py-12 lg:px-14">
-          <div className="mb-8 flex items-center justify-between lg:hidden">
-            <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} priority className="h-11 w-11 rounded-xl object-contain" />
-            <div className="flex items-center gap-2">
-              <span className="badge badge-brand">لونيفا · من تأسيس منه</span>
-              <ThemeToggle showLabel={false} />
+      <div className="relative mx-auto w-full max-w-7xl px-3 pb-10 sm:px-6 sm:pb-14">
+        <header className="flex items-center justify-between gap-3 py-5 sm:py-7">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white shadow-sm" style={{ border: "1px solid var(--line)" }}>
+              <img src="/luniva-logo-v2.png" alt="شعار لونيفا" className="h-10 w-10 object-contain" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-black tracking-tight" style={{ color: "var(--ink)" }}>لونيفا</p>
+              <p className="truncate text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>من تأسيس منه</p>
             </div>
           </div>
+          <ThemeToggle showLabel={false} />
+        </header>
 
-          <div className="mx-auto w-full max-w-[25rem]">
-            <div className="hidden items-center justify-between lg:flex">
-              <span
-                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black tracking-[0.16em]"
-                style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}
-              >
-                <Sparkles size={12} />لونيفا · من تأسيس منه
-              </span>
-              <ThemeToggle />
+        <section className="page-enter relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14">
+          <div
+            className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full opacity-60 blur-3xl"
+            style={{ background: "var(--lav-soft)" }}
+          />
+          <div
+            className="pointer-events-none absolute -bottom-28 -right-16 h-72 w-72 rounded-full opacity-60 blur-3xl"
+            style={{ background: "var(--brand-soft)" }}
+          />
+          <div className="relative max-w-2xl">
+            <span className="badge badge-brand"><Sparkles size={13} />لونيفا · من تأسيس منه</span>
+            <h1 className="page-title mt-5 text-[2.1rem] leading-[1.2] sm:text-[2.9rem]">
+              دليل المنتجات والبكدجات
+            </h1>
+            <p className="page-subtitle mt-3 max-w-xl text-sm leading-8 sm:text-base">
+              تصفّحي تشكيلة لونيفا من المنتجات والألوان والمقاسات، والبكدجات الجاهزة بأسعارها بعد الخصم — عرض واضح ومرتب بلا أي بيانات خاصة.
+            </p>
+            <div className="mt-7 flex flex-wrap gap-2">
+              <span className="badge badge-lav"><Package size={12} />{formatNumber(products.length)} منتج</span>
+              <span className="badge badge-brand"><Gift size={12} />{formatNumber(packages.length)} بكدج</span>
+              <span className="badge badge-success"><BadgePercent size={12} />{formatNumber(offerCount)} بكدج بخصم</span>
             </div>
+          </div>
+        </section>
 
-            <div className="mt-7 lg:mt-8">
-              <p className="eyebrow">بوابة الدخول · لونيفا</p>
-              <h1 className="page-title mt-1.5 text-[2rem] sm:text-[2.35rem]">أهلًا بعودتك، منه ✨</h1>
-              <p className="page-subtitle mt-2 max-w-sm">
-                مساحتك الخاصة يا منه لمتابعة العملاء والمنتجات والبكدجات والفواتير والتحصيل من مكان واحد، بتصميم يحمل روح علامتك.
-              </p>
-              <div className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
-                <Sparkles size={12} />اسم المستخدم: <span className="mono">منه</span>
+        {loadError && (
+          <div className="app-card mt-6 p-5 text-sm font-bold" style={{ color: "var(--danger)" }}>
+            تعذّر تحميل الكتالوج حاليًا. حاولي مرة أخرى بعد قليل.
+          </div>
+        )}
+
+        <section id="products" className="mt-12 sm:mt-16">
+          <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="eyebrow">تشكيلة لونيفا</p>
+              <h2 className="section-title mt-1">المنتجات</h2>
+              <p className="mt-1 text-xs muted">كل لون ومقاس بسعره النهائي بعد الخصم.</p>
+            </div>
+            <span className="badge badge-muted self-start sm:self-auto"><Layers3 size={12} />عرض للاطلاع فقط</span>
+          </div>
+
+          {products.length === 0 ? (
+            <div className="app-card empty-state">
+              <div>
+                <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>
+                  <Package size={28} />
+                </span>
+                <p className="font-extrabold" style={{ color: "var(--ink)" }}>لا توجد منتجات للعرض بعد</p>
+                <p className="mx-auto mt-2 max-w-xs text-sm muted">ستظهر المنتجات هنا فور إضافتها إلى الكتالوج.</p>
               </div>
             </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {products.map((product) => {
+                const stats = priceStats(product.variants);
+                const hero = product.image_url || product.variants.find((variant) => variant.imageUrl)?.imageUrl || null;
+                return (
+                  <article key={product.id} className="group overflow-hidden rounded-[1.5rem] transition hover:-translate-y-1" style={{ border: "1px solid var(--line)", background: "var(--surface)", boxShadow: "var(--shadow-sm)" }}>
+                    <div className="relative h-48 overflow-hidden">
+                      <CardImage src={hero} alt={product.name} icon={Package} />
+                      <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
+                        <span className="badge badge-lav shadow-sm"><Sparkles size={12} />منتج</span>
+                        {stats.topDiscount > 0 && (
+                          <span className="badge badge-success shadow-sm"><BadgePercent size={12} />خصم {formatNumber(stats.topDiscount)}%</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="min-w-0 p-4">
+                      <h3 className="truncate text-base font-extrabold" style={{ color: "var(--ink)" }}>{product.name}</h3>
+                      <p className="mono mt-1 text-[11px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{product.primary_sku}</p>
+                      {product.description && <p className="mt-2 line-clamp-2 text-xs leading-6 muted">{product.description}</p>}
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className="badge badge-muted"><Layers3 size={12} />{formatNumber(product.variants.length)} متغير</span>
+                        {product.variants.slice(0, 3).map((variant) => (
+                          <span key={variant.id} className="badge badge-muted">
+                            <Palette size={11} />{variant.color} · {variant.size}
+                          </span>
+                        ))}
+                        {product.variants.length > 3 && <span className="badge badge-muted">+{formatNumber(product.variants.length - 3)}</span>}
+                      </div>
+                      <div className="mt-4 flex items-end justify-between gap-3 border-t pt-4" style={{ borderColor: "var(--line)" }}>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold muted-2">السعر</p>
+                          <p className="money mt-1 truncate text-lg" style={{ color: "var(--brand-strong)" }}>
+                            {stats.min === stats.max ? formatMoney(stats.min) : `${formatMoney(stats.min)} – ${formatMoney(stats.max)}`}
+                          </p>
+                        </div>
+                        <ShieldCheck size={18} className="shrink-0" style={{ color: "var(--success)" }} />
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-            <form onSubmit={login} className="mt-8 space-y-4" noValidate={false}>
-              <label className="block" htmlFor="login-username">
-                <span className="field-label">اسم المستخدم</span>
-                <span
-                  className="group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 transition focus-within:border-[var(--brand)] focus-within:ring-4 focus-within:ring-[var(--brand-ring)]"
-                  style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
-                >
-                  <span
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl transition group-focus-within:scale-105"
-                    style={{ background: "var(--surface)", color: "var(--brand-strong)", border: "1px solid var(--line)" }}
-                  >
-                    <UserRound size={17} />
-                  </span>
-                  <input
-                    id="login-username"
-                    required
-                    name="username"
-                    type="text"
-                    autoComplete="username"
-                    autoFocus
-                    disabled={saving}
-                    placeholder="منه"
-                    className="w-full min-w-0 bg-transparent py-1.5 text-right text-sm font-bold outline-none placeholder:text-[var(--muted-2)] disabled:opacity-60"
-                    dir="rtl"
-                    style={{ color: "var(--ink)" }}
-                  />
-                </span>
-              </label>
+        <section id="packages" className="mt-12 sm:mt-16">
+          <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
+            <div>
+              <p className="eyebrow">عروض لونيفا</p>
+              <h2 className="section-title mt-1">البكدجات</h2>
+              <p className="mt-1 text-xs muted">توليفات جاهزة تجمع أكثر من منتج بسعر واحد بعد الخصم.</p>
+            </div>
+            <span className="badge badge-muted self-start sm:self-auto"><Gift size={12} />عروض للاطلاع فقط</span>
+          </div>
 
-              <label className="block" htmlFor="login-password">
-                <span className="flex items-center justify-between">
-                  <span className="field-label">كلمة المرور</span>
-                  <span className="text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>حساسة لحالة الأحرف</span>
+          {packages.length === 0 ? (
+            <div className="app-card empty-state">
+              <div>
+                <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl" style={{ background: "var(--lav-soft)", color: "var(--lav-strong)" }}>
+                  <Gift size={28} />
                 </span>
-                <span
-                  className="group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 transition focus-within:border-[var(--brand)] focus-within:ring-4 focus-within:ring-[var(--brand-ring)]"
-                  style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
-                >
-                  <span
-                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl transition group-focus-within:scale-105"
-                    style={{ background: "var(--surface)", color: "var(--brand-strong)", border: "1px solid var(--line)" }}
-                  >
-                    <LockKeyhole size={17} />
-                  </span>
-                  <input
-                    id="login-password"
-                    required
-                    name="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    disabled={saving}
-                    onKeyDown={syncCapsLock}
-                    onKeyUp={syncCapsLock}
-                    onBlur={() => setCapsLock(false)}
-                    placeholder="••••••••"
-                    className="w-full min-w-0 bg-transparent py-1.5 text-left text-sm outline-none placeholder:text-[var(--muted-2)] disabled:opacity-60"
-                    dir="ltr"
-                    style={{ color: "var(--ink)" }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((value) => !value)}
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg transition hover:bg-[var(--surface-3)]"
-                    style={{ color: "var(--muted)" }}
-                    aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
-                    title={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"}
-                    tabIndex={-1}
-                  >
-                    {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
-                  </button>
-                </span>
-                {capsLock && (
-                  <span
-                    aria-live="polite"
-                    className="mt-1.5 inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[10px] font-bold"
-                    style={{ background: "var(--warning-soft)", color: "var(--warning)" }}
-                  >
-                    <AlertTriangle size={12} />
-                    مفتاح Caps Lock مفعّل — تحققي من حالة الأحرف
-                  </span>
-                )}
-              </label>
-
-              <div className="flex items-center justify-between gap-3 pt-0.5">
-                <label className="flex cursor-pointer select-none items-center gap-2.5 text-xs font-bold" style={{ color: "var(--ink-soft)" }}>
-                  <input
-                    name="remember"
-                    type="checkbox"
-                    disabled={saving}
-                    className="h-4 w-4 cursor-pointer rounded accent-[var(--brand)]"
-                  />
-                  تذكرني لمدة 30 يومًا
-                </label>
-                <span className="flex items-center gap-1.5 text-[10px] font-bold" style={{ color: "var(--success)" }}>
-                  <ShieldCheck size={13} />جلسة آمنة
-                </span>
+                <p className="font-extrabold" style={{ color: "var(--ink)" }}>لا توجد بكدجات للعرض بعد</p>
+                <p className="mx-auto mt-2 max-w-xs text-sm muted">ستظهر البكدجات النشطة هنا فور تجهيزها.</p>
               </div>
-
-              {error && (
-                <div
-                  role="alert"
-                  className="login-shake flex items-start gap-2.5 rounded-2xl px-4 py-3 text-xs font-bold leading-6"
-                  style={{ background: "var(--danger-soft)", color: "var(--danger)", border: "1px solid color-mix(in srgb, var(--danger) 45%, transparent)" }}
-                >
-                  <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px]" style={{ background: "var(--surface)" }}>!</span>
-                  <span>{error}</span>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="group relative mt-1 flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl px-5 py-3.5 text-sm font-extrabold text-white transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-70"
-                style={{
-                  background: "linear-gradient(135deg, var(--brand), var(--brand-strong))",
-                  boxShadow: "0 16px 34px var(--brand-ring)",
-                }}
-              >
-                <span
-                  className="pointer-events-none absolute inset-0 -translate-x-full opacity-60 transition duration-700 group-hover:translate-x-full"
-                  style={{ background: "linear-gradient(105deg, transparent, rgba(255,255,255,.35), transparent)" }}
-                />
-                {saving ? <LoaderCircle size={18} className="animate-spin" /> : null}
-                <span className="relative">{saving ? "جارِ الدخول..." : "دخول إلى النظام"}</span>
-                {!saving && <ArrowLeft size={18} className="relative transition group-hover:-translate-x-1" />}
-              </button>
-            </form>
-
-            <div className="mt-7 flex items-center justify-center gap-2 text-[11px]" style={{ color: "var(--muted-2)" }}>
-              <ShieldCheck size={14} />
-              محمي بجلسة آمنة وتشفير كامل للبيانات
             </div>
-
-            <p className="mt-6 text-center text-[10px] lg:hidden" style={{ color: "var(--muted-2)" }}>
-              © {new Date().getFullYear()} لونيفا · من تأسيس منه · جميع الحقوق محفوظة
-            </p>
-          </div>
-        </div>
-
-        {/* Brand showcase */}
-        <div
-          className="relative order-last hidden overflow-hidden p-8 text-white lg:flex lg:flex-col xl:p-10"
-          style={{ background: "linear-gradient(155deg, #3f2432 0%, #6e3a4d 42%, #7a5aa8 100%)" }}
-        >
-          <div
-            className="pointer-events-none absolute inset-0 opacity-[0.18]"
-            style={{
-              backgroundImage: "radial-gradient(circle at 1px 1px, #fff 1px, transparent 0)",
-              backgroundSize: "22px 22px",
-              maskImage: "radial-gradient(ellipse at 70% 30%, black, transparent 72%)",
-              WebkitMaskImage: "radial-gradient(ellipse at 70% 30%, black, transparent 72%)",
-            }}
-          />
-          <div className="pointer-events-none absolute -left-16 -top-20 h-64 w-64 rounded-full border-[32px] border-white/10" />
-          <div className="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full border-[42px] border-[#e7a9ba]/20" />
-          <div
-            className="pointer-events-none absolute right-16 top-24 h-28 w-28 rounded-full opacity-40 blur-2xl"
-            style={{ background: "#f3b8c9", animation: "float-soft 9s ease-in-out infinite" }}
-          />
-          <span
-            className="pointer-events-none absolute -bottom-6 left-2 select-none text-[8rem] font-black leading-none tracking-tighter text-white/[0.04]"
-            aria-hidden="true"
-          >
-            لونيفا
-          </span>
-
-          <div className="relative flex items-center justify-between">
-            <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white shadow-xl">
-              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={120} height={120} priority className="h-12 w-12 object-contain" />
-            </span>
-            <span className="rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-[10px] font-black text-rose-100 backdrop-blur">
-              من تأسيس منه
-            </span>
-          </div>
-
-          <div className="relative my-auto py-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-rose-100 backdrop-blur">
-              <Sparkles size={13} />منظمة، أنيقة، قريبة منك
-            </span>
-            <h2 className="mt-4 max-w-sm text-[2.15rem] font-light leading-[1.25] xl:text-[2.5rem]">
-              مساحة واحدة تجمع
-              <span className="font-extrabold text-[#ffd9e3]"> كل تفاصيل عملك.</span>
-            </h2>
-            <p className="mt-3 max-w-sm text-sm leading-7 text-rose-100/85">
-              صمّمتها منه لتجمع ملفات العميلات والمنتجات والبكدجات في تجربة إدارة هادئة، منظمة، تحمل روح Luniva.
-            </p>
-
-            <div className="mt-7 space-y-2">
-              {highlights.map(({ icon: Icon, title, text }) => (
-                <div
-                  key={title}
-                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.07] p-2.5 backdrop-blur transition hover:bg-white/[0.11]"
-                >
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-[#ffd9e3]" style={{ background: "rgba(255,255,255,.12)" }}>
-                    <Icon size={17} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-[12px] font-extrabold leading-5">{title}</p>
-                    <p className="mt-0.5 text-[10px] leading-4 text-rose-100/70">{text}</p>
-                  </div>
-                  <CheckCircle2 size={15} className="ms-auto shrink-0 text-[#ffd9e3]/70" />
-                </div>
-              ))}
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {packages.map((item) => {
+                const stats = priceStats(item.variants);
+                const hero = item.image_url || item.variants.find((variant) => variant.imageUrl)?.imageUrl || null;
+                return (
+                  <article key={item.id} className="group overflow-hidden rounded-[1.5rem] transition hover:-translate-y-1" style={{ border: "1px solid var(--line)", background: "var(--surface)", boxShadow: "var(--shadow-sm)" }}>
+                    <div className="relative h-48 overflow-hidden">
+                      <CardImage src={hero} alt={item.name} icon={Gift} />
+                      <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
+                        <span className="badge badge-brand shadow-sm"><Gift size={12} />بكدج</span>
+                        {stats.topDiscount > 0 && (
+                          <span className="badge badge-success shadow-sm">خصم {formatNumber(stats.topDiscount)}%</span>
+                        )}
+                      </div>
+                      {item.badge && (
+                        <span className="absolute bottom-3 right-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#7c4354] shadow-sm backdrop-blur">
+                          {item.badge}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0 p-4">
+                      <h3 className="truncate text-base font-extrabold" style={{ color: "var(--ink)" }}>{item.name}</h3>
+                      <p className="mono mt-1 text-[11px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{item.primary_sku}</p>
+                      {item.description && <p className="mt-2 line-clamp-2 text-xs leading-6 muted">{item.description}</p>}
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className="badge badge-muted"><Boxes size={12} />{formatNumber(item.items_count)} منتجات</span>
+                        <span className="badge badge-lav"><Layers3 size={12} />{formatNumber(item.variants_count)} بكدج فرعي</span>
+                        <span className="badge badge-muted"><Tag size={12} />يبدأ من {formatMoney(item.starting_price)}</span>
+                      </div>
+                      <div className="mt-4 flex items-end justify-between gap-3 border-t pt-4" style={{ borderColor: "var(--line)" }}>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-bold muted-2">السعر بعد الخصم</p>
+                          <p className="money mt-1 truncate text-lg" style={{ color: "var(--brand-strong)" }}>
+                            {stats.min === stats.max ? formatMoney(stats.min) : `${formatMoney(stats.min)} – ${formatMoney(stats.max)}`}
+                          </p>
+                        </div>
+                        <ShieldCheck size={18} className="shrink-0" style={{ color: "var(--success)" }} />
+                      </div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
-          </div>
+          )}
+        </section>
 
-          <div className="relative flex items-center justify-between gap-3 border-t border-white/10 pt-3 text-[10px] text-rose-100/60">
-            <span>© {new Date().getFullYear()} لونيفا · من تأسيس منه</span>
-            <span className="flex items-center gap-1.5"><ShieldCheck size={12} />بيانات محمية</span>
-          </div>
-        </div>
-      </section>
+        <footer className="mt-14 flex flex-col items-center justify-between gap-2 border-t pt-6 text-center text-[11px] sm:flex-row sm:text-right" style={{ borderColor: "var(--line)", color: "var(--muted-2)" }}>
+          <span>© {new Date().getFullYear()} لونيفا · من تأسيس منه · جميع الحقوق محفوظة</span>
+          <span className="flex items-center gap-1.5"><ShieldCheck size={13} />صفحة عرض عامة — لا تتضمن بيانات إدارة</span>
+        </footer>
+      </div>
     </main>
   );
 }
