@@ -10,11 +10,19 @@ import {
   Pencil,
   ReceiptText,
   Search,
+  Truck,
   Wallet,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
-import { invoiceStatusLabels, paymentMethodLabels, type InvoiceStatus, type PaymentMethod } from "@/lib/invoice-shared";
+import {
+  deliveryStatusLabels,
+  invoiceStatusLabels,
+  paymentMethodLabels,
+  type DeliveryStatus,
+  type InvoiceStatus,
+  type PaymentMethod,
+} from "@/lib/invoice-shared";
 
 export type InvoiceRow = {
   id: string;
@@ -28,6 +36,7 @@ export type InvoiceRow = {
   total: string | number;
   paid_amount: string | number;
   status: InvoiceStatus;
+  delivery_status?: DeliveryStatus;
   payment_method: PaymentMethod;
   created_at: string;
   due_date: string | null;
@@ -185,6 +194,9 @@ export default function InvoicesList({
                         <span className={`badge ${statusStyle[invoice.status] ?? "badge-muted"}`}>
                           {invoiceStatusLabels[invoice.status] ?? invoice.status}
                         </span>
+                        {invoice.delivery_status && (
+                          <span className="badge badge-brand"><Truck size={11} />{deliveryStatusLabels[invoice.delivery_status] ?? invoice.delivery_status}</span>
+                        )}
                         <span className="badge badge-muted"><CalendarDays size={11} />{formatDate(invoice.created_at)}</span>
                         {Number(invoice.overdue_days) > 0 && (
                           <span className="badge badge-danger">متأخرة {formatNumber(invoice.overdue_days)} يوم</span>

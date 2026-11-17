@@ -9,7 +9,10 @@ import {
 } from "@/lib/packages";
 import {
   PAYMENT_METHODS,
+  deliveryStatusLabels,
   deriveInvoiceStatus,
+  normalizeDeliveryStatus,
+  type DeliveryStatus,
   type InvoiceStatus,
   type PaymentMethod,
 } from "@/lib/invoice-shared";
@@ -539,6 +542,43 @@ export async function updateInvoice(id: string, patch: InvoicePatch, actor?: str
   } finally {
     client.release();
   }
+}
+
+/**
+ * Delivery progress is intentionally separate from invoice amounts and the
+ * payments ledger: changing it never reprices the invoice or resends payments.
+ */
+export async function setInvoiceDeliveryStatus(
+  id: string,
+  status: DeliveryStatus,
+  actor?: string,
+) {
+  await ensureInvoiceTables();
+  const existingResult = await db.query(
+    "SELECT invoice_number, delivery_status FROM invoices WHERE id = $1",
+    [id],
+  );
+  const existing = existingResult.rows[0];
+  if (!existing) return null;
+
+  const previous = normalizeDeliveryStatus(existing.delivery_status) ?? "preparing";
+  const invoiceNumber = String(existing.invoice_number ?? id);
+  if (previous === status) {
+    return { invoiceNumber, deliveryStatus: status, changed: false };
+  }
+
+  await db.query(
+    "UPDATE invoices SET delivery_status = $1, updated_at = NOW() WHERE id = $2",
+    [status, id],
+  );
+  await logActivity({
+    entityType: "invoice",
+    entityId: id,
+    action: "invoice.delivery_status",
+    summary: `حالة توصيل الفاتورة ${invoiceNumber}: ${deliveryStatusLabels[previous]} ← ${deliveryStatusLabels[status]}`,
+    actor,
+  });
+  return { invoiceNumber, deliveryStatus: status, changed: true };
 }
 
 /**

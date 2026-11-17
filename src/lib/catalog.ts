@@ -98,3 +98,20 @@ export async function getPublicCatalog(): Promise<{
     packages: packagesResult.rows as CatalogPackage[],
   };
 }
+
+export type PublicCatalogData = {
+  products: CatalogProduct[];
+  packages: CatalogPackage[];
+  loadError: boolean;
+};
+
+/** Loads the display-only catalog and keeps page wrappers free of error plumbing. */
+export async function loadPublicCatalog(): Promise<PublicCatalogData> {
+  try {
+    const { products, packages } = await getPublicCatalog();
+    return { products, packages, loadError: false };
+  } catch (error) {
+    console.error("Public catalog failed to load", error);
+    return { products: [], packages: [], loadError: true };
+  }
+}

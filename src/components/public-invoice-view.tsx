@@ -16,7 +16,13 @@ import {
   Truck,
 } from "lucide-react";
 import { useState } from "react";
+import InvoiceDocument, { type InvoiceDocumentData } from "@/components/invoice-document";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
+import {
+  deliveryStatusLabels,
+  deliveryStatusSteps,
+  type DeliveryStatus,
+} from "@/lib/invoice-shared";
 
 export type PublicInvoiceData = {
   invoiceNumber: string;
@@ -54,6 +60,10 @@ export type PublicInvoiceData = {
     taxNumber: string;
     footer: string;
   };
+  deliveryStatus: DeliveryStatus;
+  deliveryStatusLabel: string;
+  qrImage: string;
+  document: InvoiceDocumentData;
 };
 
 const statusColors: Record<PublicInvoiceData["status"], string> = {
@@ -62,6 +72,69 @@ const statusColors: Record<PublicInvoiceData["status"], string> = {
   paid: "#3f8267",
   cancelled: "#7d6c74",
 };
+
+function DeliveryTimeline({ status }: { status: DeliveryStatus }) {
+  const activeIndex = deliveryStatusSteps.indexOf(status as Exclude<DeliveryStatus, "cancelled">);
+  const cancelled = status === "cancelled";
+
+  return (
+    <section className="app-card mt-4 p-4 print-hidden sm:p-6">
+      <div className="flex items-center gap-2">
+        <span className="stat-icon" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
+          <Truck size={18} />
+        </span>
+        <div className="min-w-0">
+          <h2 className="section-title">تتبّع التوصيل</h2>
+          <p className="mt-0.5 text-[11px] muted-2">تابعي مرحلة طلبك من التجهيز حتى التوصيل.</p>
+        </div>
+        <span className="badge badge-brand mr-auto">
+          <CheckCircle2 size={11} />{deliveryStatusLabels[status]}
+        </span>
+      </div>
+
+      <div className="mt-5 grid gap-2 sm:grid-cols-4">
+        {deliveryStatusSteps.map((step, index) => {
+          const reached = !cancelled && activeIndex >= index;
+          const current = !cancelled && activeIndex === index;
+          return (
+            <div
+              key={step}
+              className="rounded-2xl p-3"
+              style={{
+                background: reached ? "var(--success-soft)" : "var(--surface-2)",
+                border: `1px solid ${reached ? "color-mix(in srgb, var(--success) 28%, transparent)" : "var(--line)"}`,
+              }}
+            >
+              <span
+                className="grid h-7 w-7 place-items-center rounded-full text-[10px] font-black"
+                style={{
+                  background: reached ? "var(--success)" : "var(--surface-3)",
+                  color: reached ? "#fff" : "var(--muted-2)",
+                }}
+              >
+                {reached ? <CheckCircle2 size={14} /> : formatNumber(index + 1)}
+              </span>
+              <p className="mt-2 text-[11px] font-black" style={{ color: reached ? "var(--success)" : "var(--muted)" }}>
+                {deliveryStatusLabels[step]}
+              </p>
+              {current && <p className="mt-1 text-[9px] font-bold" style={{ color: "var(--brand-strong)" }}>المرحلة الحالية</p>}
+            </div>
+          );
+        })}
+      </div>
+
+      {cancelled ? (
+        <p className="mt-3 rounded-xl px-3 py-2 text-[11px] font-bold" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>
+          تم إلغاء توصيل هذا الطلب. للتوضيح تواصلي مع لونيفا.
+        </p>
+      ) : (
+        <p className="mt-3 flex items-start gap-1.5 text-[10px] leading-5 muted-2">
+          <ShieldCheck size={12} className="mt-0.5 shrink-0" />تُحدَّث الحالة من النظام، وستظهر هنا تلقائيًا عند تغييرها.
+        </p>
+      )}
+    </section>
+  );
+}
 
 export default function PublicInvoiceView({ data }: { data: PublicInvoiceData }) {
   const [mode, setMode] = useState<"cards" | "list">("cards");
@@ -74,7 +147,7 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
   return (
     <main dir="rtl" className="min-h-screen overflow-x-hidden px-3 py-6 sm:px-6 sm:py-10" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <div className="mx-auto w-full max-w-4xl">
-        <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <header className="mb-5 flex flex-wrap items-center justify-between gap-3 print-hidden">
           <div className="flex items-center gap-3">
             <span className="grid h-12 w-12 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm" style={{ border: "1px solid var(--line)" }}>
               <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={96} height={96} className="h-10 w-10 object-contain" />
@@ -90,7 +163,7 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
         </header>
 
         <section
-          className="relative overflow-hidden rounded-[1.8rem] px-5 py-7 text-white sm:px-9 sm:py-9"
+          className="relative overflow-hidden rounded-[1.8rem] px-5 py-7 text-white print-hidden sm:px-9 sm:py-9"
           style={{ background: "linear-gradient(135deg, var(--plum), var(--brand-strong))", boxShadow: "var(--shadow-md)" }}
         >
           <div className="absolute -left-14 -top-16 h-48 w-48 rounded-full border-[26px] border-white/10" />
@@ -108,6 +181,9 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
               <span className="rounded-full px-3 py-1.5 text-[11px] font-black" style={{ background: `${statusColors[data.status]}22`, color: "#fff" }}>
                 {data.statusLabel}
               </span>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-black text-white/90">
+                <Truck size={12} />{data.deliveryStatusLabel}
+              </span>
               <button type="button" onClick={() => window.print()} className="btn bg-white text-[#7c4354] hover:bg-white/90 print-hidden">
                 <Printer size={15} />طباعة الفاتورة
               </button>
@@ -115,7 +191,7 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
           </div>
         </section>
 
-        <section className="mt-5 grid gap-3 sm:grid-cols-3">
+        <section className="mt-5 grid gap-3 print-hidden sm:grid-cols-3">
           <div className="app-card p-4">
             <p className="text-[11px] font-bold muted-2">الإجمالي</p>
             <p className="money mt-1.5 text-lg" style={{ color: "var(--ink)" }}>{formatMoney(data.total)}</p>
@@ -130,7 +206,7 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
           </div>
         </section>
 
-        <section className="app-card mt-4 p-4 sm:p-6">
+        <section className="app-card mt-4 p-4 print-hidden sm:p-6">
           <div className="rounded-2xl p-4" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
             <div className="flex items-center justify-between gap-3 text-[11px] font-extrabold">
               <span style={{ color: "var(--ink-soft)" }}>نسبة التحصيل</span>
@@ -228,7 +304,7 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
           )}
         </section>
 
-        <section className="app-card mt-4 p-4 sm:p-6">
+        <section className="app-card mt-4 p-4 print-hidden sm:p-6">
           <div className="grid gap-4 sm:grid-cols-[1fr_300px]">
             <div className="min-w-0 space-y-3">
               {data.notes && (
@@ -264,7 +340,23 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
           </div>
         </section>
 
-        <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 px-1 text-[10px]" style={{ color: "var(--muted-2)" }}>
+        <DeliveryTimeline status={data.deliveryStatus} />
+
+        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 print-hidden">
+          <div className="min-w-0">
+            <h2 className="section-title flex items-center gap-2"><ReceiptText size={17} />الفاتورة الرسمية</h2>
+            <p className="mt-1 text-[11px] muted-2">النسخة الكاملة كما تُطبع، ومعها رمز QR للمعاينة ومتابعة التوصيل.</p>
+          </div>
+          <button type="button" onClick={() => window.print()} className="btn btn-primary">
+            <Printer size={15} />طباعة الفاتورة كاملة
+          </button>
+        </section>
+
+        <div className="mt-3">
+          <InvoiceDocument invoice={data.document} />
+        </div>
+
+        <footer className="mt-6 flex flex-wrap items-center justify-between gap-2 px-1 text-[10px] print-hidden" style={{ color: "var(--muted-2)" }}>
           <span className="flex items-center gap-1.5"><BadgePercent size={12} />{data.company.footer}</span>
           <span>{data.company.name} · {data.invoiceNumber}</span>
         </footer>

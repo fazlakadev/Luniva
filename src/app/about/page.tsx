@@ -64,7 +64,7 @@ export default function AboutPage() {
               className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white shadow-sm"
               style={{ border: "1px solid var(--line)" }}
             >
-              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} priority className="h-10 w-10 object-contain" />
+              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} preload className="h-10 w-10 object-contain" />
             </span>
             <span className="min-w-0">
               <span className="block truncate text-lg font-black tracking-tight" style={{ color: "var(--ink)" }}>لونيفا</span>
@@ -72,7 +72,7 @@ export default function AboutPage() {
             </span>
           </Link>
           <nav className="flex shrink-0 items-center gap-2">
-            <Link href="/" className="btn btn-outline px-3 py-2 text-[11px]">
+            <Link href="/catalog" className="btn btn-outline px-3 py-2 text-[11px]">
               <ArrowLeft size={14} />الكتالوج
             </Link>
             <ThemeToggle showLabel={false} />
@@ -154,7 +154,7 @@ export default function AboutPage() {
                 تصفّحي المنتجات والبكدجات كما هي، بأسعار واضحة وتفاصيل كاملة تساعدك على الاختيار.
               </p>
             </div>
-            <Link href="/" className="btn shrink-0 bg-white text-[#7c4354] hover:bg-white/90">
+            <Link href="/catalog" className="btn shrink-0 bg-white text-[#7c4354] hover:bg-white/90">
               <ArrowLeft size={16} />تصفّح الكتالوج
             </Link>
           </div>
@@ -165,7 +165,7 @@ export default function AboutPage() {
           style={{ borderColor: "var(--line)", color: "var(--muted-2)" }}
         >
           <span>© {new Date().getFullYear()} لونيفا · شركة ملابس نسائية مصرية · جميع الحقوق محفوظة</span>
-          <Link href="/" className="font-bold" style={{ color: "var(--brand-strong)" }}>العودة إلى الكتالوج</Link>
+          <Link href="/catalog" className="font-bold" style={{ color: "var(--brand-strong)" }}>العودة إلى الكتالوج</Link>
         </footer>
       </div>
     </main>

@@ -312,6 +312,7 @@ export function ensureInvoiceTables() {
         customer_phone VARCHAR(32),
         customer_address TEXT,
         delivery_area VARCHAR(120),
+        delivery_status VARCHAR(24) NOT NULL DEFAULT 'preparing',
         subtotal NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (subtotal >= 0),
         discount_type VARCHAR(16) NOT NULL DEFAULT 'amount',
         discount_value NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (discount_value >= 0),
@@ -354,6 +355,7 @@ export function ensureInvoiceTables() {
     // Existing databases predate these columns/tables; keep upgrades automatic.
     await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS due_date DATE");
     await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS view_nonce VARCHAR(64)");
+    await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(24) NOT NULL DEFAULT 'preparing'");
 
     // Every invoice gets its own random nonce. It is only useful together with
     // the server secret, so the public share link cannot be derived from the DB.
@@ -433,6 +435,7 @@ export function ensureInvoiceTables() {
       db.query("CREATE INDEX IF NOT EXISTS invoices_created_idx ON invoices(created_at DESC)"),
       db.query("CREATE INDEX IF NOT EXISTS invoices_customer_idx ON invoices(customer_id)"),
       db.query("CREATE INDEX IF NOT EXISTS invoices_status_idx ON invoices(status)"),
+      db.query("CREATE INDEX IF NOT EXISTS invoices_delivery_status_idx ON invoices(delivery_status)"),
       db.query("CREATE INDEX IF NOT EXISTS invoices_due_idx ON invoices(due_date)"),
       db.query("CREATE INDEX IF NOT EXISTS invoice_payments_invoice_idx ON invoice_payments(invoice_id)"),
       db.query("CREATE INDEX IF NOT EXISTS invoice_payments_date_idx ON invoice_payments(paid_at DESC)"),

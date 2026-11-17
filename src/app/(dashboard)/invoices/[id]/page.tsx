@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, CalendarDays, Pencil, ReceiptText } from "lucide-react";
+import { ArrowRight, CalendarDays, Pencil, ReceiptText, Truck } from "lucide-react";
+import DeliveryStatusControl from "@/components/delivery-status-control";
 import InvoiceActions from "@/components/invoice-actions";
 import InvoiceDocument, { type InvoiceDocumentData } from "@/components/invoice-document";
 import PrintInvoiceButton from "@/components/invoice-print-button";
@@ -9,7 +10,11 @@ import { getInvoiceDetail } from "@/lib/invoice-queries";
 import { getPublicInvoiceUrl, invoiceQrDataUrl } from "@/lib/invoice-view";
 import { formatDate } from "@/lib/format";
 import { invoiceStatusLabels, type InvoiceStatus, type PaymentMethod } from "@/lib/invoices";
-import { daysOverdue } from "@/lib/invoice-shared";
+import {
+  daysOverdue,
+  deliveryStatusLabels,
+  normalizeDeliveryStatus,
+} from "@/lib/invoice-shared";
 import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +40,7 @@ export default async function InvoiceDetailPage({
 
   const status = invoice.status as InvoiceStatus;
   const paymentMethod = invoice.payment_method as PaymentMethod;
+  const deliveryStatus = normalizeDeliveryStatus(invoice.delivery_status) ?? "preparing";
   const discountType = invoice.discount_type === "percent" ? "percent" : "amount";
   const created = query.created === "1";
   const autoPrint = query.print === "1";
@@ -63,6 +69,7 @@ export default async function InvoiceDetailPage({
     items: invoice.items,
     company: settings,
     qrImage: shareQr || undefined,
+    deliveryStatus,
   };
 
   const overdue = daysOverdue(invoice.due_date, status);
@@ -77,6 +84,7 @@ export default async function InvoiceDetailPage({
           <div className="flex flex-wrap items-center gap-2.5">
             <p className="eyebrow">مستند الفاتورة</p>
             <span className={`badge ${statusStyle[status] ?? "badge-muted"}`}>{invoiceStatusLabels[status] ?? status}</span>
+            <span className="badge badge-brand"><Truck size={12} />{deliveryStatusLabels[deliveryStatus]}</span>
             {overdue > 0 && <span className="badge badge-danger">متأخرة {overdue} يوم</span>}
           </div>
           <h1 className="page-title mono mt-1" dir="ltr" style={{ textAlign: "right" }}>{invoice.invoice_number}</h1>
@@ -104,6 +112,11 @@ export default async function InvoiceDetailPage({
           <InvoiceDocument invoice={document} />
         </div>
         <div className="print-hidden space-y-4">
+          <DeliveryStatusControl
+            id={invoice.id}
+            invoiceNumber={invoice.invoice_number}
+            initialStatus={deliveryStatus}
+          />
           {shareUrl && shareQr && (
             <InvoiceShareCard
               id={invoice.id}

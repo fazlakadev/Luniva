@@ -8,6 +8,32 @@ export const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   cancelled: "ملغاة",
 };
 
+export const DELIVERY_STATUSES = ["preparing", "ready", "in_transit", "delivered", "cancelled"] as const;
+export type DeliveryStatus = (typeof DELIVERY_STATUSES)[number];
+
+export const deliveryStatusLabels: Record<DeliveryStatus, string> = {
+  preparing: "قيد التجهيز",
+  ready: "جاهز للاستلام",
+  in_transit: "في الطريق",
+  delivered: "تم التوصيل",
+  cancelled: "ملغي",
+};
+
+/** The four visible progress steps; cancellation is shown separately. */
+export const deliveryStatusSteps: Array<Exclude<DeliveryStatus, "cancelled">> = [
+  "preparing",
+  "ready",
+  "in_transit",
+  "delivered",
+];
+
+export function normalizeDeliveryStatus(value: unknown): DeliveryStatus | null {
+  if (typeof value !== "string") return null;
+  return (DELIVERY_STATUSES as readonly string[]).includes(value)
+    ? (value as DeliveryStatus)
+    : null;
+}
+
 export const PAYMENT_METHODS = ["cash", "card", "transfer", "wallet"] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];
 

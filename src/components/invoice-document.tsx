@@ -1,8 +1,11 @@
 import Image from "next/image";
+import { Truck } from "lucide-react";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import {
+  deliveryStatusLabels,
   invoiceStatusLabels,
   paymentMethodLabels,
+  type DeliveryStatus,
   type InvoiceStatus,
   type PaymentMethod,
 } from "@/lib/invoice-shared";
@@ -43,6 +46,7 @@ export type InvoiceDocumentData = {
   items: InvoiceDocumentItem[];
   company?: CompanySettings;
   qrImage?: string;
+  deliveryStatus?: DeliveryStatus;
 };
 
 const INK = "#2b2228";
@@ -100,9 +104,16 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
             {invoice.due_date && (
               <p className="mt-1 text-[10px]" style={{ color: MUTED }}>الاستحقاق: {formatDate(invoice.due_date)}</p>
             )}
-            <span className="mt-2 inline-flex rounded-full px-2.5 py-1 text-[10px] font-black" style={{ background: `${statusColor}18`, color: statusColor }}>
-              {invoiceStatusLabels[invoice.status]}
-            </span>
+            <div className="mt-2 flex flex-wrap justify-end gap-1.5">
+              <span className="inline-flex rounded-full px-2.5 py-1 text-[10px] font-black" style={{ background: `${statusColor}18`, color: statusColor }}>
+                {invoiceStatusLabels[invoice.status]}
+              </span>
+              {invoice.deliveryStatus && (
+                <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black" style={{ background: "#edf3f8", color: "#3d6683" }}>
+                  <Truck size={11} />{deliveryStatusLabels[invoice.deliveryStatus]}
+                </span>
+              )}
+            </div>
           </div>
         </header>
 
@@ -213,18 +224,31 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
           </div>
         </section>
 
-        <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-[9px]" style={{ borderColor: LINE, color: MUTED }}>
-          <div className="flex items-center gap-3">
-            {invoice.qrImage && (
-              <div className="flex items-center gap-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={invoice.qrImage} alt={`رمز معاينة الفاتورة ${invoice.invoice_number}`} className="h-14 w-14" />
-                <span>امسحي الرمز لمعاينة الفاتورة</span>
-              </div>
-            )}
-            <span>{invoice.company?.receiptFooter ?? "شكرًا لتعاملك معنا"}</span>
+        <footer className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t pt-4" style={{ borderColor: LINE, color: MUTED }}>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black" style={{ color: INK }}>
+              {invoice.company?.receiptFooter ?? "شكرًا لتعاملك معنا"}
+            </p>
+            <p className="mt-1 text-[9px] leading-4">
+              الاحتفاظ بهذه الفاتورة يسهّل المتابعة والاستبدال. الأسعار مثبتة لحظة الإصدار.
+            </p>
+            <p className="mono mt-2 text-[9px]" dir="ltr">
+              {invoice.company?.companyName ?? "Luniva"} · {invoice.invoice_number}
+            </p>
           </div>
-          <span className="mono" dir="ltr">{invoice.company?.companyName ?? "Luniva"} · {invoice.invoice_number}</span>
+
+          {invoice.qrImage && (
+            <div className="flex shrink-0 items-center gap-3 rounded-2xl border bg-white p-2.5" style={{ borderColor: LINE }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={invoice.qrImage} alt={`رمز معاينة الفاتورة ${invoice.invoice_number}`} className="h-20 w-20" />
+              <div className="max-w-[130px]">
+                <p className="text-[10px] font-black" style={{ color: INK }}>امسحي رمز QR</p>
+                <p className="mt-1 text-[9px] leading-4">
+                  لمعاينة فاتورتك ومتابعة التوصيل من هاتفك.
+                </p>
+              </div>
+            </div>
+          )}
         </footer>
       </div>
     </article>

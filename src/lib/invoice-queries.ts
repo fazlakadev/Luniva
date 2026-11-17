@@ -259,7 +259,7 @@ export async function exportRows(type: "invoices" | "payments" | "customers") {
       SELECT invoice_number AS "رقم الفاتورة", customer_name AS "العميلة", customer_phone AS "الهاتف",
              to_char(created_at, 'YYYY-MM-DD') AS "التاريخ", total AS "الإجمالي",
              paid_amount AS "المدفوع", GREATEST(total - paid_amount, 0) AS "المتبقي",
-             status AS "الحالة", payment_method AS "طريقة الدفع", due_date AS "تاريخ الاستحقاق"
+             status AS "الحالة", delivery_status AS "حالة التوصيل", payment_method AS "طريقة الدفع", due_date AS "تاريخ الاستحقاق"
       FROM invoices ORDER BY created_at DESC
     `);
     return result.rows;
