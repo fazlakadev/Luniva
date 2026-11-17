@@ -61,8 +61,14 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
   const { products, packages, loadError } = await loadPublicCatalog();
   const offerCount = packages.filter((item) => priceStats(item.variants).topDiscount > 0).length;
 
-  const heroHref = page === "home" ? "/catalog" : "#products";
-  const heroLabel = page === "home" ? "تصفّح كتالوج العملاء" : "تصفّح المنتجات";
+  const isHome = page === "home";
+  const heroHref = isHome ? "/catalog" : "#products";
+  const heroLabel = isHome ? "تصفّح كتالوج العملاء" : "ابدئي بالمنتجات";
+  const heroTitleTop = isHome ? "قطع مختارة" : "كل تشكيلة لونيفا";
+  const heroTitleBottom = isHome ? "بروح مصرية" : "في مكان واحد";
+  const heroText = isHome
+    ? "اكتشفي تشكيلة تجمع القطع اليومية والبكدجات المُنسّقة، بألوان ومقاسات واضحة وأسعار نهائية، لتجدي ما يناسب ذوقك بثقة وسهولة."
+    : "من هنا تفتحي الكتالوج كاملًا: منتجات بكل الألوان والمقاسات، وبكدجات جاهزة بأسعارها بعد الخصم، وتفاصيل كل قطعة قبل الطلب.";
 
   return (
     <PublicSiteShell section={page}>
@@ -82,11 +88,11 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
           <div className="min-w-0">
             <span className="badge badge-brand"><Sparkles size={13} />لونيفا · تأسست عام 2026</span>
             <h1 className="page-title mt-5 text-[2.1rem] leading-[1.18] sm:text-[3rem]">
-              قطع مختارة
-              <span className="mt-1 block" style={{ color: "var(--brand-strong)" }}>بروح مصرية</span>
+              {heroTitleTop}
+              <span className="mt-1 block" style={{ color: "var(--brand-strong)" }}>{heroTitleBottom}</span>
             </h1>
             <p className="page-subtitle mt-4 max-w-xl text-sm leading-9 sm:text-base">
-              اكتشفي تشكيلة تجمع القطع اليومية والبكدجات المُنسّقة، بألوان ومقاسات واضحة وأسعار نهائية، لتجدي ما يناسب ذوقك بثقة وسهولة.
+              {heroText}
             </p>
             <div className="mt-7 flex flex-wrap gap-2">
               <span className="badge badge-lav"><Package size={12} />{formatNumber(products.length)} منتج</span>

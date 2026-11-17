@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Truck } from "lucide-react";
+import { QrCode, ShieldCheck, Smartphone, Truck } from "lucide-react";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import {
   deliveryStatusLabels,
@@ -238,14 +238,35 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
           </div>
 
           {invoice.qrImage && (
-            <div className="flex shrink-0 items-center gap-3 rounded-2xl border bg-white p-2.5" style={{ borderColor: LINE }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={invoice.qrImage} alt={`رمز معاينة الفاتورة ${invoice.invoice_number}`} className="h-20 w-20" />
-              <div className="max-w-[130px]">
-                <p className="text-[10px] font-black" style={{ color: INK }}>امسحي رمز QR</p>
-                <p className="mt-1 text-[9px] leading-4">
-                  لمعاينة فاتورتك ومتابعة التوصيل من هاتفك.
-                </p>
+            <div
+              className="w-full shrink-0 rounded-2xl p-3 sm:w-[268px]"
+              style={{ background: "linear-gradient(135deg, #fff8f9, #fdf1f4)", border: `1px solid ${LINE}` }}
+            >
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg" style={{ background: "#f7e4e9", color: BRAND }}>
+                  <QrCode size={14} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-black" style={{ color: INK }}>امسحي رمز الاستجابة السريعة</p>
+                  <p className="mt-0.5 text-[8px] leading-[13px]" style={{ color: MUTED }}>
+                    لمعاينة فاتورتك ومتابعة التوصيل من هاتفك.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-2.5 flex items-center gap-3 rounded-xl bg-white p-2.5" style={{ border: `1px solid ${LINE}` }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={invoice.qrImage} alt={`رمز معاينة الفاتورة ${invoice.invoice_number}`} className="h-[72px] w-[72px] shrink-0 rounded-lg bg-white" />
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1 text-[9px] font-black" style={{ color: BRAND }}>
+                    <Smartphone size={10} />فاتورتك في جيبك
+                  </p>
+                  <p className="mt-1 text-[8px] leading-[13px]" style={{ color: MUTED }}>
+                    تفتح المعاينة وحالة التوصيل مباشرة على الهاتف.
+                  </p>
+                  <span className="mt-1.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[8px] font-black" style={{ background: "#e9f5ef", color: "#3f8267" }}>
+                    <ShieldCheck size={9} />رابط آمن
+                  </span>
+                </div>
               </div>
             </div>
           )}

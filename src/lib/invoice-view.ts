@@ -88,7 +88,7 @@ export async function invoiceQrDataUrl(url: string) {
     errorCorrectionLevel: "M",
     margin: 1,
     width: 280,
-    color: { dark: "#2b2228", light: "#ffffff" },
+    color: { dark: "#7c4354", light: "#fffaf8" },
   });
 }
 

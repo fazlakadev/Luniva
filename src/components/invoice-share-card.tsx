@@ -65,14 +65,19 @@ export default function InvoiceShareCard({
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col items-center gap-3">
-        <div className="rounded-2xl bg-white p-3 shadow-sm" style={{ border: "1px solid var(--line)" }}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={qr} alt={`رمز QR للفاتورة ${invoiceNumber}`} className="h-36 w-36" />
+      <div className="mt-4 rounded-2xl p-4" style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--surface-2))", border: "1px solid var(--line)" }}>
+        <div className="flex flex-col items-center gap-3">
+          <div className="rounded-2xl bg-white p-3 shadow-sm" style={{ border: "1px solid var(--line)" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qr} alt={`رمز معاينة الفاتورة ${invoiceNumber}`} className="h-40 w-40" />
+          </div>
+          <div className="text-center">
+            <p className="text-[11px] font-black" style={{ color: "var(--brand-strong)" }}>امسحي رمز الاستجابة السريعة</p>
+            <p className="mt-1 text-[10px] font-bold leading-5 muted">
+              يفتح معاينة الفاتورة والمنتجات وحالة التوصيل على الهاتف.
+            </p>
+          </div>
         </div>
-        <p className="text-center text-[10px] font-bold" style={{ color: "var(--muted)" }}>
-          رمز QR يفتح معاينة الفاتورة والمنتجات مباشرة
-        </p>
       </div>
 
       <div className="mt-3 rounded-xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>

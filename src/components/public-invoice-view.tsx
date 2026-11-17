@@ -9,8 +9,10 @@ import {
   List,
   LockKeyhole,
   Package,
+  QrCode,
   ReceiptText,
   ShieldCheck,
+  Smartphone,
   Sparkles,
   Truck,
 } from "lucide-react";
@@ -339,10 +341,47 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
 
         <DeliveryTimeline status={data.deliveryStatus} />
 
+        <section className="app-card mt-4 p-4 print-hidden sm:p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="stat-icon" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
+                <QrCode size={18} />
+              </span>
+              <div className="min-w-0">
+                <h2 className="section-title">فاتورتك على هاتفك</h2>
+                <p className="mt-0.5 text-[11px] muted-2">امسحي الرمز أو افتحي المعاينة في أي وقت.</p>
+              </div>
+            </div>
+            <span className="badge badge-success">
+              <Smartphone size={12} />معاينة ومتابعة
+            </span>
+          </div>
+
+          <div
+            className="mt-4 flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between"
+            style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--surface-2))", border: "1px solid var(--line)" }}
+          >
+            <div className="min-w-0">
+              <p className="text-[12px] font-black" style={{ color: "var(--brand-strong)" }}>امسحي رمز الاستجابة السريعة</p>
+              <p className="mt-2 max-w-md text-[11px] leading-7 muted">
+                لمعاينة فاتورتك ومتابعة التوصيل من هاتفك.
+              </p>
+              <div className="mt-3 grid gap-2 text-[10px] font-bold" style={{ color: "var(--muted)" }}>
+                <p className="flex items-center gap-1.5"><CheckCircle2 size={12} className="shrink-0" style={{ color: "var(--success)" }} />ملخص الدفع والفاتورة الكاملة</p>
+                <p className="flex items-center gap-1.5"><CheckCircle2 size={12} className="shrink-0" style={{ color: "var(--success)" }} />حالة التوصيل محدَّثة من النظام</p>
+              </div>
+            </div>
+            <div className="shrink-0 self-center rounded-2xl bg-white p-3 shadow-sm" style={{ border: "1px solid var(--line)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={data.qrImage} alt={`رمز معاينة الفاتورة ${data.invoiceNumber}`} className="h-36 w-36 sm:h-40 sm:w-40" />
+            </div>
+          </div>
+        </section>
+
         <section className="mt-6 flex flex-wrap items-center justify-between gap-3 print-hidden">
           <div className="min-w-0">
             <h2 className="section-title flex items-center gap-2"><ReceiptText size={17} />الفاتورة الرسمية</h2>
-            <p className="mt-1 text-[11px] muted-2">النسخة الكاملة كما تُطبع، ومعها رمز QR للمعاينة ومتابعة التوصيل.</p>
+            <p className="mt-1 text-[11px] muted-2">النسخة الكاملة كما تُطبع، ومعها رمز الاستجابة السريعة للمعاينة ومتابعة التوصيل.</p>
           </div>
           <PrintInvoiceButton />
         </section>

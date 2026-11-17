@@ -1,25 +1,70 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Gift, Layers3, Package, ShieldCheck, Sparkles } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  CircleHelp,
+  FileText,
+  Gift,
+  Layers3,
+  Package,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
 import ThemeToggle from "@/components/theme-toggle";
 import { getSettings } from "@/lib/settings";
 
-type PublicSection = "home" | "catalog" | "product" | "package";
+export type PublicSection =
+  | "home"
+  | "catalog"
+  | "product"
+  | "package"
+  | "about"
+  | "privacy"
+  | "terms"
+  | "faq";
 
-const NAV_LINKS = [
-  { href: "/", label: "الرئيسية", icon: Sparkles, key: "home" as const },
-  { href: "/catalog", label: "الكتالوج", icon: Layers3, key: "catalog" as const },
-  { href: "/catalog#products", label: "المنتجات", icon: Package, key: "products" as const },
-  { href: "/catalog#packages", label: "البكدجات", icon: Gift, key: "packages" as const },
-  { href: "/about", label: "من نحن", icon: ShieldCheck, key: "about" as const },
+type NavItem = {
+  href: string;
+  label: string;
+  icon: typeof Layers3;
+  key: PublicSection | "products" | "packages";
+};
+
+const CATALOG_LINKS: NavItem[] = [
+  { href: "/", label: "الرئيسية", icon: Sparkles, key: "home" },
+  { href: "/catalog", label: "كل الكتالوج", icon: Layers3, key: "catalog" },
+  { href: "/catalog#products", label: "المنتجات", icon: Package, key: "products" },
+  { href: "/catalog#packages", label: "البكدجات", icon: Gift, key: "packages" },
 ];
 
-function isLinkActive(key: string, section: PublicSection) {
-  if (key === "home") return section === "home";
-  if (key === "catalog") return section !== "home";
-  if (key === "products") return section === "product";
-  if (key === "packages") return section === "package";
-  return false;
+const ABOUT_LINKS: NavItem[] = [
+  { href: "/about", label: "من نحن", icon: ShieldCheck, key: "about" },
+];
+
+const HELP_LINKS: NavItem[] = [
+  { href: "/faq", label: "الأسئلة الشائعة", icon: CircleHelp, key: "faq" },
+  { href: "/privacy", label: "سياسة الخصوصية", icon: ShieldCheck, key: "privacy" },
+  { href: "/terms", label: "الشروط والأحكام", icon: FileText, key: "terms" },
+];
+
+const ALL_NAV_LINKS = [...CATALOG_LINKS, ...ABOUT_LINKS, ...HELP_LINKS];
+
+function isActive(key: string, section: PublicSection) {
+  return key === section;
+}
+
+function isCatalogSection(section: PublicSection) {
+  return section === "home" || section === "catalog" || section === "product" || section === "package";
+}
+
+function navStyle(active: boolean, compact = false) {
+  return {
+    background: active ? "var(--brand-soft)" : "transparent",
+    color: active ? "var(--brand-strong)" : "var(--muted)",
+    border: active ? "1px solid color-mix(in srgb, var(--brand) 24%, transparent)" : "1px solid transparent",
+    fontSize: compact ? "10px" : "11px",
+  };
 }
 
 export default async function PublicSiteShell({
@@ -30,8 +75,10 @@ export default async function PublicSiteShell({
   children: React.ReactNode;
 }) {
   const settings = await getSettings();
-  const primaryHref = section === "home" ? "/catalog" : "/";
-  const primaryLabel = section === "home" ? "كتالوج العملاء" : "الرئيسية";
+  const catalogActive = isCatalogSection(section);
+  const helpActive = section === "faq" || section === "privacy" || section === "terms";
+  const primaryHref = catalogActive ? "/catalog#products" : "/";
+  const primaryLabel = catalogActive ? "تصفّح المنتجات" : "الرئيسية";
 
   return (
     <main
@@ -57,7 +104,7 @@ export default async function PublicSiteShell({
         }}
       />
 
-      <header className="site-header sticky top-0 z-40 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--bg) 86%, transparent)" }}>
+      <header className="site-header sticky top-0 z-40 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--bg) 88%, transparent)" }}>
         <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-6">
           <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="لونيفا - الرئيسية">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white shadow-sm" style={{ border: "1px solid var(--line)" }}>
@@ -70,23 +117,75 @@ export default async function PublicSiteShell({
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex" aria-label="القائمة الرئيسية">
-            {NAV_LINKS.map(({ href, label, icon: Icon, key }) => {
-              const active = isLinkActive(key, section);
-              return (
-                <Link
-                  key={key}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-extrabold transition"
-                  style={{
-                    background: active ? "var(--brand-soft)" : "transparent",
-                    color: active ? "var(--brand-strong)" : "var(--muted)",
-                  }}
-                >
-                  <Icon size={13} />{label}
-                </Link>
-              );
-            })}
+            <div className="group relative">
+              <button
+                type="button"
+                aria-haspopup="true"
+                aria-label="قائمة الكتالوج"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-extrabold transition"
+                style={navStyle(catalogActive)}
+              >
+                <Layers3 size={13} />الكتالوج<ChevronDown size={12} className="transition group-hover:rotate-180" />
+              </button>
+              <div
+                className="invisible absolute right-0 top-full z-50 mt-2 w-64 translate-y-1 rounded-2xl border p-2 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+                style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+              >
+                <p className="px-3 py-2 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>تصفّحي لونيفا في مكان واحد</p>
+                {CATALOG_LINKS.map(({ href, label, icon: Icon, key }) => (
+                  <Link
+                    key={key}
+                    href={href}
+                    aria-current={isActive(key, section) ? "page" : undefined}
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition hover:bg-[var(--brand-soft)]"
+                    style={{ color: isActive(key, section) ? "var(--brand-strong)" : "var(--muted)" }}
+                  >
+                    <Icon size={13} />{label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {ABOUT_LINKS.map(({ href, label, icon: Icon, key }) => (
+              <Link
+                key={key}
+                href={href}
+                aria-current={isActive(key, section) ? "page" : undefined}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-extrabold transition"
+                style={navStyle(isActive(key, section))}
+              >
+                <Icon size={13} />{label}
+              </Link>
+            ))}
+
+            <div className="group relative">
+              <button
+                type="button"
+                aria-haspopup="true"
+                aria-label="قائمة المساعدة والسياسات"
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 font-extrabold transition"
+                style={navStyle(helpActive)}
+              >
+                <CircleHelp size={13} />المساعدة<ChevronDown size={12} className="transition group-hover:rotate-180" />
+              </button>
+              <div
+                className="invisible absolute right-0 top-full z-50 mt-2 w-64 translate-y-1 rounded-2xl border p-2 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
+                style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+              >
+                <p className="px-3 py-2 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>معلومات تهمّك</p>
+                {HELP_LINKS.map(({ href, label, icon: Icon, key }) => (
+                  <Link
+                    key={key}
+                    href={href}
+                    aria-current={isActive(key, section) ? "page" : undefined}
+                    className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition hover:bg-[var(--brand-soft)]"
+                    style={{ color: isActive(key, section) ? "var(--brand-strong)" : "var(--muted)" }}
+                  >
+                    <Icon size={13} />{label}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -99,17 +198,17 @@ export default async function PublicSiteShell({
 
         <nav className="lg:hidden" aria-label="قائمة الجوال">
           <div className="no-scrollbar mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-3 py-2 sm:px-6">
-            {NAV_LINKS.map(({ href, label, icon: Icon, key }) => {
-              const active = isLinkActive(key, section);
+            {ALL_NAV_LINKS.map(({ href, label, icon: Icon, key }) => {
+              const active = isActive(key, section);
               return (
                 <Link
                   key={key}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-extrabold"
                   style={{
+                    ...navStyle(active, true),
                     background: active ? "var(--brand-soft)" : "var(--surface-2)",
-                    color: active ? "var(--brand-strong)" : "var(--muted)",
                     border: `1px solid ${active ? "color-mix(in srgb, var(--brand) 24%, transparent)" : "var(--line)"}`,
                   }}
                 >
@@ -124,7 +223,7 @@ export default async function PublicSiteShell({
       <div className="relative mx-auto w-full max-w-7xl px-3 pb-10 pt-6 sm:px-6 sm:pb-14">{children}</div>
 
       <footer className="site-footer relative mt-14 border-t" style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 72%, transparent)" }}>
-        <div className="mx-auto grid w-full max-w-7xl gap-8 px-3 py-10 sm:grid-cols-3 sm:px-6">
+        <div className="mx-auto grid w-full max-w-7xl gap-8 px-3 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">
           <div className="min-w-0">
             <div className="flex items-center gap-2.5">
               <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white shadow-sm" style={{ border: "1px solid var(--line)" }}>
@@ -141,10 +240,21 @@ export default async function PublicSiteShell({
           </div>
 
           <div className="min-w-0">
-            <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>روابط سريعة</p>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {NAV_LINKS.map(({ href, label }) => (
-                <Link key={href} href={href} className="text-[11px] font-bold transition hover:underline" style={{ color: "var(--muted)" }}>
+            <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>التصفّح</p>
+            <div className="mt-3 space-y-2">
+              {CATALOG_LINKS.map(({ href, label }) => (
+                <Link key={href} href={href} className="block text-[11px] font-bold transition hover:underline" style={{ color: "var(--muted)" }}>
+                  {label}
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>عن لونيفا</p>
+            <div className="mt-3 space-y-2">
+              {[...ABOUT_LINKS, ...HELP_LINKS].map(({ href, label }) => (
+                <Link key={href} href={href} className="block text-[11px] font-bold transition hover:underline" style={{ color: "var(--muted)" }}>
                   {label}
                 </Link>
               ))}
@@ -174,8 +284,9 @@ export default async function PublicSiteShell({
           <div className="mx-auto flex w-full max-w-7xl flex-col items-center justify-between gap-2 px-3 py-4 text-center text-[10px] sm:flex-row sm:px-6 sm:text-right" style={{ color: "var(--muted-2)" }}>
             <span>© {new Date().getFullYear()} لونيفا · شركة ملابس نسائية مصرية · جميع الحقوق محفوظة</span>
             <span className="flex flex-wrap items-center justify-center gap-3">
-              <Link href="/catalog" className="font-bold" style={{ color: "var(--brand-strong)" }}>الكتالوج</Link>
-              <Link href="/about" className="font-bold" style={{ color: "var(--brand-strong)" }}>من نحن</Link>
+              {HELP_LINKS.map(({ href, label }) => (
+                <Link key={href} href={href} className="font-bold" style={{ color: "var(--brand-strong)" }}>{label}</Link>
+              ))}
             </span>
           </div>
         </div>
