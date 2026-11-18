@@ -99,8 +99,8 @@ export function PublicProductDetail({ product }: { product: CatalogProduct }) {
     <PublicSiteShell section="product">
       <Breadcrumb
         trail={[
-          { href: "/catalog", label: "الكتالوج" },
-          { href: "/catalog#products", label: "المنتجات" },
+          { href: "/", label: "الرئيسية" },
+          { href: "/catalog/products", label: "المنتجات" },
           { label: product.name },
         ]}
       />
@@ -217,8 +217,8 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
     <PublicSiteShell section="package">
       <Breadcrumb
         trail={[
-          { href: "/catalog", label: "الكتالوج" },
-          { href: "/catalog#packages", label: "البكدجات" },
+          { href: "/", label: "الرئيسية" },
+          { href: "/catalog/packages", label: "البكدجات" },
           { label: pkg.name },
         ]}
       />

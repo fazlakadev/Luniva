@@ -17,7 +17,7 @@ import { formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
 
 type PublicCatalogProps = {
-  page?: "home" | "catalog" | "products" | "packages";
+  page?: "home" | "products" | "packages";
 };
 
 function priceStats(variants: CatalogVariant[]) {
@@ -65,31 +65,17 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
   const isProducts = page === "products";
   const isPackages = page === "packages";
 
-  const heroHref = isHome
-    ? "/catalog"
-    : isProducts
-      ? "/catalog/packages"
-      : isPackages
-        ? "/catalog/products"
-        : "#products";
-  const heroLabel = isHome
-    ? "تصفّح كتالوج العملاء"
-    : isProducts
-      ? "تصفّح البكدجات"
-      : isPackages
-        ? "تصفّح المنتجات"
-        : "ابدئي بالمنتجات";
-  const heroTitleTop = isHome ? "قطع مختارة" : isProducts ? "كل المنتجات" : isPackages ? "بكدجات لونيفا" : "كل تشكيلة لونيفا";
-  const heroTitleBottom = isHome ? "بروح مصرية" : isProducts ? "بالتفاصيل الكاملة" : isPackages ? "بأسعار بعد الخصم" : "في مكان واحد";
+  const heroHref = isProducts ? "/catalog/packages" : "/catalog/products";
+  const heroLabel = isProducts ? "تصفّح البكدجات" : "تصفّح المنتجات";
+  const heroTitleTop = isHome ? "كل تشكيلة لونيفا" : isProducts ? "كل المنتجات" : "بكدجات لونيفا";
+  const heroTitleBottom = isHome ? "بروح مصرية" : isProducts ? "بالتفاصيل الكاملة" : "بأسعار بعد الخصم";
   const HeroIcon = isPackages ? Gift : Package;
 
   const heroText = isHome
-    ? "اكتشفي تشكيلة تجمع القطع اليومية والبكدجات المُنسّقة، بألوان ومقاسات واضحة وأسعار نهائية، لتجدي ما يناسب ذوقك بثقة وسهولة."
+    ? "اكتشفي تشكيلة تجمع القطع اليومية والبكدجات المُنسّقة في صفحة واحدة، بألوان ومقاسات واضحة وأسعار نهائية، لتجدي ما يناسب ذوقك بثقة وسهولة."
     : isProducts
       ? "تصفّحي كل منتجات لونيفا في صفحة واحدة: الألوان والمقاسات والصور والسعر النهائي لكل متغير، وكل التفاصيل التي تساعدك على المقارنة قبل الطلب."
-      : isPackages
-        ? "توليفات جاهزة تجمع أكثر من قطعة في بكدج واحد بسعر بعد الخصم. افتحي كل بكدج لتري مكوناته والبكدجات الفرعية المتاحة له."
-        : "من هنا تفتحي الكتالوج كاملًا: منتجات بكل الألوان والمقاسات، وبكدجات جاهزة بأسعارها بعد الخصم، وتفاصيل كل قطعة قبل الطلب.";
+      : "توليفات جاهزة تجمع أكثر من قطعة في بكدج واحد بسعر بعد الخصم. افتحي كل بكدج لتري مكوناته والبكدجات الفرعية المتاحة له.";
 
   return (
     <PublicSiteShell section={page}>

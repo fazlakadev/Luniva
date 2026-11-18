@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
-import PublicCatalog from "@/components/public-catalog";
-
-export const dynamic = "force-dynamic";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-  title: "كتالوج العملاء | لونيفا",
-  description: "دليل عرض عام للمنتجات والبكدجات لدى لونيفا، بالألوان والمقاسات والأسعار النهائية بعد الخصم.",
+  title: "لونيفا | الرئيسية",
+  description: "دمجت صفحة الكتالوج مع الصفحة الرئيسية؛ سيتم توجيهك إلى الصفحة الرئيسية تلقائيًا.",
 };
 
-export default function CustomerCatalogPage() {
-  return <PublicCatalog page="catalog" />;
+export default function LegacyCatalogPage() {
+  redirect("/");
 }

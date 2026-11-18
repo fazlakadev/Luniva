@@ -85,7 +85,7 @@ export default function AboutPage() {
               <span className="badge badge-success">منتجات وبكدجات مختارة</span>
             </div>
             <div className="mt-8 flex flex-wrap gap-2">
-              <Link href="/catalog" className="btn btn-primary px-4 py-2.5 text-[11px]">
+              <Link href="/" className="btn btn-primary px-4 py-2.5 text-[11px]">
                 <ArrowLeft size={14} />تصفّح الكتالوج
               </Link>
               <Link href="/faq" className="btn btn-outline px-4 py-2.5 text-[11px]">
@@ -218,7 +218,7 @@ export default function AboutPage() {
               تصفّحي المنتجات والبكدجات كما هي، بأسعار واضحة وتفاصيل كاملة تساعدك على الاختيار.
             </p>
           </div>
-          <Link href="/catalog" className="btn shrink-0 bg-white text-[#7c4354] hover:bg-white/90">
+          <Link href="/" className="btn shrink-0 bg-white text-[#7c4354] hover:bg-white/90">
             <ArrowLeft size={16} />تصفّح الكتالوج
           </Link>
         </div>

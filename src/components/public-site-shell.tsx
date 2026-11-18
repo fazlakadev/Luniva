@@ -7,7 +7,6 @@ import type { PublicSection } from "@/lib/public-sections";
 
 const CATALOG_FOOTER_LINKS = [
   { href: "/", label: "الرئيسية" },
-  { href: "/catalog", label: "كل الكتالوج" },
   { href: "/catalog/products", label: "المنتجات" },
   { href: "/catalog/packages", label: "البكدجات" },
 ];
@@ -57,11 +56,15 @@ export default async function PublicSiteShell({
         }}
       />
 
-      <header
-        className="site-header sticky top-0 z-40 border-b backdrop-blur-xl"
-        style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--bg) 88%, transparent)" }}
-      >
-        <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6 sm:py-3">
+      <header className="site-header sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
+        <div
+          className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3 rounded-[1.5rem] border px-3 py-2.5 backdrop-blur-2xl sm:px-4 sm:py-3"
+          style={{
+            borderColor: "color-mix(in srgb, var(--line) 80%, transparent)",
+            background: "color-mix(in srgb, var(--surface) 72%, transparent)",
+            boxShadow: "var(--shadow-md)",
+          }}
+        >
           <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-2.5" aria-label="لونيفا - الرئيسية">
             <span
               className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white shadow-sm sm:h-11 sm:w-11"

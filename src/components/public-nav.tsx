@@ -45,7 +45,6 @@ const CONTACT_LINK: NavLink = { href: "/contact", label: "تواصل معنا", 
 
 const CATALOG_LINKS: NavLink[] = [
   HOME_LINK,
-  { href: "/catalog", label: "كل الكتالوج", icon: Layers3, section: "catalog" },
   { href: "/catalog/products", label: "المنتجات", icon: Package, section: "products" },
   { href: "/catalog/packages", label: "البكدجات", icon: Gift, section: "packages" },
 ];
@@ -59,7 +58,7 @@ const SUPPORT_LINKS: NavLink[] = [
 function resolveActive(pathname: string, section: PublicSection): PublicSection {
   if (pathname.startsWith("/catalog/products")) return "products";
   if (pathname.startsWith("/catalog/packages")) return "packages";
-  if (pathname === "/catalog") return "catalog";
+  if (pathname === "/catalog") return "home";
   if (pathname === "/about") return "about";
   if (pathname === "/contact") return "contact";
   if (pathname === "/faq") return "faq";
@@ -198,15 +197,6 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
             ))}
           </div>
         </div>
-
-        <Link
-          href={CONTACT_LINK.href}
-          aria-current={active === "contact" ? "page" : undefined}
-          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-extrabold transition hover:bg-[var(--brand-soft)]"
-          style={navStyle(active === "contact")}
-        >
-          <Mail size={14} />تواصل معنا
-        </Link>
       </nav>
 
       <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">

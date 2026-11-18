@@ -1,6 +1,5 @@
 export type PublicSection =
   | "home"
-  | "catalog"
   | "products"
   | "packages"
   | "product"
@@ -16,7 +15,6 @@ export type PublicNavKey = PublicSection | "support";
 export function isCatalogSection(section: PublicSection) {
   return (
     section === "home" ||
-    section === "catalog" ||
     section === "products" ||
     section === "packages" ||
     section === "product" ||

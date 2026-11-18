@@ -144,7 +144,7 @@ export default function PublicInfoPage({
             <p className="mt-2 max-w-lg text-sm leading-8 text-white/75">{ctaText}</p>
           </div>
           <div className="flex flex-wrap shrink-0 gap-2">
-            <Link href="/catalog" className="btn bg-white text-[#7c4354] hover:bg-white/90">
+            <Link href="/" className="btn bg-white text-[#7c4354] hover:bg-white/90">
               <ArrowLeft size={16} />تصفّح الكتالوج
             </Link>
             <Link href="/faq" className="btn border-white/40 text-white hover:bg-white/10">

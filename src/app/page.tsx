@@ -4,8 +4,8 @@ import PublicCatalog from "@/components/public-catalog";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "لونيفا | المنتجات والبكدجات",
-  description: "تصفّحي تشكيلة لونيفا من المنتجات والبكدجات، بأسعار واضحة وتفاصيل كاملة في دليل عرض عام.",
+  title: "لونيفا | الرئيسية والكتالوج",
+  description: "الصفحة الرئيسية والكتالوج في مكان واحد: منتجات وبكدجات لونيفا بألوان ومقاسات وأسعار نهائية وتفاصيل كاملة.",
 };
 
 export default function PublicCatalogPage() {
