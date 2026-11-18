@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import ClothingRailSection from "@/components/home/clothing-rail-section";
+import SectionDivider from "@/components/home/section-divider";
 import TurningPortraitHero from "@/components/home/turning-portrait-hero";
 import ValueCard from "@/components/home/value-card";
 import AmbientGlow from "@/components/motion/ambient-glow";
@@ -128,7 +129,10 @@ export default async function PublicCatalog({ page = "home", query = "" }: Publi
   return (
     <PublicSiteShell section={page}>
       {isHome ? (
-        <TurningPortraitHero />
+        <>
+          <TurningPortraitHero />
+          <SectionDivider />
+        </>
       ) : (
       <section
         className="relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14"

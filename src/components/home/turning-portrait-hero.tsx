@@ -4,8 +4,8 @@
 // Adapted for Luniva: Arabic copy, brand colours and internal links.
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { motion, useInView, useMotionValue, useReducedMotion } from "motion/react";
-import { ArrowLeft, ArrowRight, Gift, Package, Ruler, ShieldCheck } from "lucide-react";
+import { motion, useInView, useReducedMotion } from "motion/react";
+import { ArrowLeft, Gift, Package, Ruler, ShieldCheck } from "lucide-react";
 
 /* A hero in which the person follows the mouse. She does not stand on one
    picture but on 122 frames of a turn: the horizontal mouse position says
@@ -70,21 +70,21 @@ const KARTEN = [
     label: "التشكيلة",
     titel: "منتجات مُنتقاة",
     text: "قطع يومية وخيارات للمناسبات في مكان واحد.",
-    wert: "✓",
+    wert: "مختارة",
   },
   {
     icon: Ruler,
     label: "المقاسات",
     titel: "كل مقاس واضح",
     text: "تعرفي اللون والمقاس قبل أن تختاري.",
-    wert: "S–XL",
+    wert: "ص–ك",
   },
   {
     icon: ShieldCheck,
     label: "الأسعار",
     titel: "بعد الخصم",
     text: "السعر النهائي ظاهر بلا خطوات إضافية.",
-    wert: "%",
+    wert: "٪",
   },
 ];
 
@@ -139,7 +139,7 @@ function Hochzaehler({ bis, aktiv }: { bis: number; aktiv: boolean }) {
     return () => cancelAnimationFrame(frame);
   }, [aktiv, bis, reduce]);
 
-  return <>{wert.toLocaleString("en-GB")}</>;
+  return <>{wert.toLocaleString("ar-EG")}</>;
 }
 
 export function TurningPortraitHero() {
@@ -157,10 +157,6 @@ export function TurningPortraitHero() {
   const folgt = useRef(false);
   /** Last pointer position, as a fraction of the width. Null until there is one. */
   const zeigerX = useRef<number | null>(null);
-
-  /* The angle of the arrow in the button. It points at the pointer wherever
-     that is: the button looks back, just like the person. */
-  const winkel = useMotionValue(-35);
 
   /** Points the turn at a fraction of the section width. */
   const setzeZiel = useCallback((x: number) => {
@@ -298,15 +294,6 @@ export function TurningPortraitHero() {
        mouse and then leaves it there should not have to move again. */
     zeigerX.current = x;
     if (folgt.current) setzeZiel(x);
-
-    const knopf = ref.current.querySelector<HTMLElement>("[data-orbit]");
-    if (knopf) {
-      const r = knopf.getBoundingClientRect();
-      winkel.set(
-        (Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)) * 180) /
-          Math.PI,
-      );
-    }
   };
 
   const auftritt = (verzug: number) => ({
@@ -394,46 +381,14 @@ export function TurningPortraitHero() {
             </motion.p>
 
             <motion.div
-              className="mt-5 grid grid-cols-[76px_1fr] items-center gap-4 md:mt-6 md:grid-cols-[104px_1fr] md:gap-6"
+              className="mt-5 flex items-center gap-3 md:mt-6"
               {...auftritt(0.78)}
             >
-              <Link
-                href="/catalog/products"
-                data-orbit
-                aria-label="تصفّح منتجات لونيفا"
-                className="group relative grid h-[76px] w-[76px] place-items-center md:h-[104px] md:w-[104px]"
-              >
-                <span
-                  aria-hidden
-                  className="pointer-events-none absolute inset-6 rounded-full opacity-0 transition-[opacity,transform] duration-500 ease-[cubic-bezier(.16,1,.3,1)] group-hover:scale-125 group-hover:opacity-100 motion-reduce:transition-none"
-                  style={{ background: `radial-gradient(circle, ${AKZENT}33, transparent 68%)` }}
-                />
-                <svg
-                  viewBox="0 0 118 118"
-                  aria-hidden
-                  className={`absolute inset-0 h-full w-full ${reduce ? "" : "motion-safe:animate-[spin_21s_linear_infinite] group-hover:motion-safe:animate-[spin_10s_linear_infinite]"}`}
-                >
-                  <defs>
-                    <path id="luniva-ring" d="M59,59 m-47,0 a47,47 0 1,1 94,0 a47,47 0 1,1 -94,0" />
-                  </defs>
-                  <text
-                    fill="rgba(255,255,255,.8)"
-                    style={{ fontSize: "8.2px", fontWeight: 600, letterSpacing: "1.1px" }}
-                  >
-                    <textPath href="#luniva-ring" startOffset="0%">
-                      LUNIVA · CATALOG · 2026 ·
-                    </textPath>
-                  </text>
-                </svg>
-                <motion.span
-                  aria-hidden
-                  className="grid h-[33px] w-[33px] place-items-center"
-                  style={{ rotate: reduce ? 145 : winkel }}
-                >
-                  <ArrowLeft className="h-6 w-6" strokeWidth={1.6} />
-                </motion.span>
-              </Link>
-
+              <span
+                aria-hidden="true"
+                className="h-10 w-[3px] shrink-0 rounded-full"
+                style={{ background: AKZENT }}
+              />
               <div className="min-w-0">
                 <span className="flex items-baseline gap-1.5 whitespace-nowrap">
                   <strong className="text-[21px] leading-none font-semibold tracking-[-.02em] md:text-[26px]">

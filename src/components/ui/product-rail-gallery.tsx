@@ -64,7 +64,7 @@ const GAP = 0.035;
 const MAX_H = 400;
 const MIN_WIDE_H = 200;
 const CAROUSEL_H = 340;
-const DEFAULT_LABELS: ClothingRailHeroLabels = { front: "Front", back: "Back", close: "Close", show: "Show" };
+const DEFAULT_LABELS: ClothingRailHeroLabels = { front: "أمامي", back: "خلفي", close: "إغلاق", show: "عرض" };
 
 type Tone = { d: string; t: number };
 type Art = {
@@ -932,7 +932,7 @@ export function ClothingRailHero({
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10" style={{ background: "radial-gradient(120% 70% at 18% 0%, color-mix(in oklab, var(--ink) 7%, transparent), transparent 62%), linear-gradient(to bottom, transparent 55%, color-mix(in oklab, var(--ink) 5%, transparent))" }} />
       {(eyebrow || heading) && (
         <header className="relative z-10 flex flex-col items-center gap-2 px-6 pt-8 text-center">
-          {eyebrow && <p className="text-[11px] font-medium uppercase tracking-[0.28em] text-muted-foreground">{eyebrow}</p>}
+          {eyebrow && <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground">{eyebrow}</p>}
           {heading && <h2 className="text-balance text-2xl font-medium tracking-tight sm:text-3xl">{heading}</h2>}
         </header>
       )}
@@ -941,7 +941,7 @@ export function ClothingRailHero({
         ref={stageRef}
         data-stage
         role="group"
-        aria-label={heading ?? "Clothing rail"}
+        aria-label={heading ?? "تشكيلة الملابس"}
         className="relative mt-5 w-full touch-pan-y select-none"
         style={{ height: Math.round(railY + h * bottom + h * 0.05 + 12), overflowX: "clip" }}
         onPointerMove={onPointerMove}
@@ -1220,8 +1220,8 @@ function Detail({ uid, item, index, total, hanger, labels, reduced, source, onLi
       </button>
       <div className="relative grid w-full max-w-5xl items-center gap-10 pt-10 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
         {stage}
-        <div className={`flex flex-col gap-4 text-center transition-[opacity,transform] delay-150 duration-500 motion-reduce:transition-none md:text-left ${shown ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
-          <p className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground">{String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}</p>
+        <div className={`flex flex-col gap-4 text-center transition-[opacity,transform] delay-150 duration-500 motion-reduce:transition-none md:text-right ${shown ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
+          <p className="font-mono text-[11px] tracking-[0.2em] text-muted-foreground">{(index + 1).toLocaleString("ar-EG").padStart(2, "٠")} / {total.toLocaleString("ar-EG").padStart(2, "٠")}</p>
           <h3 id={titleId} className="text-2xl font-medium tracking-tight sm:text-3xl">{item.name}</h3>
           {item.description && <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>}
           {item.details && item.details.length > 0 && (
@@ -1233,7 +1233,7 @@ function Detail({ uid, item, index, total, hanger, labels, reduced, source, onLi
             {(["front", "back"] as const).map((face) => (
               <button key={face} type="button" aria-pressed={side === face} onClick={() => turnTo(face)} className={`relative pb-1.5 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${side === face ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
                 {face === "front" ? labels.front : labels.back}
-                <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-px origin-left bg-foreground transition-transform duration-300 motion-reduce:transition-none ${side === face ? "scale-x-100" : "scale-x-0"}`} />
+                <span aria-hidden="true" className={`absolute inset-x-0 bottom-0 h-px origin-right bg-foreground transition-transform duration-300 motion-reduce:transition-none ${side === face ? "scale-x-100" : "scale-x-0"}`} />
               </button>
             ))}
           </div>
