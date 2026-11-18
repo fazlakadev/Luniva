@@ -9,6 +9,7 @@ import {
   Gift,
   LayoutGrid,
   LogOut,
+  MoreHorizontal,
   Package,
   PanelRightClose,
   PanelRightOpen,
@@ -18,6 +19,7 @@ import {
   ShieldCheck,
   UsersRound,
   Wallet,
+  X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/theme-toggle";
@@ -49,10 +51,20 @@ export default function AppShell({ children, name }: { children: React.ReactNode
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // Restore the persisted sidebar state once the client is available.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setCollapsed(window.localStorage.getItem("luniva_sidebar") === "collapsed"); }, []);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setMoreOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [moreOpen]);
 
   function toggleSidebar() {
     const next = !collapsed;
@@ -68,6 +80,9 @@ export default function AppShell({ children, name }: { children: React.ReactNode
 
   const isActive = (href: string) =>
     pathname === href || (href !== "/workspace" && pathname.startsWith(href));
+
+  const moreActive = ["/products", "/packages", "/settings", "/invoices/new", "/packages/new", "/products/new", "/customers/new"]
+    .some((prefix) => pathname.startsWith(prefix));
 
   return (
     <div className="min-h-screen overflow-x-clip" style={{ background: "var(--bg)", color: "var(--ink)" }} dir="rtl">
@@ -336,9 +351,18 @@ export default function AppShell({ children, name }: { children: React.ReactNode
             <span className="truncate text-xs font-extrabold" style={{ color: "var(--ink)" }}>مساحة العمل</span>
           </Link>
           <div className="flex items-center gap-1.5">
-            <Link href="/invoices/new" className="btn btn-primary px-3 py-2 text-[11px]">
-              <ReceiptText size={14} />فاتورة
+            <Link href="/invoices/new" className="btn btn-primary px-2.5 py-2 text-[11px] sm:px-3" aria-label="فاتورة جديدة">
+              <ReceiptText size={14} /><span className="hidden sm:inline">فاتورة</span>
             </Link>
+            <button
+              type="button"
+              onClick={() => setMoreOpen(true)}
+              className="btn btn-soft px-2.5 py-2"
+              aria-label="القائمة السريعة"
+              title="القائمة السريعة"
+            >
+              <Plus size={16} />
+            </button>
             <ThemeToggle />
             <button onClick={logout} title="تسجيل الخروج" aria-label="تسجيل الخروج" className="btn btn-outline px-2.5 py-2">
               <LogOut size={16} />
@@ -352,7 +376,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
       </main>
 
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 flex justify-around gap-1 rounded-2xl border p-1.5 shadow-xl backdrop-blur-xl xl:hidden print:hidden"
+        className="fixed inset-x-2 bottom-2 z-40 flex justify-around gap-0.5 rounded-2xl border p-1.5 shadow-xl backdrop-blur-xl sm:inset-x-3 sm:bottom-3 sm:gap-1 xl:hidden print:hidden"
         style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 94%, transparent)" }}
       >
         {mobileNav.map(({ href, short, icon: Icon }) => {
@@ -362,7 +386,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
               key={href}
               href={href}
               aria-current={active ? "page" : undefined}
-              className="flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] font-extrabold transition"
+              className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-extrabold transition sm:text-[10px]"
               style={active ? { background: "var(--brand-soft)", color: "var(--brand-strong)" } : { color: "var(--muted)" }}
             >
               <span
@@ -371,11 +395,90 @@ export default function AppShell({ children, name }: { children: React.ReactNode
               >
                 <Icon size={17} />
               </span>
-              {short}
+              <span className="w-full truncate text-center">{short}</span>
             </Link>
           );
         })}
+        <button
+          type="button"
+          onClick={() => setMoreOpen((open) => !open)}
+          aria-expanded={moreOpen}
+          aria-label="المزيد من الأقسام"
+          className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-0.5 py-1.5 text-[9px] font-extrabold transition sm:text-[10px]"
+          style={moreActive || moreOpen ? { background: "var(--brand-soft)", color: "var(--brand-strong)" } : { color: "var(--muted)" }}
+        >
+          <span
+            className="grid h-7 w-7 place-items-center rounded-lg"
+            style={moreActive || moreOpen ? { background: "var(--surface)" } : undefined}
+          >
+            <MoreHorizontal size={17} />
+          </span>
+          <span className="w-full truncate text-center">المزيد</span>
+        </button>
       </nav>
+
+      {moreOpen && (
+        <div className="fixed inset-0 z-50 xl:hidden print:hidden">
+          <button
+            type="button"
+            aria-label="إغلاق القائمة السريعة"
+            onClick={() => setMoreOpen(false)}
+            className="absolute inset-0 cursor-default bg-[#1c101c]/45 backdrop-blur-sm"
+          />
+          <div
+            className="absolute inset-x-2 bottom-[76px] max-h-[72dvh] overflow-y-auto rounded-2xl border p-3 shadow-xl sm:inset-x-3 sm:bottom-[86px] sm:p-4"
+            style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+          >
+            <div className="mb-3 flex items-center justify-between gap-2 px-1">
+              <p className="text-[12px] font-black" style={{ color: "var(--ink)" }}>قائمة سريعة</p>
+              <button
+                type="button"
+                onClick={() => setMoreOpen(false)}
+                aria-label="إغلاق"
+                className="btn-icon"
+                style={{ color: "var(--muted)" }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <p className="px-1 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>أقسام إضافية</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {nav.filter(({ href }) => ["/products", "/packages", "/settings"].includes(href)).map(({ href, label, icon: Icon }) => {
+                const active = isActive(href);
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    onClick={() => setMoreOpen(false)}
+                    className="flex min-w-0 items-center gap-2 rounded-xl border p-3 text-[11px] font-extrabold"
+                    style={active ? { background: "var(--brand-soft)", borderColor: "var(--brand)", color: "var(--brand-strong)" } : { borderColor: "var(--line)", color: "var(--ink-soft)" }}
+                  >
+                    <Icon size={15} className="shrink-0" />
+                    <span className="truncate">{label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+
+            <p className="mt-4 px-1 text-[10px] font-black" style={{ color: "var(--lav-strong)" }}>إجراءات سريعة</p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {quickLinks.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMoreOpen(false)}
+                  className="flex min-w-0 items-center gap-2 rounded-xl border p-3 text-[11px] font-extrabold"
+                  style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}
+                >
+                  <Icon size={15} className="shrink-0" />
+                  <span className="truncate">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <WelcomeDialog name={name} />
     </div>

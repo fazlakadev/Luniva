@@ -234,14 +234,14 @@ export default function InvoicesList({
                     </div>
                   </div>
 
-                  <div className="flex gap-2 lg:flex-col">
-                    <Link href={`/invoices/${invoice.id}`} className="btn btn-outline flex-1 px-3 py-2 text-[11px] lg:flex-none">
-                      <Eye size={14} />عرض وطباعة
+                  <div className="flex flex-wrap gap-2 lg:flex-col">
+                    <Link href={`/invoices/${invoice.id}`} className="btn btn-outline min-w-0 flex-1 px-3 py-2 text-[11px] lg:flex-none">
+                      <Eye size={14} /><span className="sm:hidden">عرض</span><span className="hidden sm:inline">عرض وطباعة</span>
                     </Link>
-                    <Link href={`/invoices/${invoice.id}#manage`} className="btn btn-soft flex-1 px-3 py-2 text-[11px] lg:flex-none">
+                    <Link href={`/invoices/${invoice.id}#manage`} className="btn btn-soft min-w-0 flex-1 px-3 py-2 text-[11px] lg:flex-none">
                       <CircleDollarSign size={14} />تحصيل
                     </Link>
-                    <Link href={`/invoices/${invoice.id}/edit`} className="btn btn-outline flex-1 px-3 py-2 text-[11px] lg:flex-none">
+                    <Link href={`/invoices/${invoice.id}/edit`} className="btn btn-outline min-w-0 flex-1 px-3 py-2 text-[11px] lg:flex-none">
                       <Pencil size={14} />تعديل
                     </Link>
                   </div>

@@ -150,16 +150,16 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
     <main dir="rtl" className="min-h-screen overflow-x-hidden px-3 py-6 sm:px-6 sm:py-10" style={{ background: "var(--bg)", color: "var(--ink)" }}>
       <div className="mx-auto w-full max-w-4xl">
         <header className="mb-5 flex flex-wrap items-center justify-between gap-3 print-hidden">
-          <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm" style={{ border: "1px solid var(--line)" }}>
-              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={96} height={96} className="h-10 w-10 object-contain" />
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-2xl bg-white shadow-sm sm:h-12 sm:w-12" style={{ border: "1px solid var(--line)" }}>
+              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={96} height={96} className="h-8 w-8 object-contain sm:h-10 sm:w-10" />
             </span>
-            <div>
-              <p className="text-base font-black tracking-wide" style={{ color: "var(--ink)" }}>{data.company.name}</p>
-              <p className="text-[11px] font-bold" style={{ color: "var(--brand-strong)" }}>{data.company.tagline}</p>
+            <div className="min-w-0">
+              <p className="break-words text-sm font-black tracking-wide sm:text-base" style={{ color: "var(--ink)" }}>{data.company.name}</p>
+              <p className="break-words text-[11px] font-bold" style={{ color: "var(--brand-strong)" }}>{data.company.tagline}</p>
             </div>
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold" style={{ background: "var(--success-soft)", color: "var(--success)" }}>
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[10px] font-extrabold" style={{ background: "var(--success-soft)", color: "var(--success)" }}>
             <LockKeyhole size={12} />صفحة خاصة بالفاتورة فقط
           </span>
         </header>

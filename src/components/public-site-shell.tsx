@@ -79,6 +79,7 @@ export default async function PublicSiteShell({
   const helpActive = section === "faq" || section === "privacy" || section === "terms";
   const primaryHref = catalogActive ? "/catalog#products" : "/";
   const primaryLabel = catalogActive ? "تصفّح المنتجات" : "الرئيسية";
+  const primaryLabelShort = catalogActive ? "المنتجات" : "الرئيسية";
 
   return (
     <main
@@ -105,14 +106,14 @@ export default async function PublicSiteShell({
       />
 
       <header className="site-header sticky top-0 z-40 border-b backdrop-blur-xl" style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--bg) 88%, transparent)" }}>
-        <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-3 py-3 sm:px-6">
-          <Link href="/" className="flex min-w-0 items-center gap-2.5" aria-label="لونيفا - الرئيسية">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white shadow-sm" style={{ border: "1px solid var(--line)" }}>
-              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} preload className="h-9 w-9 object-contain" />
+        <div className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-2.5" aria-label="لونيفا - الرئيسية">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white shadow-sm sm:h-11 sm:w-11" style={{ border: "1px solid var(--line)" }}>
+              <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} preload className="h-8 w-8 object-contain sm:h-9 sm:w-9" />
             </span>
             <span className="min-w-0">
-              <span className="block truncate text-base font-black tracking-tight" style={{ color: "var(--ink)" }}>لونيفا</span>
-              <span className="block truncate text-[9px] font-bold" style={{ color: "var(--muted-2)" }}>شركة ملابس نسائية مصرية</span>
+              <span className="block truncate text-sm font-black tracking-tight sm:text-base" style={{ color: "var(--ink)" }}>لونيفا</span>
+              <span className="hidden truncate text-[9px] font-bold sm:block" style={{ color: "var(--muted-2)" }}>شركة ملابس نسائية مصرية</span>
             </span>
           </Link>
 
@@ -188,16 +189,18 @@ export default async function PublicSiteShell({
             </div>
           </nav>
 
-          <div className="flex shrink-0 items-center gap-2">
-            <Link href={primaryHref} className="btn btn-primary px-3 py-2 text-[11px]">
-              <ArrowLeft size={13} />{primaryLabel}
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Link href={primaryHref} className="btn btn-primary px-2.5 py-2 text-[10px] sm:px-3 sm:text-[11px]" aria-label={primaryLabel}>
+              <ArrowLeft size={13} />
+              <span className="hidden sm:inline">{primaryLabel}</span>
+              <span className="sm:hidden">{primaryLabelShort}</span>
             </Link>
             <ThemeToggle showLabel={false} />
           </div>
         </div>
 
         <nav className="lg:hidden" aria-label="قائمة الجوال">
-          <div className="no-scrollbar mx-auto flex w-full max-w-7xl gap-1 overflow-x-auto px-3 py-2 sm:px-6">
+          <div className="mobile-scroll mx-auto flex w-full max-w-7xl gap-1 px-3 pb-2.5 pt-2 sm:px-6">
             {ALL_NAV_LINKS.map(({ href, label, icon: Icon, key }) => {
               const active = isActive(key, section);
               return (

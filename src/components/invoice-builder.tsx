@@ -587,16 +587,16 @@ export default function InvoiceBuilder({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[11px] font-extrabold" style={{ color: "var(--ink)" }}>{item.name}</p>
                       <p className="truncate text-[9px]" style={{ color: "var(--muted-2)" }}>{item.subtitle}</p>
-                      <p className="mono text-[9px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{item.sku}</p>
+                      <p className="mono max-w-full truncate text-[9px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{item.sku}</p>
                     </div>
                     <div className="flex shrink-0 items-center rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
                       <button type="button" onClick={() => changeQuantity(item.key, -1)} className="grid h-7 w-7 place-items-center" style={{ color: "var(--muted)" }} aria-label="تقليل الكمية"><Minus size={12} /></button>
                       <span className="w-6 text-center text-[11px] font-black mono" style={{ color: "var(--ink)" }}>{formatNumber(item.quantity)}</span>
                       <button type="button" onClick={() => changeQuantity(item.key, 1)} className="grid h-7 w-7 place-items-center" style={{ color: "var(--muted)" }} aria-label="زيادة الكمية"><Plus size={12} /></button>
                     </div>
-                    <div className="w-16 shrink-0 text-left">
-                      <p className="money text-[11px]" style={{ color: "var(--brand-strong)" }}>{formatMoney(item.unitPrice * item.quantity)}</p>
-                      <p className="text-[9px]" style={{ color: "var(--muted-2)" }}>{formatMoney(item.unitPrice)} / قطعة</p>
+                    <div className="w-14 shrink-0 text-left sm:w-16">
+                      <p className="money text-[10px] sm:text-[11px]" style={{ color: "var(--brand-strong)" }}>{formatMoney(item.unitPrice * item.quantity)}</p>
+                      <p className="hidden text-[9px] sm:block" style={{ color: "var(--muted-2)" }}>{formatMoney(item.unitPrice)} / قطعة</p>
                     </div>
                     <button type="button" onClick={() => removeItem(item.key)} className="btn-icon shrink-0" style={{ color: "var(--danger)" }} aria-label="حذف العنصر"><Trash2 size={14} /></button>
                   </div>

@@ -30,6 +30,10 @@ export default async function ReportsPage() {
     const [year, month] = value.split("-");
     return `${monthLabels[month] ?? month} ${year}`;
   };
+  const shortMonthLabel = (value: string) => {
+    const [year, month] = value.split("-");
+    return `${(monthLabels[month] ?? month).slice(0, 3)} ${year.slice(-2)}`;
+  };
 
   return (
     <div className="page-enter">
@@ -88,17 +92,20 @@ export default async function ReportsPage() {
 
         <section className="app-card p-5">
           <h2 className="section-title">اتجاه التحصيل (آخر ٦ أشهر)</h2>
-          <div className="mt-5 flex h-44 items-end justify-between gap-2" style={{ borderBottom: "1px solid var(--line)" }}>
-            {monthly.length === 0 ? <p className="mx-auto self-center text-sm muted">لا توجد بيانات كافية.</p> : monthly.map((row) => {
-              const height = Math.max(6, Math.round((Number(row.amount) / maxMonth) * 100));
-              return (
-                <div key={row.month} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
-                  <span className="money text-[9px] font-black" style={{ color: "var(--brand-strong)" }}>{formatMoney(row.amount)}</span>
-                  <div className="w-full max-w-12 rounded-t-lg" style={{ height: `${height}%`, background: "linear-gradient(180deg, var(--brand), var(--lav))" }} />
-                  <span className="whitespace-nowrap text-[9px]" style={{ color: "var(--muted-2)" }}>{monthLabel(row.month)}</span>
-                </div>
-              );
-            })}
+          <div className="mobile-scroll mt-5 pb-2">
+            <div className="flex h-44 min-w-[360px] items-end justify-between gap-2" style={{ borderBottom: "1px solid var(--line)" }}>
+              {monthly.length === 0 ? <p className="mx-auto self-center text-sm muted">لا توجد بيانات كافية.</p> : monthly.map((row) => {
+                const height = Math.max(6, Math.round((Number(row.amount) / maxMonth) * 100));
+                return (
+                  <div key={row.month} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-2">
+                    <span className="money text-[9px] font-black" style={{ color: "var(--brand-strong)" }}>{formatMoney(row.amount)}</span>
+                    <div className="w-full max-w-12 rounded-t-lg" style={{ height: `${height}%`, background: "linear-gradient(180deg, var(--brand), var(--lav))" }} />
+                    <span className="whitespace-nowrap text-[9px] sm:hidden" style={{ color: "var(--muted-2)" }}>{shortMonthLabel(row.month)}</span>
+                    <span className="hidden whitespace-nowrap text-[9px] sm:inline" style={{ color: "var(--muted-2)" }}>{monthLabel(row.month)}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </section>
 

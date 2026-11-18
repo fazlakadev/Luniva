@@ -97,7 +97,7 @@ export default function PageSkeleton({
                   <Bar className="mt-2 h-3 w-48" />
                 </div>
               </div>
-              <Block className="h-10 w-48" />
+              <Block className="hidden h-10 w-48 max-w-full sm:block" />
             </div>
           </div>
           <div className="divide-y" style={{ borderColor: "var(--line)" }}>

@@ -372,7 +372,7 @@ export default function ProductShowcase({
               </div>
             )}
 
-            <div className="mt-5 grid grid-cols-3 gap-2">
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
               <div className="rounded-xl p-3 text-center" style={{ background: "var(--surface-2)" }}>
                 <Wallet size={15} className="mx-auto" style={{ color: "var(--brand-strong)" }} />
                 <p className="money mt-1.5 text-sm" style={{ color: "var(--ink)" }}>{formatMoney(stats.min)}</p>

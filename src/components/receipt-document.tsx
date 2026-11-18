@@ -36,11 +36,11 @@ export default function ReceiptDocument({ receipt, settings }: { receipt: Receip
     <article className="invoice-sheet mx-auto w-full max-w-[720px] overflow-hidden rounded-2xl" dir="rtl">
       <div className="p-6 sm:p-9">
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-5" style={{ borderColor: LINE }}>
-          <div className="flex items-center gap-3">
-            <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-14 w-14 object-contain" />
-            <div>
-              <p className="text-lg font-black tracking-[0.14em]" style={{ color: INK }}>{settings.companyName}</p>
-              <p className="mt-0.5 text-[10px] font-extrabold" style={{ color: BRAND }}>{settings.companyTagline}</p>
+          <div className="flex min-w-0 items-center gap-3">
+            <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-12 w-12 shrink-0 object-contain sm:h-14 sm:w-14" />
+            <div className="min-w-0">
+              <p className="break-words text-base font-black tracking-[0.08em] sm:text-lg sm:tracking-[0.14em]" style={{ color: INK }}>{settings.companyName}</p>
+              <p className="mt-0.5 break-words text-[10px] font-extrabold" style={{ color: BRAND }}>{settings.companyTagline}</p>
               {(settings.companyPhone || settings.taxNumber) && (
                 <p className="mt-1 text-[10px]" style={{ color: MUTED }}>
                   {[settings.companyPhone && `هاتف: ${settings.companyPhone}`, settings.taxNumber && `سجل ضريبي: ${settings.taxNumber}`].filter(Boolean).join(" · ")}
@@ -89,7 +89,7 @@ export default function ReceiptDocument({ receipt, settings }: { receipt: Receip
           <p className="mt-1 text-[10px]" style={{ color: MUTED }}>{receipt.notes || "—"}</p>
         </section>
 
-        <section className="mt-5 grid grid-cols-3 gap-2">
+        <section className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
           {[
             { label: "إجمالي الفاتورة", value: total },
             { label: "إجمالي المحصّل", value: paid },

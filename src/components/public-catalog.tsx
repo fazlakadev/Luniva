@@ -87,7 +87,7 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
         <div className="relative grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
           <div className="min-w-0">
             <span className="badge badge-brand"><Sparkles size={13} />لونيفا · تأسست عام 2026</span>
-            <h1 className="page-title mt-5 text-[2.1rem] leading-[1.18] sm:text-[3rem]">
+            <h1 className="page-title mt-5 break-words leading-[1.18] sm:text-[3rem]">
               {heroTitleTop}
               <span className="mt-1 block" style={{ color: "var(--brand-strong)" }}>{heroTitleBottom}</span>
             </h1>
@@ -99,11 +99,11 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
               <span className="badge badge-brand"><Gift size={12} />{formatNumber(packages.length)} بكدج</span>
               <span className="badge badge-success"><BadgePercent size={12} />{formatNumber(offerCount)} بكدج بخصم</span>
             </div>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Link href={heroHref} className="btn btn-primary px-5 py-3 text-sm">
+            <div className="mt-8 flex flex-wrap items-center gap-2 sm:gap-3">
+              <Link href={heroHref} className="btn btn-primary px-4 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm">
                 <Package size={16} />{heroLabel}
               </Link>
-              <Link href="/about" className="btn btn-outline px-5 py-3 text-sm">
+              <Link href="/about" className="btn btn-outline px-4 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm">
                 <Sparkles size={16} />قصتنا
               </Link>
             </div>

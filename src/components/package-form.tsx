@@ -583,7 +583,7 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
                       {selected && (
                         <div className="mt-3 flex items-center gap-2 text-xs muted">
                           <span className="badge badge-lav">{formatNumber(selected.variants.length)} متغير</span>
-                          <span className="mono" dir="ltr">{selected.primary_sku}</span>
+                          <span className="mono max-w-[140px] truncate" dir="ltr">{selected.primary_sku}</span>
                           {selected.variants.length === 0 && <span style={{ color: "var(--danger)" }}>أضيفي متغيرات لهذا المنتج أولًا.</span>}
                         </div>
                       )}
@@ -651,8 +651,9 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
                       <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-xs font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-extrabold" style={{ color: "var(--ink)" }}>{sub.name || `بكدج فرعي ${index + 1}`}</p>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] muted">
-                          <span className="mono" dir="ltr">{sub.sku || "بدون كود"}</span>
+                        <p className="mt-0.5 text-[11px] font-black sm:hidden" style={{ color: "var(--brand-strong)" }}>{formatMoney(after)}</p>
+                          <p className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] muted">
+                          <span className="mono max-w-[110px] truncate" dir="ltr">{sub.sku || "بدون كود"}</span>
                           <span>·</span>
                           <span>{configured}/{items.length} مكونات</span>
                           <span>·</span>

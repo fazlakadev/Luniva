@@ -69,7 +69,7 @@ export default function WelcomeDialog({ name }: { name: string }) {
       aria-modal="true"
       aria-labelledby="welcome-title"
       aria-describedby="welcome-description"
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 print:hidden"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 print:hidden sm:p-4"
     >
       <button
         type="button"
@@ -79,7 +79,7 @@ export default function WelcomeDialog({ name }: { name: string }) {
       />
 
       <div
-        className="page-enter relative w-full max-w-md overflow-hidden rounded-[1.75rem] border p-7 text-center shadow-2xl sm:p-9"
+        className="page-enter relative max-h-[90dvh] w-full max-w-md overflow-y-auto overscroll-contain rounded-[1.75rem] border p-5 text-center shadow-2xl sm:p-9"
         style={{ borderColor: "var(--line)", background: "var(--surface)" }}
       >
         <div
@@ -111,7 +111,7 @@ export default function WelcomeDialog({ name }: { name: string }) {
           </span>
           <p className="eyebrow mt-5">مرحبًا بك في لونيفا</p>
           <h2 id="welcome-title" className="page-title mt-2 text-2xl">
-            أهلًا، {displayName}
+            أهلًا، <span className="break-words">{displayName}</span>
           </h2>
           <p id="welcome-description" className="page-subtitle mx-auto mt-3 max-w-xs text-sm leading-8">
             يسعدنا وجودك في مساحة العمل. كل ما تحتاجينه لإدارة المنتجات والبكدجات والفواتير والتحصيل جاهز بين يديك.

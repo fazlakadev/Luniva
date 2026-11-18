@@ -38,7 +38,7 @@ function priceStats(variants: CatalogVariant[]) {
 
 function Breadcrumb({ trail }: { trail: Array<{ href?: string; label: string }> }) {
   return (
-    <nav aria-label="مسار التنقل" className="no-scrollbar mb-5 flex min-w-0 items-center gap-2 overflow-x-auto text-[11px] font-bold muted">
+    <nav aria-label="مسار التنقل" className="mobile-scroll mb-5 flex min-w-0 items-center gap-2 text-[11px] font-bold muted">
       {trail.map((item, index) => (
         <span key={`${item.label}-${index}`} className="flex min-w-0 shrink-0 items-center gap-2">
           {index > 0 && <span className="text-[10px] opacity-50">/</span>}

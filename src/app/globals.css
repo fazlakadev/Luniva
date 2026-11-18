@@ -157,6 +157,19 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
 
   .no-scrollbar::-webkit-scrollbar { display: none; }
 
+  /* Horizontal strips that must stay scrollable on touch screens. */
+  .mobile-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+
+  .mobile-scroll::-webkit-scrollbar { height: 4px; }
+  .mobile-scroll::-webkit-scrollbar-track { background: transparent; }
+  .mobile-scroll::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 999px; }
+
   .field {
     width: 100%;
     border: 1px solid var(--line);
@@ -348,6 +361,13 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 
+/* Mobile polish: let long Arabic labels wrap instead of forcing overflow. */
+@media (max-width: 640px) {
+  .page-title { font-size: clamp(1.55rem, 8vw, 2rem); }
+  .btn { max-width: 100%; white-space: normal; }
+  .badge { max-width: 100%; white-space: normal; }
+}
+
 /* Invoice document keeps a paper look in both themes. */
 .invoice-sheet {
   background: #fffdfc;
@@ -394,7 +414,8 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   [data-print-button],
   .print-hidden,
   .print\:hidden,
-  .no-scrollbar { display: none !important; }
+  .no-scrollbar,
+  .mobile-scroll { display: none !important; }
 
   .invoice-sheet {
     max-width: none !important;

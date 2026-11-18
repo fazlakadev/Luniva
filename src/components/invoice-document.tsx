@@ -146,8 +146,8 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
           </div>
         </section>
 
-        <section className="mt-5 overflow-hidden rounded-xl" style={{ border: `1px solid ${LINE}` }}>
-          <table className="w-full border-collapse text-right">
+        <section className="mt-5 overflow-x-auto rounded-xl" style={{ border: `1px solid ${LINE}` }}>
+          <table className="w-full min-w-[560px] border-collapse text-right">
             <thead>
               <tr style={{ background: "#f7eef0" }}>
                 <th className="px-2 py-2.5 sm:px-3 text-[10px] font-black" style={{ color: BRAND }}>#</th>

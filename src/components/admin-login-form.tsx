@@ -73,7 +73,7 @@ export default function AdminLoginForm() {
   return (
     <main
       dir="rtl"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden p-3 sm:p-6 lg:p-8"
+      className="relative flex min-h-screen items-center justify-center overflow-x-hidden p-3 sm:p-6 lg:p-8"
       style={{ background: "var(--bg)", color: "var(--ink)" }}
     >
       <div
@@ -114,7 +114,7 @@ export default function AdminLoginForm() {
           <div className="mb-8 flex items-center justify-between lg:hidden">
             <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} priority className="h-11 w-11 rounded-xl object-contain" />
             <div className="flex items-center gap-2">
-              <span className="badge badge-brand">لونيفا · تأسست عام 2026</span>
+              <span className="badge badge-brand hidden sm:inline-flex">لونيفا · تأسست عام 2026</span>
               <ThemeToggle showLabel={false} />
             </div>
           </div>
