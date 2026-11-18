@@ -332,8 +332,8 @@ export function TurningPortraitHero() {
       ref={ref}
       onPointerMove={bewegen}
       dir="rtl"
-      className="relative isolate flex h-[92svh] min-h-[680px] w-full flex-col overflow-hidden rounded-[1.75rem] bg-[var(--plum)] text-[#fff7fa] sm:rounded-[2.25rem] md:h-[100svh] md:min-h-[760px]"
-      style={{ fontFamily: GROTESK, border: "1px solid color-mix(in srgb, var(--brand) 28%, transparent)" }}
+      className="relative isolate flex h-[calc(100svh-4.75rem)] min-h-[600px] w-full flex-col overflow-hidden bg-[var(--plum)] text-[#fff7fa] sm:h-[calc(100svh-5.25rem)] md:min-h-[680px]"
+      style={{ fontFamily: GROTESK }}
     >
       <canvas ref={leinwand} aria-hidden className="absolute inset-0 z-0 h-full w-full" />
       <p className="sr-only">بورتريه متحرك لقطع لونيفا، يتغيّر اتجاهه مع حركة المؤشر.</p>
@@ -354,8 +354,8 @@ export function TurningPortraitHero() {
         style={{ boxShadow: "inset 0 0 170px 42px rgba(0,0,0,.28)" }}
       />
 
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1600px] flex-col px-5 pb-6 pt-8 sm:px-8 md:pb-8 md:pt-10">
-        <div className="flex flex-1 items-end gap-8 pb-[4vh] md:items-center md:pb-0 lg:grid lg:grid-cols-[minmax(0,640px)_1fr_minmax(260px,320px)]">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1600px] flex-col px-5 pb-5 pt-6 sm:px-8 md:pb-7 md:pt-8">
+        <div className="flex flex-1 items-center gap-8 py-3 lg:grid lg:grid-cols-[minmax(0,640px)_1fr_minmax(260px,320px)]">
           <div className="min-w-0 max-w-[94vw] md:max-w-[620px]">
             <motion.p
               className="mb-4 flex flex-wrap items-center gap-2 text-[11px] font-bold tracking-[.02em] text-white/60 md:text-[12px]"
@@ -368,18 +368,18 @@ export function TurningPortraitHero() {
               <span>تأسست عام 2026</span>
             </motion.p>
 
-            <h1 className="m-0 max-w-[640px] text-right text-[clamp(38px,5.8vw,82px)] font-semibold leading-[1.08] tracking-[-.02em]">
-              <span className="block overflow-hidden pb-[.08em]">
+            <h1 className="m-0 max-w-[640px] text-right text-[clamp(30px,4.4vw,60px)] font-semibold leading-[1.28] tracking-[-.015em]">
+              <span className="block overflow-hidden pb-[.16em]">
                 <motion.span className="block" {...zeile(0.3)}>
                   قطع تليق بك
                 </motion.span>
               </span>
-              <span className="block overflow-hidden pb-[.08em]">
+              <span className="block overflow-hidden pb-[.16em]">
                 <motion.span className="block" {...zeile(0.39)}>
                   وتظل في بالك
                 </motion.span>
               </span>
-              <span className="block overflow-hidden pb-[.08em]">
+              <span className="block overflow-hidden pb-[.16em]">
                 <motion.span className="block text-white/75" {...zeile(0.48)}>
                   بعد أول نظرة
                 </motion.span>
@@ -387,21 +387,21 @@ export function TurningPortraitHero() {
             </h1>
 
             <motion.p
-              className="mt-6 max-w-[440px] text-right text-[13px] leading-[1.9] text-white/65 md:text-[15px]"
+              className="mt-4 max-w-[440px] text-right text-[12px] leading-[1.8] text-white/65 md:text-[14px]"
               {...auftritt(0.64)}
             >
               حرّكي المؤشر لتري القطعة من زاوية أخرى، وتعرفي الألوان والمقاسات والتفاصيل الكاملة قبل أن تقرري.
             </motion.p>
 
             <motion.div
-              className="mt-7 grid grid-cols-[88px_1fr] items-center gap-4 md:grid-cols-[112px_1fr] md:gap-6"
+              className="mt-5 grid grid-cols-[76px_1fr] items-center gap-4 md:mt-6 md:grid-cols-[104px_1fr] md:gap-6"
               {...auftritt(0.78)}
             >
               <Link
                 href="/catalog/products"
                 data-orbit
                 aria-label="تصفّح منتجات لونيفا"
-                className="group relative grid h-[88px] w-[88px] place-items-center md:h-[112px] md:w-[112px]"
+                className="group relative grid h-[76px] w-[76px] place-items-center md:h-[104px] md:w-[104px]"
               >
                 <span
                   aria-hidden

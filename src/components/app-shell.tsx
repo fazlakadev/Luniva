@@ -95,7 +95,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
       />
 
       <aside
-        className={`fixed inset-y-0 right-0 z-40 hidden border-l shadow-sm backdrop-blur-2xl transition-[width] duration-300 ease-out xl:flex xl:flex-col print:hidden ${
+        className={`fixed inset-y-0 right-0 z-40 hidden overflow-hidden border-l shadow-sm backdrop-blur-2xl transition-[width] duration-300 ease-out xl:flex xl:flex-col print:hidden ${
           collapsed ? "w-[88px]" : "w-[286px]"
         }`}
         style={{
@@ -151,7 +151,11 @@ export default function AppShell({ children, name }: { children: React.ReactNode
           </Link>
 
           {/* Navigation */}
-          <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+          <div
+            data-lenis-prevent
+            data-lenis-prevent-wheel
+            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
+          >
             <div className={`mb-2 flex items-center gap-2 ${collapsed ? "justify-center" : "px-1"}`}>
               {collapsed ? (
                 <span className="h-px w-6" style={{ background: "var(--line-strong)" }} />
@@ -426,7 +430,9 @@ export default function AppShell({ children, name }: { children: React.ReactNode
             className="absolute inset-0 cursor-default bg-[#1c101c]/45 backdrop-blur-sm"
           />
           <div
-            className="absolute inset-x-2 bottom-[76px] max-h-[72dvh] overflow-y-auto rounded-2xl border p-3 shadow-xl sm:inset-x-3 sm:bottom-[86px] sm:p-4"
+            data-lenis-prevent
+            data-lenis-prevent-wheel
+            className="absolute inset-x-2 bottom-[76px] max-h-[72dvh] overflow-y-auto overscroll-contain rounded-2xl border p-3 shadow-xl sm:inset-x-3 sm:bottom-[86px] sm:p-4"
             style={{ borderColor: "var(--line)", background: "var(--surface)" }}
           >
             <div className="mb-3 flex items-center justify-between gap-2 px-1">

@@ -97,7 +97,15 @@ export default async function PublicSiteShell({
         </div>
       </header>
 
-      <div className="relative z-10 mx-auto w-full max-w-7xl px-3 pb-24 pt-6 sm:px-6 sm:pb-14 md:pb-14">{children}</div>
+      <div
+        className={
+          section === "home"
+            ? "relative z-10 w-full"
+            : "relative z-10 mx-auto w-full max-w-7xl px-3 pb-24 pt-6 sm:px-6 sm:pb-14 md:pb-14"
+        }
+      >
+        {children}
+      </div>
       <MobileGooeyNav />
 
       <footer

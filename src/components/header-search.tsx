@@ -39,7 +39,6 @@ export default function HeaderSearch() {
           <X size={13} />
         </button>
       )}
-      <span aria-hidden="true" className="header-search__filter" />
     </form>
   );
 }

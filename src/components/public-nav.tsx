@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import HeaderSearch from "@/components/header-search";
 import ThemeToggle from "@/components/theme-toggle";
 import {
@@ -93,6 +94,12 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // The drawer is portalled out of the blurred header. Rendering the portal
+  // only on the client keeps the server markup deterministic.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -222,7 +229,7 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         </button>
       </div>
 
-      {drawerOpen && (
+      {mounted && drawerOpen && createPortal(
         <div className="fixed inset-0 z-[70] lg:hidden" role="presentation">
           <button
             type="button"
@@ -259,7 +266,11 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4" data-lenis-prevent>
+            <div
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4"
+              data-lenis-prevent
+              data-lenis-prevent-wheel
+            >
               <DrawerLink link={HOME_LINK} active={active === "home"} onNavigate={() => setDrawerOpen(false)} />
 
               <DrawerGroup
@@ -313,7 +324,8 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
               <ThemeToggle showLabel={false} />
             </div>
           </aside>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
