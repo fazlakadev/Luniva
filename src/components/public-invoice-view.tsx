@@ -359,7 +359,7 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
 
           <div
             className="mt-4 flex flex-col gap-4 rounded-2xl p-4 sm:flex-row sm:items-center sm:justify-between"
-            style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--surface-2))", border: "1px solid var(--line)" }}
+            style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}
           >
             <div className="min-w-0">
               <p className="text-[12px] font-black" style={{ color: "var(--brand-strong)" }}>امسحي رمز الاستجابة السريعة</p>
@@ -371,9 +371,11 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
                 <p className="flex items-center gap-1.5"><CheckCircle2 size={12} className="shrink-0" style={{ color: "var(--success)" }} />حالة التوصيل محدَّثة من النظام</p>
               </div>
             </div>
-            <div className="shrink-0 self-center rounded-2xl bg-white p-3 shadow-sm" style={{ border: "1px solid var(--line)" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={data.qrImage} alt={`رمز معاينة الفاتورة ${data.invoiceNumber}`} className="h-36 w-36 sm:h-40 sm:w-40" />
+            <div className="shrink-0 self-center rounded-2xl p-3" style={{ background: "var(--brand-soft)", border: "1px solid var(--line)" }}>
+              <span className="grid h-36 w-36 place-items-center rounded-xl bg-white p-1.5 sm:h-40 sm:w-40" style={{ border: "1px solid var(--line)" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={data.qrImage} alt="رمز معاينة الفاتورة" className="h-full w-full rounded-lg" />
+              </span>
             </div>
           </div>
         </section>

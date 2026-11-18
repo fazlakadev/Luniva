@@ -65,17 +65,20 @@ export default function InvoiceShareCard({
         </div>
       </div>
 
-      <div className="mt-4 rounded-2xl p-4" style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--surface-2))", border: "1px solid var(--line)" }}>
+      <div className="mt-4 rounded-2xl p-4" style={{ background: "var(--surface)", border: "1px solid var(--line)", boxShadow: "var(--shadow-sm)" }}>
         <div className="flex flex-col items-center gap-3">
-          <div className="rounded-2xl bg-white p-3 shadow-sm" style={{ border: "1px solid var(--line)" }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={qr} alt={`رمز معاينة الفاتورة ${invoiceNumber}`} className="h-40 w-40" />
+          <div className="rounded-2xl p-3" style={{ background: "var(--brand-soft)", border: "1px solid var(--line)" }}>
+            <span className="grid h-40 w-40 place-items-center rounded-xl bg-white p-1.5" style={{ border: "1px solid var(--line)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={qr} alt="رمز معاينة الفاتورة" className="h-full w-full rounded-lg" />
+            </span>
           </div>
           <div className="text-center">
             <p className="text-[11px] font-black" style={{ color: "var(--brand-strong)" }}>امسحي رمز الاستجابة السريعة</p>
             <p className="mt-1 text-[10px] font-bold leading-5 muted">
               يفتح معاينة الفاتورة والمنتجات وحالة التوصيل على الهاتف.
             </p>
+            <p className="mono mt-1.5 text-[9px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{invoiceNumber}</p>
           </div>
         </div>
       </div>

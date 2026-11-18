@@ -85,10 +85,10 @@ export async function getPublicInvoiceUrl(invoiceId: string) {
 
 export async function invoiceQrDataUrl(url: string) {
   return QRCode.toDataURL(url, {
-    errorCorrectionLevel: "M",
-    margin: 1,
-    width: 280,
-    color: { dark: "#7c4354", light: "#fffaf8" },
+    errorCorrectionLevel: "H",
+    margin: 2,
+    width: 320,
+    color: { dark: "#a95d73", light: "#ffffff" },
   });
 }
 
