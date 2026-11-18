@@ -332,7 +332,7 @@ export function TurningPortraitHero() {
       ref={ref}
       onPointerMove={bewegen}
       dir="rtl"
-      className="relative isolate flex h-[calc(100svh-4.75rem)] min-h-[600px] w-full flex-col overflow-hidden bg-[var(--plum)] text-[#fff7fa] sm:h-[calc(100svh-5.25rem)] md:min-h-[680px]"
+      className="relative isolate flex h-[100svh] min-h-0 w-full flex-col overflow-hidden bg-[var(--plum)] text-[#fff7fa]"
       style={{ fontFamily: GROTESK }}
     >
       <canvas ref={leinwand} aria-hidden className="absolute inset-0 z-0 h-full w-full" />
@@ -354,7 +354,7 @@ export function TurningPortraitHero() {
         style={{ boxShadow: "inset 0 0 170px 42px rgba(0,0,0,.28)" }}
       />
 
-      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1600px] flex-col px-5 pb-5 pt-6 sm:px-8 md:pb-7 md:pt-8">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[1600px] flex-col px-5 pb-5 pt-24 sm:px-8 sm:pt-28 md:pb-7">
         <div className="flex flex-1 items-center gap-8 py-3 lg:grid lg:grid-cols-[minmax(0,640px)_1fr_minmax(260px,320px)]">
           <div className="min-w-0 max-w-[94vw] md:max-w-[620px]">
             <motion.p

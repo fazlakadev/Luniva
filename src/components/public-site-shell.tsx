@@ -60,7 +60,11 @@ export default async function PublicSiteShell({
 
       {section === "home" && <HomeAtmosphere />}
 
-      <header className="site-header sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
+      <header
+        className={`site-header z-40 px-3 pt-3 sm:px-6 sm:pt-4 ${
+          section === "home" ? "fixed inset-x-0 top-0" : "sticky top-0"
+        }`}
+      >
         <div
           className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3 rounded-[1.5rem] border px-3 py-2.5 backdrop-blur-2xl sm:px-4 sm:py-3"
           style={{
