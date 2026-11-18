@@ -12,9 +12,9 @@ export type PublicSection =
 
 export type PublicNavKey = PublicSection | "support";
 
-export function isCatalogSection(section: PublicSection) {
+// The catalog menu should only light up on catalog pages, never on the combined home page.
+export function isCatalogMenuActive(section: PublicSection) {
   return (
-    section === "home" ||
     section === "products" ||
     section === "packages" ||
     section === "product" ||

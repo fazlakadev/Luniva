@@ -21,7 +21,7 @@ import {
 import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/theme-toggle";
 import {
-  isCatalogSection,
+  isCatalogMenuActive,
   isSupportSection,
   type PublicSection,
 } from "@/lib/public-sections";
@@ -108,7 +108,7 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
     };
   }, [drawerOpen]);
 
-  const catalogActive = isCatalogSection(active);
+  const catalogActive = isCatalogMenuActive(active);
   const supportActive = isSupportSection(active);
   const ctaHref = active === "contact" ? "/catalog/products" : "/contact";
   const ctaLabel = active === "contact" ? "تصفّح المنتجات" : "تواصل معنا";
@@ -207,7 +207,7 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         <button
           type="button"
           onClick={() => {
-            setCatalogOpen(isCatalogSection(active));
+            setCatalogOpen(isCatalogMenuActive(active));
             setSupportOpen(isSupportSection(active));
             setDrawerOpen(true);
           }}
@@ -257,7 +257,7 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4" data-lenis-prevent>
               <DrawerLink link={HOME_LINK} active={active === "home"} onNavigate={() => setDrawerOpen(false)} />
 
               <DrawerGroup
