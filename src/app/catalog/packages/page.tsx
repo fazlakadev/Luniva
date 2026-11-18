@@ -8,6 +8,12 @@ export const metadata: Metadata = {
   description: "توليفات لونيفا الجاهزة من المنتجات بأسعار بعد الخصم، مع عرض المكونات والبكدجات الفرعية والتفاصيل الكاملة.",
 };
 
-export default function PackagesPage() {
-  return <PublicCatalog page="packages" />;
+export default async function PackagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const query = Array.isArray(params.q) ? params.q[0] ?? "" : params.q ?? "";
+  return <PublicCatalog page="packages" query={query} />;
 }

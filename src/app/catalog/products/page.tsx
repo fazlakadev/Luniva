@@ -8,6 +8,12 @@ export const metadata: Metadata = {
   description: "تصفّحي كل منتجات لونيفا بالألوان والمقاسات والأسعار النهائية بعد الخصم، مع تفاصيل كاملة لكل قطعة.",
 };
 
-export default function ProductsPage() {
-  return <PublicCatalog page="products" />;
+export default async function ProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const query = Array.isArray(params.q) ? params.q[0] ?? "" : params.q ?? "";
+  return <PublicCatalog page="products" query={query} />;
 }

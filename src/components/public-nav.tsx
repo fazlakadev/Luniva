@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import HeaderSearch from "@/components/header-search";
 import ThemeToggle from "@/components/theme-toggle";
 import {
   isCatalogMenuActive,
@@ -199,7 +200,8 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         </div>
       </nav>
 
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-2">
+        <HeaderSearch />
         <Link href={ctaHref} className="btn btn-primary hidden px-3 py-2 text-[11px] sm:inline-flex">
           <ArrowLeft size={13} />{ctaLabel}
         </Link>

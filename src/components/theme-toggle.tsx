@@ -1,10 +1,11 @@
 "use client";
 
-import { Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CloudMoon, Moon, Sparkles, Sun } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 
 export default function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
   const [dark, setDark] = useState(false);
+  const filterId = useId().replace(/:/g, "");
 
   useEffect(() => {
     // The inline theme script runs before hydration, so read the applied class after mount.
@@ -35,48 +36,35 @@ export default function ThemeToggle({ showLabel = false }: { showLabel?: boolean
       aria-label={label}
       title={label}
       onClick={toggle}
-      className="group inline-flex shrink-0 items-center gap-2 rounded-full border p-1 transition duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--brand-ring)]"
-      style={{
-        borderColor: dark ? "color-mix(in srgb, var(--brand) 45%, transparent)" : "var(--line-strong)",
-        background: dark
-          ? "color-mix(in srgb, var(--surface) 60%, transparent)"
-          : "color-mix(in srgb, var(--surface) 78%, transparent)",
-        boxShadow: dark ? "0 6px 20px rgba(0,0,0,.24)" : "0 6px 18px rgba(130,75,94,.10)",
-      }}
+      className="luniva-theme-switch group inline-flex shrink-0 items-center gap-2 rounded-full focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--brand-ring)]"
+      data-dark={dark ? "true" : "false"}
     >
+      <svg aria-hidden="true" className="absolute h-0 w-0 overflow-hidden">
+        <defs>
+          <filter id={`sketch-${filterId}`} x="-12%" y="-12%" width="124%" height="124%">
+            <feTurbulence type="turbulence" baseFrequency="0.04 0.05" numOctaves={3} seed={42} result="noise" />
+            <feDisplacementMap in="SourceGraphic" in2="noise" scale={3} xChannelSelector="R" yChannelSelector="G" />
+          </filter>
+        </defs>
+      </svg>
+
       <span
-        className="relative inline-flex h-7 w-[3.25rem] shrink-0 items-center rounded-full transition-colors duration-300"
-        style={{
-          background: dark
-            ? "linear-gradient(135deg, var(--brand-strong), var(--lav-strong))"
-            : "linear-gradient(135deg, var(--brand-soft), var(--lav-soft))",
-          boxShadow: "inset 0 1px 3px rgba(58,34,44,.10)",
-        }}
+        className="luniva-theme-switch__track"
+        style={{ filter: `url(#sketch-${filterId})` }}
+        aria-hidden="true"
       >
-        <span
-          aria-hidden="true"
-          className="absolute right-[5px] grid h-5 w-5 place-items-center rounded-full transition-colors duration-300"
-          style={{ color: dark ? "rgba(255,255,255,.5)" : "var(--brand-strong)" }}
-        >
-          <Sun size={12} />
+        <span className="luniva-theme-switch__rays" />
+        <span className="luniva-theme-switch__clouds"><CloudMoon size={12} /></span>
+        <span className="luniva-theme-switch__stars">
+          <Sparkles size={11} />
+          <Sparkles size={8} />
+          <Sparkles size={7} />
         </span>
-        <span
-          aria-hidden="true"
-          className="absolute left-[5px] grid h-5 w-5 place-items-center rounded-full transition-colors duration-300"
-          style={{ color: dark ? "#fff" : "var(--muted-2)" }}
-        >
-          <Moon size={12} />
-        </span>
-        <span
-          aria-hidden="true"
-          className="absolute top-[3px] grid h-[22px] w-[22px] place-items-center rounded-full shadow-md transition-all duration-300 ease-out"
-          style={{
-            left: dark ? 3 : "calc(100% - 25px)",
-            background: dark ? "var(--surface)" : "#fff",
-            color: dark ? "var(--lav-strong)" : "var(--brand-strong)",
-          }}
-        >
-          {dark ? <Moon size={13} /> : <Sun size={13} />}
+        <span className="luniva-theme-switch__shooting" />
+        <span className="luniva-theme-switch__aurora" />
+        <span className="luniva-theme-switch__sun">
+          <Sun className="luniva-theme-switch__sun-icon" size={13} />
+          <Moon className="luniva-theme-switch__moon-icon" size={13} />
         </span>
       </span>
 

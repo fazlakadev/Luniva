@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Layers3, Mail, ShieldCheck, Sparkles } from "lucide-react";
+import HomeAtmosphere from "@/components/motion/home-atmosphere";
+import MobileGooeyNav from "@/components/motion/mobile-gooey-nav";
 import PublicNav from "@/components/public-nav";
 import { getSettings } from "@/lib/settings";
 import type { PublicSection } from "@/lib/public-sections";
@@ -56,6 +58,8 @@ export default async function PublicSiteShell({
         }}
       />
 
+      {section === "home" && <HomeAtmosphere />}
+
       <header className="site-header sticky top-0 z-40 px-3 pt-3 sm:px-6 sm:pt-4">
         <div
           className="relative mx-auto flex w-full max-w-7xl items-center justify-between gap-3 rounded-[1.5rem] border px-3 py-2.5 backdrop-blur-2xl sm:px-4 sm:py-3"
@@ -93,10 +97,11 @@ export default async function PublicSiteShell({
         </div>
       </header>
 
-      <div className="relative mx-auto w-full max-w-7xl px-3 pb-10 pt-6 sm:px-6 sm:pb-14">{children}</div>
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-3 pb-24 pt-6 sm:px-6 sm:pb-14 md:pb-14">{children}</div>
+      <MobileGooeyNav />
 
       <footer
-        className="site-footer relative mt-14 border-t"
+        className="site-footer relative z-10 mt-14 border-t pb-20 md:pb-0"
         style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 72%, transparent)" }}
       >
         <div className="mx-auto grid w-full max-w-7xl gap-8 px-3 py-10 sm:grid-cols-2 sm:px-6 lg:grid-cols-4">

@@ -11,6 +11,7 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import BrandGlassCard from "@/components/about/brand-glass-card";
 import PublicSiteShell from "@/components/public-site-shell";
 
 export const metadata: Metadata = {
@@ -116,6 +117,8 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+
+      <BrandGlassCard />
 
       <section className="mt-10 grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="app-card min-w-0 p-5 sm:p-7">

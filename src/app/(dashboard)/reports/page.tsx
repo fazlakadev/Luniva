@@ -66,6 +66,13 @@ export default async function ReportsPage() {
     return `${(monthLabels[month] ?? month).slice(0, 3)} ${year.slice(-2)}`;
   };
 
+  const latestMonth = monthly.length ? monthly[monthly.length - 1] : null;
+  const previousMonth = monthly.length > 1 ? monthly[monthly.length - 2] : null;
+  const latestAmount = latestMonth ? Number(latestMonth.amount) : 0;
+  const previousAmount = previousMonth ? Number(previousMonth.amount) : 0;
+  const monthChange = previousAmount > 0 ? Math.round(((latestAmount - previousAmount) / previousAmount) * 100) : 0;
+  const balanceBars = monthly.slice(-6);
+
   return (
     <div className="page-enter min-w-0">
       <div className="mb-6 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-end sm:justify-between">
@@ -109,6 +116,91 @@ export default async function ReportsPage() {
             className="h-full rounded-full transition-all"
             style={{ width: `${collectionRate}%`, background: "linear-gradient(90deg, var(--lav), var(--brand))" }}
           />
+        </div>
+      </section>
+
+      <section className="balance-report mb-5 overflow-hidden p-5 sm:p-6">
+        <span aria-hidden="true" className="balance-report__glow" />
+        <span aria-hidden="true" className="balance-report__mesh" />
+        <div className="relative grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1.05fr)] lg:items-center">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[10px] font-black tracking-[0.16em] text-[var(--brand-strong)]">
+              <TrendingUp size={13} />MONTHLY BALANCE
+            </p>
+            <h2 className="mt-2 text-[15px] font-black" style={{ color: "var(--ink)" }}>الرصيد والتحصيل الشهري</h2>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <p className="money break-all text-[1.9rem] font-black leading-none sm:text-[2.35rem]" style={{ color: "var(--ink)" }}>
+                {formatMoney(latestAmount)}
+              </p>
+              {previousAmount > 0 && (
+                <span
+                  className="rounded-full px-2.5 py-1 text-[10px] font-black"
+                  style={{
+                    background: monthChange >= 0 ? "var(--success-soft)" : "var(--danger-soft)",
+                    color: monthChange >= 0 ? "var(--success)" : "var(--danger)",
+                  }}
+                >
+                  {monthChange >= 0 ? "+" : ""}{formatNumber(monthChange)}% عن الشهر السابق
+                </span>
+              )}
+            </div>
+            <p className="mt-2 text-[11px] font-bold muted">
+              {latestMonth ? `تحصيل ${monthLabel(latestMonth.month)} · ${formatNumber(latestMonth.count)} دفعة` : "لا توجد دفعات مسجلة بعد"}
+            </p>
+
+            <div className="mt-5 grid grid-cols-3 gap-2">
+              {[
+                { label: "المبيعات", value: formatMoney(billed) },
+                { label: "المحصّل", value: formatMoney(collected) },
+                { label: "المتبقي", value: formatMoney(outstanding) },
+              ].map(({ label, value }) => (
+                <div key={label} className="min-w-0 rounded-2xl px-3 py-2.5" style={{ background: "color-mix(in srgb, var(--surface) 78%, transparent)", border: "1px solid var(--line)" }}>
+                  <p className="truncate text-[9px] font-bold muted-2">{label}</p>
+                  <p className="money mt-1 truncate text-[11px] font-black" style={{ color: "var(--ink)" }}>{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mx-auto grid h-[132px] w-[132px] place-items-center">
+            <div
+              className="balance-report__ring"
+              style={{ background: `conic-gradient(var(--brand) ${collectionRate}%, var(--surface-3) 0)` }}
+            >
+              <div className="balance-report__ring-inner">
+                <p className="money text-xl font-black" style={{ color: "var(--brand-strong)" }}>{formatNumber(collectionRate)}%</p>
+                <p className="mt-0.5 text-[9px] font-bold muted-2">نسبة التحصيل</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>آخر ٦ أشهر</p>
+              <p className="text-[9px] font-bold muted-2">من إجمالي الدفعات المسجلة</p>
+            </div>
+            {balanceBars.length === 0 ? (
+              <p className="text-sm muted">لا توجد بيانات كافية.</p>
+            ) : (
+              <div className="balance-report__bars">
+                {balanceBars.map((row) => {
+                  const height = Math.max(8, Math.round((Number(row.amount) / maxMonth) * 100));
+                  return (
+                    <div key={row.month} className="flex h-full min-w-0 flex-col items-center justify-end gap-1.5">
+                      <span
+                        className="balance-report__bar"
+                        style={{ height: `${height}%` }}
+                        title={`${monthLabel(row.month)}: ${formatMoney(row.amount)}`}
+                      />
+                      <span className="w-full truncate text-center text-[8px] font-bold muted-2" title={monthLabel(row.month)}>
+                        {shortMonthLabel(row.month)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </section>
 

@@ -9,12 +9,13 @@ import {
   Palette,
   Sparkles,
   Tag,
+  X,
 } from "lucide-react";
 import ClothingRailSection from "@/components/home/clothing-rail-section";
+import TurningPortraitHero from "@/components/home/turning-portrait-hero";
 import ValueCard from "@/components/home/value-card";
 import AmbientGlow from "@/components/motion/ambient-glow";
 import { BlurFade } from "@/components/motion/blur-fade";
-import HeroShader from "@/components/motion/hero-shader";
 import HeroTitle from "@/components/motion/hero-title";
 import MagneticLink from "@/components/motion/magnetic-link";
 import { NumberTicker } from "@/components/motion/number-ticker";
@@ -25,7 +26,24 @@ import { discountPercent } from "@/lib/packages";
 
 type PublicCatalogProps = {
   page?: "home" | "products" | "packages";
+  query?: string;
 };
+
+function normalizeSearch(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي");
+}
+
+function matchesQuery(query: string, haystack: Array<string | number | null | undefined>) {
+  if (!query) return true;
+  const needle = normalizeSearch(query);
+  return haystack.some((value) => value != null && normalizeSearch(String(value)).includes(needle));
+}
 
 function priceStats(variants: CatalogVariant[]) {
   const prices = variants.map((variant) => Number(variant.price) || 0);
@@ -64,13 +82,36 @@ function CardImage({
   );
 }
 
-export default async function PublicCatalog({ page = "home" }: PublicCatalogProps) {
-  const { products, packages, loadError } = await loadPublicCatalog();
-  const offerCount = packages.filter((item) => priceStats(item.variants).topDiscount > 0).length;
+export default async function PublicCatalog({ page = "home", query = "" }: PublicCatalogProps) {
+  const { products: allProducts, packages: allPackages, loadError } = await loadPublicCatalog();
 
   const isHome = page === "home";
   const isProducts = page === "products";
   const isPackages = page === "packages";
+  const searchQuery = isHome ? "" : query.trim();
+
+  const products = searchQuery
+    ? allProducts.filter((product) =>
+        matchesQuery(searchQuery, [
+          product.name,
+          product.description,
+          product.primary_sku,
+          ...product.variants.flatMap((variant) => [variant.name, variant.color, variant.size, variant.sku]),
+        ]),
+      )
+    : allProducts;
+  const packages = searchQuery
+    ? allPackages.filter((item) =>
+        matchesQuery(searchQuery, [
+          item.name,
+          item.description,
+          item.primary_sku,
+          item.badge,
+          ...item.variants.flatMap((variant) => [variant.color, variant.size, variant.sku]),
+        ]),
+      )
+    : allPackages;
+  const offerCount = packages.filter((item) => priceStats(item.variants).topDiscount > 0).length;
 
   const heroHref = isProducts ? "/catalog/packages" : "/catalog/products";
   const heroLabel = isProducts ? "تصفّح البكدجات" : "تصفّح المنتجات";
@@ -86,11 +127,13 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
 
   return (
     <PublicSiteShell section={page}>
+      {isHome ? (
+        <TurningPortraitHero />
+      ) : (
       <section
         className="relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14"
         style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 88%, transparent)" }}
       >
-        {isHome && <HeroShader />}
         <AmbientGlow
           className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full"
           style={{ background: "var(--lav-soft)" }}
@@ -165,6 +208,23 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
           </BlurFade>
         </div>
       </section>
+      )}
+
+      {searchQuery && (
+        <div
+          className="app-card mt-5 flex flex-wrap items-center justify-between gap-3 p-4 text-[11px] font-bold"
+          style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}
+        >
+          <span>
+            نتائج البحث عن <b style={{ color: "var(--brand-strong)" }}>«{searchQuery}»</b>:{" "}
+            {formatNumber(isProducts ? products.length : packages.length)}{" "}
+            {isProducts ? "منتج" : "بكدج"}
+          </span>
+          <Link href={isProducts ? "/catalog/products" : "/catalog/packages"} className="btn btn-soft px-3 py-1.5 text-[10px]">
+            <X size={12} />مسح البحث
+          </Link>
+        </div>
+      )}
 
       {isHome && <ClothingRailSection />}
 
@@ -237,8 +297,12 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
                 <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl" style={{ background: "var(--brand-soft)", color: "var(--brand)" }}>
                   <Package size={28} />
                 </span>
-                <p className="font-extrabold" style={{ color: "var(--ink)" }}>لا توجد منتجات للعرض بعد</p>
-                <p className="mx-auto mt-2 max-w-xs text-sm muted">ستظهر المنتجات هنا فور إضافتها إلى الكتالوج.</p>
+                <p className="font-extrabold" style={{ color: "var(--ink)" }}>
+                  {searchQuery ? "لا توجد نتائج مطابقة" : "لا توجد منتجات للعرض بعد"}
+                </p>
+                <p className="mx-auto mt-2 max-w-xs text-sm muted">
+                  {searchQuery ? "جرّبي كلمة بحث أخرى أو امسحي البحث للعودة إلى كل المنتجات." : "ستظهر المنتجات هنا فور إضافتها إلى الكتالوج."}
+                </p>
               </div>
             </div>
           ) : (
@@ -314,8 +378,12 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
                 <span className="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-3xl" style={{ background: "var(--lav-soft)", color: "var(--lav-strong)" }}>
                   <Gift size={28} />
                 </span>
-                <p className="font-extrabold" style={{ color: "var(--ink)" }}>لا توجد بكدجات للعرض بعد</p>
-                <p className="mx-auto mt-2 max-w-xs text-sm muted">ستظهر البكدجات النشطة هنا فور تجهيزها.</p>
+                <p className="font-extrabold" style={{ color: "var(--ink)" }}>
+                  {searchQuery ? "لا توجد نتائج مطابقة" : "لا توجد بكدجات للعرض بعد"}
+                </p>
+                <p className="mx-auto mt-2 max-w-xs text-sm muted">
+                  {searchQuery ? "جرّبي كلمة بحث أخرى أو امسحي البحث للعودة إلى كل البكدجات." : "ستظهر البكدجات النشطة هنا فور تجهيزها."}
+                </p>
               </div>
             </div>
           ) : (
