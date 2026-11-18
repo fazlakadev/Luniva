@@ -17,6 +17,7 @@ import {
 import CatalogShareCard from "@/components/catalog-share-card";
 import DeleteButton from "@/components/delete-button";
 import PackageVariants, { type PackageVariantView } from "@/components/package-variants";
+import ZoomableImage from "@/components/zoomable-image";
 import { getPackageDetail } from "@/lib/package-queries";
 import { getCatalogShareData } from "@/lib/public-links";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
@@ -52,6 +53,13 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
   const minPrice = variants.length ? Math.min(...variants.map((variant) => Number(variant.price_after_discount))) : baseAfter;
   const maxPrice = variants.length ? Math.max(...variants.map((variant) => Number(variant.price_after_discount))) : baseAfter;
   const share = await getCatalogShareData("package", id);
+  const gallery = Array.from(
+    new Set(
+      [pkg.image_url, ...variants.map((variant) => variant.image_url), ...items.map((item) => item.image_url)].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
+  );
 
   return (
     <>
@@ -68,22 +76,49 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
 
       <section className="app-card overflow-hidden">
         <div className="grid lg:grid-cols-[minmax(0,.9fr)_minmax(0,1.1fr)]">
-          <div className="relative min-h-64 overflow-hidden sm:min-h-80" style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--surface-3))" }}>
-            {pkg.image_url ? (
-              <img src={pkg.image_url} alt={pkg.name} className="h-full w-full object-cover" />
-            ) : (
-              <div className="grid h-full min-h-64 place-items-center">
-                <div className="text-center">
-                  <Gift size={52} className="mx-auto" style={{ color: "var(--brand)" }} />
-                  <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--brand-strong)" }}>عرض لونيفا</p>
-                </div>
+          <div className="relative flex flex-col" style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--surface-3))" }}>
+            <div className="relative min-h-64 flex-1 overflow-hidden sm:min-h-80">
+              <ZoomableImage
+                src={gallery[0]}
+                alt={pkg.name}
+                images={gallery}
+                initialIndex={0}
+                placeholder={
+                  <div className="grid h-full w-full min-h-64 place-items-center">
+                    <div className="text-center">
+                      <Gift size={52} className="mx-auto" style={{ color: "var(--brand)" }} />
+                      <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--brand-strong)" }}>عرض لونيفا</p>
+                    </div>
+                  </div>
+                }
+                className="h-full min-h-64 w-full sm:min-h-80"
+              />
+              <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-4">
+                <span className={`badge ${statusStyle[(pkg.status as PackageStatus) ?? "active"]}`}>{packageStatusLabels[(pkg.status as PackageStatus) ?? "active"]}</span>
+                {percent > 0 && <span className="badge badge-dark backdrop-blur-sm">خصم {formatNumber(percent)}%</span>}
+              </div>
+              {gallery.length > 0 && (
+                <span className="pointer-events-none absolute right-4 top-16 inline-flex items-center gap-1 rounded-full bg-[#21151a]/55 px-2.5 py-1 text-[9px] font-black text-white backdrop-blur-sm">
+                  اضغط للتكبير
+                </span>
+              )}
+              {pkg.badge && <span className="pointer-events-none absolute bottom-4 right-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-extrabold text-[#7c4354] shadow-sm backdrop-blur">{pkg.badge}</span>}
+            </div>
+            {gallery.length > 1 && (
+              <div className="no-scrollbar flex justify-center gap-2 overflow-x-auto p-3" style={{ background: "color-mix(in srgb, var(--surface) 70%, transparent)" }}>
+                {gallery.map((image, index) => (
+                  <ZoomableImage
+                    key={`${image}-${index}`}
+                    src={image}
+                    alt={`${pkg.name} ${index + 1}`}
+                    images={gallery}
+                    initialIndex={index}
+                    className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white/80 shadow-sm"
+                    showHint={false}
+                  />
+                ))}
               </div>
             )}
-            <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-4">
-              <span className={`badge ${statusStyle[(pkg.status as PackageStatus) ?? "active"]}`}>{packageStatusLabels[(pkg.status as PackageStatus) ?? "active"]}</span>
-              {percent > 0 && <span className="badge badge-dark backdrop-blur-sm">خصم {formatNumber(percent)}%</span>}
-            </div>
-            {pkg.badge && <span className="absolute bottom-4 right-4 rounded-full bg-white/90 px-3 py-1.5 text-xs font-extrabold text-[#7c4354] shadow-sm backdrop-blur">{pkg.badge}</span>}
           </div>
 
           <div className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
@@ -138,8 +173,15 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
           <div className="grid gap-3 sm:grid-cols-2">
             {items.map((item) => (
               <article key={item.id} className="flex items-center gap-3 rounded-2xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl" style={{ background: "var(--surface)", color: "var(--lav-strong)" }}>
-                  {item.image_url ? <img src={item.image_url} alt="" className="h-full w-full object-cover" /> : <Boxes size={22} />}
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl" style={{ background: "var(--surface)", color: "var(--lav-strong)" }}>
+                  <ZoomableImage
+                    src={item.image_url}
+                    alt={item.product_name}
+                    images={gallery}
+                    initialIndex={item.image_url ? Math.max(0, gallery.indexOf(item.image_url)) : 0}
+                    className="h-full w-full"
+                    placeholder={<span className="grid h-full w-full place-items-center"><Boxes size={22} /></span>}
+                  />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-extrabold" style={{ color: "var(--ink)" }}>{item.product_name}</p>

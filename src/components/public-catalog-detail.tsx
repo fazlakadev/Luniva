@@ -4,6 +4,7 @@ import {
   Boxes,
   CheckCircle2,
   ChevronRight,
+  Expand,
   Gift,
   Layers3,
   Package,
@@ -14,6 +15,7 @@ import {
   Tag,
 } from "lucide-react";
 import PublicSiteShell from "@/components/public-site-shell";
+import ZoomableImage from "@/components/zoomable-image";
 import type {
   CatalogPackageDetail,
   CatalogProduct,
@@ -34,6 +36,16 @@ function priceStats(variants: CatalogVariant[]) {
       0,
     ),
   };
+}
+
+function uniqueImages(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.filter((value): value is string => Boolean(value))));
+}
+
+function imageIndex(images: string[], src?: string | null) {
+  if (!src) return 0;
+  const index = images.indexOf(src);
+  return index >= 0 ? index : 0;
 }
 
 function Breadcrumb({ trail }: { trail: Array<{ href?: string; label: string }> }) {
@@ -61,16 +73,28 @@ function DetailImage({
   alt,
   icon: Icon,
   className = "h-full w-full",
+  images,
+  initialIndex,
+  fit = "cover",
 }: {
   src: string | null;
   alt: string;
   icon: typeof Package;
   className?: string;
+  images?: string[];
+  initialIndex?: number;
+  fit?: "cover" | "contain";
 }) {
   if (src) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img src={src} alt={alt} loading="lazy" className={`${className} object-cover`} />
+      <ZoomableImage
+        src={src}
+        alt={alt}
+        className={className}
+        images={images}
+        initialIndex={initialIndex}
+        fit={fit}
+      />
     );
   }
   return (
@@ -93,7 +117,8 @@ function PriceRange({ min, max }: { min: number; max: number }) {
 
 export function PublicProductDetail({ product }: { product: CatalogProduct }) {
   const stats = priceStats(product.variants);
-  const hero = product.image_url || product.variants.find((variant) => variant.imageUrl)?.imageUrl || null;
+  const gallery = uniqueImages([product.image_url, ...product.variants.map((variant) => variant.imageUrl)]);
+  const hero = gallery[0] ?? null;
 
   return (
     <PublicSiteShell section="product">
@@ -108,13 +133,40 @@ export function PublicProductDetail({ product }: { product: CatalogProduct }) {
       <section className="app-card overflow-hidden">
         <div className="grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="relative min-h-[280px] overflow-hidden sm:min-h-[380px] lg:min-h-[430px]" style={{ background: "linear-gradient(135deg, var(--lav-soft), var(--surface-3))" }}>
-            <DetailImage src={hero} alt={product.name} icon={Package} className="absolute inset-0 h-full w-full" />
+            <DetailImage
+              src={hero}
+              alt={product.name}
+              icon={Package}
+              className="absolute inset-0 h-full w-full"
+              images={gallery}
+              initialIndex={0}
+            />
             <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-4">
               <span className="badge badge-lav shadow-sm"><Sparkles size={12} />منتج لونيفا</span>
               {stats.topDiscount > 0 && (
                 <span className="badge badge-success shadow-sm"><BadgePercent size={12} />خصم حتى {formatNumber(stats.topDiscount)}%</span>
               )}
             </div>
+            {gallery.length > 1 && (
+              <div className="no-scrollbar absolute inset-x-0 bottom-0 flex justify-center gap-2 overflow-x-auto p-3">
+                {gallery.map((image, imageIndex) => (
+                  <ZoomableImage
+                    key={`${image}-${imageIndex}`}
+                    src={image}
+                    alt={`${product.name} ${imageIndex + 1}`}
+                    images={gallery}
+                    initialIndex={imageIndex}
+                    className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white/80 shadow-md"
+                    showHint={false}
+                  />
+                ))}
+              </div>
+            )}
+            {gallery.length > 0 && (
+              <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-[#21151a]/55 px-2.5 py-1 text-[9px] font-black text-white backdrop-blur-sm">
+                اضغط للتكبير
+              </span>
+            )}
           </div>
 
           <div className="flex min-w-0 flex-col justify-center p-5 sm:p-8 lg:p-10">
@@ -175,15 +227,28 @@ export function PublicProductDetail({ product }: { product: CatalogProduct }) {
             const percent = discountPercent(before, price);
             const swatch = colorSwatch(variant.color || "");
             return (
-              <article key={variant.id} className="min-w-0 overflow-hidden rounded-2xl" style={{ border: "1px solid var(--line)", background: "var(--surface-2)" }}>
-                <div className="h-28 overflow-hidden">
-                  <DetailImage src={variant.imageUrl} alt={`${product.name} ${variant.color || ""}`} icon={Palette} />
+              <article
+                key={variant.id}
+                className="group min-w-0 overflow-hidden rounded-2xl transition duration-300 hover:-translate-y-0.5 motion-reduce:transition-none"
+                style={{ border: "1px solid var(--line)", background: "var(--surface-2)" }}
+              >
+                <div className="relative h-28 overflow-hidden">
+                  <DetailImage
+                    src={variant.imageUrl}
+                    alt={`${product.name} ${canonicalColorName(variant.color || "")} ${variant.size}`}
+                    icon={Palette}
+                    images={gallery}
+                    initialIndex={imageIndex(gallery, variant.imageUrl)}
+                  />
+                  <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-[#21151a]/55 px-2 py-0.5 text-[9px] font-black text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100 motion-reduce:transition-none">
+                    تكبير <Expand size={9} className="inline" />
+                  </span>
                 </div>
                 <div className="min-w-0 p-3">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span
                       className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-[10px] font-black"
-                      style={{ background: swatch, color: colorInk(swatch) }}
+                      style={{ background: swatch, color: colorInk(variant.color || "") }}
                     >
                       <span className="h-2 w-2 shrink-0 rounded-full bg-white/80" />
                       {canonicalColorName(variant.color || "") || "لون"}
@@ -208,7 +273,12 @@ export function PublicProductDetail({ product }: { product: CatalogProduct }) {
 
 export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
   const stats = priceStats(pkg.variants);
-  const hero = pkg.image_url || pkg.variants.find((variant) => variant.imageUrl)?.imageUrl || null;
+  const gallery = uniqueImages([
+    pkg.image_url,
+    ...pkg.variants.map((variant) => variant.imageUrl),
+    ...pkg.items.map((item) => item.imageUrl),
+  ]);
+  const hero = gallery[0] ?? null;
   const before = Number(pkg.starting_before_price) || 0;
   const after = Number(pkg.starting_price) || 0;
   const savings = Math.max(0, before - after);
@@ -226,7 +296,14 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
       <section className="app-card overflow-hidden">
         <div className="grid lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="relative min-h-[280px] overflow-hidden sm:min-h-[380px] lg:min-h-[430px]" style={{ background: "linear-gradient(135deg, var(--brand-soft), var(--surface-3))" }}>
-            <DetailImage src={hero} alt={pkg.name} icon={Gift} className="absolute inset-0 h-full w-full" />
+            <DetailImage
+              src={hero}
+              alt={pkg.name}
+              icon={Gift}
+              className="absolute inset-0 h-full w-full"
+              images={gallery}
+              initialIndex={0}
+            />
             <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-4">
               <span className="badge badge-brand shadow-sm"><Gift size={12} />بكدج لونيفا</span>
               {stats.topDiscount > 0 && (
@@ -234,8 +311,28 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
               )}
             </div>
             {pkg.badge && (
-              <span className="absolute bottom-4 right-4 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-extrabold text-[#7c4354] shadow-sm backdrop-blur">
+              <span className="pointer-events-none absolute bottom-16 right-4 rounded-full bg-white/90 px-3 py-1.5 text-[11px] font-extrabold text-[#7c4354] shadow-sm backdrop-blur">
                 {pkg.badge}
+              </span>
+            )}
+            {gallery.length > 1 && (
+              <div className="no-scrollbar absolute inset-x-0 bottom-0 flex justify-center gap-2 overflow-x-auto p-3">
+                {gallery.map((image, imageIndex) => (
+                  <ZoomableImage
+                    key={`${image}-${imageIndex}`}
+                    src={image}
+                    alt={`${pkg.name} ${imageIndex + 1}`}
+                    images={gallery}
+                    initialIndex={imageIndex}
+                    className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white/80 shadow-md"
+                    showHint={false}
+                  />
+                ))}
+              </div>
+            )}
+            {gallery.length > 0 && (
+              <span className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-[#21151a]/55 px-2.5 py-1 text-[9px] font-black text-white backdrop-blur-sm">
+                اضغط للتكبير
               </span>
             )}
           </div>
@@ -279,9 +376,17 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {pkg.items.map((item) => (
-              <article key={item.id} className="flex min-w-0 items-center gap-3 rounded-2xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-                <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-xl" style={{ background: "var(--surface)", color: "var(--lav-strong)" }}>
-                  <DetailImage src={item.imageUrl} alt={item.productName} icon={Package} className="h-full w-full" />
+              <article key={item.id} className="group flex min-w-0 items-center gap-3 rounded-2xl p-3" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
+                <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl" style={{ background: "var(--surface)", color: "var(--lav-strong)" }}>
+                  <DetailImage
+                    src={item.imageUrl}
+                    alt={item.productName}
+                    icon={Package}
+                    className="h-full w-full"
+                    images={gallery}
+                    initialIndex={imageIndex(gallery, item.imageUrl)}
+                  />
+                  <span className="pointer-events-none absolute inset-x-0 bottom-0 bg-[#21151a]/55 py-0.5 text-center text-[8px] font-black text-white opacity-0 transition group-hover:opacity-100 motion-reduce:transition-none">تكبير</span>
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[12px] font-black" style={{ color: "var(--ink)" }}>{item.productName}</p>
@@ -315,9 +420,18 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
               const variantPrice = Number(variant.price) || 0;
               const percent = discountPercent(variantBefore, variantPrice);
               return (
-                <article key={variant.id} className="min-w-0 overflow-hidden rounded-2xl" style={{ border: "1px solid var(--line)", background: "var(--surface-2)" }}>
-                  <div className="h-24 overflow-hidden">
-                    <DetailImage src={variant.imageUrl} alt={variant.name || pkg.name} icon={Gift} />
+                <article key={variant.id} className="group min-w-0 overflow-hidden rounded-2xl transition duration-300 hover:-translate-y-0.5 motion-reduce:transition-none" style={{ border: "1px solid var(--line)", background: "var(--surface-2)" }}>
+                  <div className="relative h-24 overflow-hidden">
+                    <DetailImage
+                      src={variant.imageUrl}
+                      alt={variant.name || pkg.name}
+                      icon={Gift}
+                      images={gallery}
+                      initialIndex={imageIndex(gallery, variant.imageUrl)}
+                    />
+                    <span className="pointer-events-none absolute bottom-2 right-2 rounded-full bg-[#21151a]/55 px-2 py-0.5 text-[9px] font-black text-white opacity-0 backdrop-blur-sm transition group-hover:opacity-100 motion-reduce:transition-none">
+                      تكبير <Expand size={9} className="inline" />
+                    </span>
                   </div>
                   <div className="min-w-0 p-3">
                     <p className="truncate text-[12px] font-black" style={{ color: "var(--ink)" }}>{variant.name || pkg.name}</p>

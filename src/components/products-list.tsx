@@ -9,10 +9,17 @@ import {
   Package,
   PackageOpen,
   Plus,
-  Search,
   Tag,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import FilterBar from "@/components/catalog-filter-bar";
+import {
+  emptyFilters,
+  filterAndSortItems,
+  type CatalogFilters,
+  type FilterableItem,
+} from "@/lib/catalog-filters";
+import { canonicalColorName } from "@/lib/colors";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 
 type Product = {
@@ -26,18 +33,44 @@ type Product = {
   starting_before_price?: string | number | null;
   top_discount?: string | number | null;
   created_at: string;
+  colors?: string[] | null;
+  sizes?: string[] | null;
 };
 
+function uniqueSorted(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, "ar"));
+}
+
 export default function ProductsList({ products }: { products: Product[] }) {
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<CatalogFilters>(emptyFilters);
+
+  const productColors = useMemo(
+    () =>
+      uniqueSorted(
+        products.flatMap((product) => (product.colors ?? []).map((color) => canonicalColorName(color))),
+      ),
+    [products],
+  );
+  const productSizes = useMemo(
+    () => uniqueSorted(products.flatMap((product) => product.sizes ?? [])),
+    [products],
+  );
 
   const visible = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    if (!query) return products;
-    return products.filter((product) =>
-      `${product.name} ${product.primary_sku}`.toLowerCase().includes(query),
-    );
-  }, [products, search]);
+    const rows: Array<FilterableItem & { product: Product }> = products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      sku: product.primary_sku,
+      colors: (product.colors ?? []).map((color) => canonicalColorName(color)),
+      sizes: product.sizes ?? [],
+      price: Number(product.starting_price ?? 0),
+      discountPercent: Number(product.top_discount ?? 0),
+      createdAt: product.created_at,
+      searchText: `${product.variant_count} متغير`,
+      product,
+    }));
+    return filterAndSortItems(rows, filters).map((row) => row.product);
+  }, [filters, products]);
 
   const totalVariants = products.reduce((sum, product) => sum + Number(product.variant_count || 0), 0);
   const withVariants = products.filter((product) => Number(product.variant_count) > 0).length;
@@ -90,6 +123,17 @@ export default function ProductsList({ products }: { products: Product[] }) {
         ))}
       </section>
 
+      <FilterBar
+        key={JSON.stringify(filters)}
+        filters={filters}
+        colors={productColors}
+        sizes={productSizes}
+        mode="local"
+        onChange={setFilters}
+        resultCount={visible.length}
+        totalCount={products.length}
+      />
+
       <section className="app-card overflow-hidden">
         <div className="border-b p-5 sm:p-6" style={{ borderColor: "var(--line)" }}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -102,16 +146,9 @@ export default function ProductsList({ products }: { products: Product[] }) {
                 <p className="mt-0.5 text-xs muted">{formatNumber(products.length)} منتج · {formatNumber(totalVariants)} متغير</p>
               </div>
             </div>
-            <label className="flex items-center gap-2 rounded-xl px-3 py-2.5 sm:w-80" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-              <Search size={16} style={{ color: "var(--muted-2)" }} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="ابحثي بالاسم أو الكود"
-                className="w-full bg-transparent text-sm outline-none"
-                style={{ color: "var(--ink)" }}
-              />
-            </label>
+            <span className="badge badge-brand self-start sm:self-auto">
+              {formatNumber(visible.length)} / {formatNumber(products.length)} ظاهر
+            </span>
           </div>
         </div>
 

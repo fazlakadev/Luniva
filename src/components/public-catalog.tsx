@@ -19,30 +19,53 @@ import { BlurFade } from "@/components/motion/blur-fade";
 import HeroTitle from "@/components/motion/hero-title";
 import MagneticLink from "@/components/motion/magnetic-link";
 import { NumberTicker } from "@/components/motion/number-ticker";
+import FilterBar from "@/components/catalog-filter-bar";
 import PublicSiteShell from "@/components/public-site-shell";
-import { loadPublicCatalog, type CatalogVariant } from "@/lib/catalog";
+import {
+  activeFilterCount,
+  emptyFilters,
+  filterAndSortItems,
+  variantFacets,
+  type CatalogFilters,
+  type FilterableItem,
+} from "@/lib/catalog-filters";
+import { loadPublicCatalog, type CatalogPackage, type CatalogProduct, type CatalogVariant } from "@/lib/catalog";
+import { canonicalColorName } from "@/lib/colors";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
 
 type PublicCatalogProps = {
   page?: "home" | "products" | "packages";
   query?: string;
+  filters?: CatalogFilters;
 };
 
-function normalizeSearch(value: string) {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/[\u064B-\u065F\u0670\u0640]/g, "")
-    .replace(/[أإآ]/g, "ا")
-    .replace(/ة/g, "ه")
-    .replace(/ى/g, "ي");
+function uniqueSorted(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, "ar"));
 }
 
-function matchesQuery(query: string, haystack: Array<string | number | null | undefined>) {
-  if (!query) return true;
-  const needle = normalizeSearch(query);
-  return haystack.some((value) => value != null && normalizeSearch(String(value)).includes(needle));
+function productFacets(product: CatalogProduct) {
+  return product.variants.reduce(
+    (result, variant) => {
+      const color = canonicalColorName(variant.color || "");
+      if (color) result.colors.push(color);
+      if (variant.size) result.sizes.push(variant.size);
+      return result;
+    },
+    { colors: [] as string[], sizes: [] as string[] },
+  );
+}
+
+function packageFacets(item: CatalogPackage) {
+  return item.variants.reduce(
+    (result, variant) => {
+      const facets = variantFacets(variant);
+      result.colors.push(...facets.colors.map((color) => canonicalColorName(color)));
+      result.sizes.push(...facets.sizes);
+      return result;
+    },
+    { colors: [] as string[], sizes: [] as string[] },
+  );
 }
 
 function priceStats(variants: CatalogVariant[]) {
@@ -82,36 +105,53 @@ function CardImage({
   );
 }
 
-export default async function PublicCatalog({ page = "home", query = "" }: PublicCatalogProps) {
+export default async function PublicCatalog({ page = "home", query = "", filters: filterProps }: PublicCatalogProps) {
   const { products: allProducts, packages: allPackages, loadError } = await loadPublicCatalog();
 
   const isHome = page === "home";
   const isProducts = page === "products";
   const isPackages = page === "packages";
-  const searchQuery = isHome ? "" : query.trim();
+  const searchQuery = isHome ? "" : (filterProps?.q ?? query.trim());
+  const filters = isHome ? emptyFilters : (filterProps ?? { ...emptyFilters, q: query.trim() });
+  const activeCount = activeFilterCount(filters);
 
-  const products = searchQuery
-    ? allProducts.filter((product) =>
-        matchesQuery(searchQuery, [
-          product.name,
-          product.description,
-          product.primary_sku,
-          ...product.variants.flatMap((variant) => [variant.name, variant.color, variant.size, variant.sku]),
-        ]),
-      )
-    : allProducts;
-  const packages = searchQuery
-    ? allPackages.filter((item) =>
-        matchesQuery(searchQuery, [
-          item.name,
-          item.description,
-          item.primary_sku,
-          item.badge,
-          ...item.variants.flatMap((variant) => [variant.color, variant.size, variant.sku]),
-        ]),
-      )
-    : allPackages;
-  const offerCount = packages.filter((item) => priceStats(item.variants).topDiscount > 0).length;
+  const productFacetData = allProducts.map((product) => ({ product, facets: productFacets(product) }));
+  const packageFacetData = allPackages.map((item) => ({ item, facets: packageFacets(item) }));
+  const productColors = uniqueSorted(productFacetData.flatMap((entry) => entry.facets.colors));
+  const productSizes = uniqueSorted(productFacetData.flatMap((entry) => entry.facets.sizes));
+  const packageColors = uniqueSorted(packageFacetData.flatMap((entry) => entry.facets.colors));
+  const packageSizes = uniqueSorted(packageFacetData.flatMap((entry) => entry.facets.sizes));
+  const productPrices = allProducts.flatMap((product) => priceStats(product.variants).min).filter((price) => price > 0);
+  const packagePrices = allPackages.flatMap((item) => priceStats(item.variants).min).filter((price) => price > 0);
+
+  const productRows: Array<FilterableItem & { product: CatalogProduct }> = productFacetData.map(({ product, facets }) => ({
+    id: product.id,
+    name: product.name,
+    sku: product.primary_sku,
+    description: product.description,
+    colors: facets.colors,
+    sizes: facets.sizes,
+    price: priceStats(product.variants).min,
+    discountPercent: priceStats(product.variants).topDiscount,
+    searchText: product.variants.flatMap((variant) => [variant.name, variant.sku]).join(" "),
+    product,
+  }));
+  const packageRows: Array<FilterableItem & { item: CatalogPackage }> = packageFacetData.map(({ item, facets }) => ({
+    id: item.id,
+    name: item.name,
+    sku: item.primary_sku,
+    description: item.description,
+    colors: facets.colors,
+    sizes: facets.sizes,
+    price: priceStats(item.variants).min,
+    discountPercent: priceStats(item.variants).topDiscount,
+    searchText: [item.badge, ...item.variants.flatMap((variant) => [variant.name, variant.sku])].filter(Boolean).join(" "),
+    item,
+  }));
+
+  const products = filterAndSortItems(productRows, filters).map((row) => row.product);
+  const packages = filterAndSortItems(packageRows, filters).map((row) => row.item);
+  const offerCount = allPackages.filter((item) => priceStats(item.variants).topDiscount > 0).length;
 
   const heroHref = isProducts ? "/catalog/packages" : "/catalog/products";
   const heroLabel = isProducts ? "تصفّح البكدجات" : "تصفّح المنتجات";
@@ -210,18 +250,31 @@ export default async function PublicCatalog({ page = "home", query = "" }: Publi
       </section>
       )}
 
-      {searchQuery && (
+      {!isHome && (
+        <div className="mt-5">
+          <FilterBar
+            key={JSON.stringify(filters)}
+            filters={filters}
+            colors={isProducts ? productColors : packageColors}
+            sizes={isProducts ? productSizes : packageSizes}
+            basePath={isProducts ? "/catalog/products" : "/catalog/packages"}
+            resultCount={isProducts ? products.length : packages.length}
+            totalCount={isProducts ? allProducts.length : allPackages.length}
+          />
+        </div>
+      )}
+
+      {!isHome && activeCount > 0 && (
         <div
           className="app-card mt-5 flex flex-wrap items-center justify-between gap-3 p-4 text-[11px] font-bold"
           style={{ borderColor: "var(--line)", color: "var(--ink-soft)" }}
         >
           <span>
-            نتائج البحث عن <b style={{ color: "var(--brand-strong)" }}>«{searchQuery}»</b>:{" "}
-            {formatNumber(isProducts ? products.length : packages.length)}{" "}
-            {isProducts ? "منتج" : "بكدج"}
+            عرض {formatNumber(isProducts ? products.length : packages.length)} {isProducts ? "منتج" : "بكدج"}
+            {searchQuery && <> ضمن نتائج البحث عن <b style={{ color: "var(--brand-strong)" }}>«{searchQuery}»</b></>}
           </span>
           <Link href={isProducts ? "/catalog/products" : "/catalog/packages"} className="btn btn-soft px-3 py-1.5 text-[10px]">
-            <X size={12} />مسح البحث
+            <X size={12} />عرض الكل
           </Link>
         </div>
       )}
@@ -252,10 +305,10 @@ export default async function PublicCatalog({ page = "home", query = "" }: Publi
                   <Package size={28} />
                 </span>
                 <p className="font-extrabold" style={{ color: "var(--ink)" }}>
-                  {searchQuery ? "لا توجد نتائج مطابقة" : "لا توجد منتجات للعرض بعد"}
+                  {activeCount > 0 ? "لا توجد نتائج مطابقة" : "لا توجد منتجات للعرض بعد"}
                 </p>
                 <p className="mx-auto mt-2 max-w-xs text-sm muted">
-                  {searchQuery ? "جرّبي كلمة بحث أخرى أو امسحي البحث للعودة إلى كل المنتجات." : "ستظهر المنتجات هنا فور إضافتها إلى الكتالوج."}
+                  {activeCount > 0 ? "جرّبي كلمة بحث أو فلترًا آخر، أو امسحي الفلاتر للعودة إلى كل المنتجات." : "ستظهر المنتجات هنا فور إضافتها إلى الكتالوج."}
                 </p>
               </div>
             </div>
@@ -333,10 +386,10 @@ export default async function PublicCatalog({ page = "home", query = "" }: Publi
                   <Gift size={28} />
                 </span>
                 <p className="font-extrabold" style={{ color: "var(--ink)" }}>
-                  {searchQuery ? "لا توجد نتائج مطابقة" : "لا توجد بكدجات للعرض بعد"}
+                  {activeCount > 0 ? "لا توجد نتائج مطابقة" : "لا توجد بكدجات للعرض بعد"}
                 </p>
                 <p className="mx-auto mt-2 max-w-xs text-sm muted">
-                  {searchQuery ? "جرّبي كلمة بحث أخرى أو امسحي البحث للعودة إلى كل البكدجات." : "ستظهر البكدجات النشطة هنا فور تجهيزها."}
+                  {activeCount > 0 ? "جرّبي كلمة بحث أو فلترًا آخر، أو امسحي الفلاتر للعودة إلى كل البكدجات." : "ستظهر البكدجات النشطة هنا فور تجهيزها."}
                 </p>
               </div>
             </div>

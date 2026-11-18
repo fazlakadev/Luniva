@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import PublicCatalog from "@/components/public-catalog";
+import { parseCatalogFilters } from "@/lib/catalog-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -11,9 +12,8 @@ export const metadata: Metadata = {
 export default async function ProductsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string | string[] }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const params = await searchParams;
-  const query = Array.isArray(params.q) ? params.q[0] ?? "" : params.q ?? "";
-  return <PublicCatalog page="products" query={query} />;
+  const filters = parseCatalogFilters(await searchParams);
+  return <PublicCatalog page="products" filters={filters} />;
 }

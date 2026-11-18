@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { colorInk, colorSwatch, canonicalColorName, normalizeColorName } from "@/lib/colors";
+import ZoomableImage from "@/components/zoomable-image";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
 
@@ -68,6 +69,16 @@ function variantTitle(variant: PackageVariantView) {
     .join(" / ");
 }
 
+function variantGallery(variant: PackageVariantView) {
+  return Array.from(
+    new Set(
+      [variant.image_url, ...variant.selections.map((selection) => selection.imageUrl)].filter(
+        (value): value is string => Boolean(value),
+      ),
+    ),
+  );
+}
+
 function CompositionRow({ selection, compact = false }: { selection: PackageSelection; compact?: boolean }) {
   return (
     <div
@@ -78,17 +89,20 @@ function CompositionRow({ selection, compact = false }: { selection: PackageSele
         className={`shrink-0 overflow-hidden rounded-lg ${compact ? "h-8 w-8" : "h-11 w-11"}`}
         style={{ background: "linear-gradient(135deg, var(--lav-soft), var(--surface-3))", border: "1px solid var(--line)" }}
       >
-        {selection.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={selection.imageUrl} alt="" className="h-full w-full object-cover" />
-        ) : (
-          <span className="grid h-full w-full place-items-center">
-            <span
-              className={`rounded-full ${compact ? "h-4 w-4" : "h-6 w-6"}`}
-              style={{ background: colorSwatch(selection.color), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.15)" }}
-            />
-          </span>
-        )}
+        <ZoomableImage
+          src={selection.imageUrl}
+          alt={selection.productName}
+          className="h-full w-full"
+          showHint={false}
+          placeholder={
+            <span className="grid h-full w-full place-items-center">
+              <span
+                className={`rounded-full ${compact ? "h-4 w-4" : "h-6 w-6"}`}
+                style={{ background: colorSwatch(selection.color), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.15)" }}
+              />
+            </span>
+          }
+        />
       </span>
       <div className="min-w-0 flex-1">
         <p className={`truncate font-extrabold ${compact ? "text-[11px]" : "text-xs"}`} style={{ color: "var(--ink)" }}>
@@ -121,6 +135,7 @@ export default function PackageVariants({
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const active = variants.find((variant) => variant.id === activeId) ?? null;
+  const activeGallery = active ? variantGallery(active) : [];
 
   useEffect(() => {
     if (!active) return;
@@ -253,7 +268,7 @@ export default function PackageVariants({
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {colorGroups.map((group) => {
               const hex = colorSwatch(group.color);
-              const ink = colorInk(hex);
+              const ink = colorInk(group.color);
               const active = colorFilter === group.color;
               const shown = active ? visible.length : group.count;
               return (
@@ -302,7 +317,7 @@ export default function PackageVariants({
           {colorFilter && (
             <span
               className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-extrabold"
-              style={{ background: colorSwatch(colorFilter), color: colorInk(colorSwatch(colorFilter)) }}
+              style={{ background: colorSwatch(colorFilter), color: colorInk(colorFilter) }}
             >
               {colorFilter}
             </span>
@@ -337,20 +352,25 @@ export default function PackageVariants({
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {visible.map((variant) => {
           const numbers = variantNumbers(variant);
+          const gallery = variantGallery(variant);
           return (
             <article key={variant.id} className="app-card group flex flex-col overflow-hidden transition hover:-translate-y-0.5" style={{ boxShadow: "var(--shadow-sm)" }}>
               <div className="relative h-44 overflow-hidden" style={{ background: "linear-gradient(135deg, var(--lav-soft), var(--surface-3))" }}>
-                {variant.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={variant.image_url} alt={variantTitle(variant)} className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]" />
-                ) : (
-                  <div className="grid h-full place-items-center">
-                    <div className="text-center">
-                      <Layers3 size={34} style={{ color: "var(--lav-strong)" }} />
-                      <p className="mt-2 text-[10px] font-extrabold" style={{ color: "var(--lav-strong)" }}>بكدج لونيفا</p>
+                <ZoomableImage
+                  src={variant.image_url}
+                  alt={variantTitle(variant)}
+                  images={gallery}
+                  initialIndex={0}
+                  className="h-full w-full"
+                  placeholder={
+                    <div className="grid h-full place-items-center">
+                      <div className="text-center">
+                        <Layers3 size={34} style={{ color: "var(--lav-strong)" }} />
+                        <p className="mt-2 text-[10px] font-extrabold" style={{ color: "var(--lav-strong)" }}>بكدج لونيفا</p>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  }
+                />
                 <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
                   {variant.is_default ? <span className="badge badge-dark">الافتراضي</span> : <span />}
                   <div className="flex flex-col items-end gap-1">
@@ -446,26 +466,28 @@ export default function PackageVariants({
         >
           <div
             className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-[var(--surface)] shadow-2xl sm:rounded-3xl"
+            data-lenis-prevent
+            data-lenis-prevent-wheel
             style={{ border: "1px solid var(--line)" }}
             onClick={(event) => event.stopPropagation()}
           >
             <div className="relative">
               <div className="relative h-52 overflow-hidden sm:h-60" style={{ background: "linear-gradient(135deg, var(--lav-soft), var(--surface-3))" }}>
-                {active.image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={active.image_url} alt={variantTitle(active)} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="grid h-full place-items-center">
-                    <GiftMark />
-                  </div>
-                )}
-                <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-1.5 bg-gradient-to-t from-black/55 to-transparent p-3 pt-8">
+                <ZoomableImage
+                  src={active.image_url}
+                  alt={variantTitle(active)}
+                  images={activeGallery}
+                  initialIndex={0}
+                  className="h-full w-full"
+                  placeholder={<div className="grid h-full place-items-center"><GiftMark /></div>}
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-1.5 bg-gradient-to-t from-black/55 to-transparent p-3 pt-8">
                   {active.is_default && <span className="badge badge-dark">الافتراضي</span>}
                   {variantColors(active).map((color) => (
                     <span
                       key={color}
                       className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-extrabold"
-                      style={{ background: colorSwatch(color), color: colorInk(colorSwatch(color)) }}
+                      style={{ background: colorSwatch(color), color: colorInk(color) }}
                     >
                       {color}
                     </span>
@@ -486,6 +508,21 @@ export default function PackageVariants({
                   <X size={17} />
                 </button>
               </div>
+              {activeGallery.length > 1 && (
+                <div className="no-scrollbar flex justify-center gap-2 overflow-x-auto p-3" style={{ background: "var(--surface-2)" }}>
+                  {activeGallery.map((image, index) => (
+                    <ZoomableImage
+                      key={`${image}-${index}`}
+                      src={image}
+                      alt={`${variantTitle(active)} ${index + 1}`}
+                      images={activeGallery}
+                      initialIndex={index}
+                      className="h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 border-white/80 shadow-sm"
+                      showHint={false}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="p-5 sm:p-6">

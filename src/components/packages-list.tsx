@@ -8,11 +8,18 @@ import {
   Layers3,
   PackageOpen,
   Pencil,
-  Search,
   Sparkles,
   Tag,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import FilterBar from "@/components/catalog-filter-bar";
+import {
+  emptyFilters,
+  filterAndSortItems,
+  type CatalogFilters,
+  type FilterableItem,
+} from "@/lib/catalog-filters";
+import { canonicalColorName } from "@/lib/colors";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent, packageStatusLabels, type PackageStatus } from "@/lib/packages";
 
@@ -33,6 +40,8 @@ export type PackageRow = {
   starting_before_price: string | number;
   stock_total: number;
   created_at: string;
+  colors?: string[] | null;
+  sizes?: string[] | null;
 };
 
 const tabs = [
@@ -42,15 +51,30 @@ const tabs = [
   { key: "archived", label: "مؤرشفة" },
 ] as const;
 
+const statusOptions = tabs.map((tab) => ({ value: tab.key, label: tab.label }));
+
 const statusStyle: Record<PackageStatus, string> = {
   active: "badge-success",
   draft: "badge-warning",
   archived: "badge-muted",
 };
 
+function uniqueSorted(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b, "ar"));
+}
+
 export default function PackagesList({ packages }: { packages: PackageRow[] }) {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<(typeof tabs)[number]["key"]>("all");
+  const [filters, setFilters] = useState<CatalogFilters>(emptyFilters);
+  const status = filters.status;
+
+  const packageColors = useMemo(
+    () => uniqueSorted(packages.flatMap((item) => (item.colors ?? []).map((color) => canonicalColorName(color)))),
+    [packages],
+  );
+  const packageSizes = useMemo(
+    () => uniqueSorted(packages.flatMap((item) => item.sizes ?? [])),
+    [packages],
+  );
 
   const counts = useMemo(
     () => ({
@@ -63,18 +87,38 @@ export default function PackagesList({ packages }: { packages: PackageRow[] }) {
   );
 
   const visible = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return packages.filter((item) => {
-      const matchesStatus = status === "all" || item.status === status;
-      const matchesQuery = query
-        ? `${item.name} ${item.primary_sku} ${item.description ?? ""}`.toLowerCase().includes(query)
-        : true;
-      return matchesStatus && matchesQuery;
-    });
-  }, [packages, search, status]);
+    const rows: Array<FilterableItem & { item: PackageRow }> = packages.map((item) => ({
+      id: item.id,
+      name: item.name,
+      sku: item.primary_sku,
+      description: item.description,
+      colors: (item.colors ?? []).map((color) => canonicalColorName(color)),
+      sizes: item.sizes ?? [],
+      price: Number(item.starting_price ?? 0),
+      discountPercent: discountPercent(Number(item.starting_before_price), Number(item.starting_price)),
+      status: item.status,
+      createdAt: item.created_at,
+      searchText: `${item.badge ?? ""} ${item.items_count} منتجات ${item.variants_count} بكدج فرعي`,
+      item,
+    }));
+    return filterAndSortItems(rows, filters).map((row) => row.item);
+  }, [filters, packages]);
 
   return (
-    <section className="app-card overflow-hidden">
+    <>
+      <FilterBar
+        key={JSON.stringify(filters)}
+        filters={filters}
+        colors={packageColors}
+        sizes={packageSizes}
+        statusOptions={statusOptions}
+        mode="local"
+        onChange={setFilters}
+        resultCount={visible.length}
+        totalCount={packages.length}
+      />
+
+      <section className="app-card overflow-hidden">
       <div className="border-b p-5 sm:p-6" style={{ borderColor: "var(--line)" }}>
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex items-center gap-3">
@@ -93,7 +137,7 @@ export default function PackagesList({ packages }: { packages: PackageRow[] }) {
                 <button
                   key={tab.key}
                   type="button"
-                  onClick={() => setStatus(tab.key)}
+                  onClick={() => setFilters((current) => ({ ...current, status: tab.key }))}
                   className="rounded-lg px-3 py-2 text-xs font-extrabold transition"
                   style={
                     status === tab.key
@@ -106,16 +150,9 @@ export default function PackagesList({ packages }: { packages: PackageRow[] }) {
                 </button>
               ))}
             </div>
-            <label className="flex items-center gap-2 rounded-xl px-3 py-2.5 sm:w-72" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-              <Search size={16} style={{ color: "var(--muted-2)" }} />
-              <input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="ابحثي بالاسم أو الكود"
-                className="w-full bg-transparent text-sm outline-none"
-                style={{ color: "var(--ink)" }}
-              />
-            </label>
+            <span className="badge badge-brand self-start sm:self-auto">
+              {formatNumber(visible.length)} / {formatNumber(packages.length)} ظاهر
+            </span>
           </div>
         </div>
       </div>
@@ -205,6 +242,7 @@ export default function PackagesList({ packages }: { packages: PackageRow[] }) {
           })}
         </div>
       )}
-    </section>
+      </section>
+    </>
   );
 }

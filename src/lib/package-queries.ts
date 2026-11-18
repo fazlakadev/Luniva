@@ -9,7 +9,17 @@ export async function getPackagesList() {
       COALESCE((SELECT MIN(v.price_after_discount) FROM package_variants v WHERE v.package_id = p.id), p.price_after_discount) AS starting_price,
       COALESCE((SELECT MAX(v.price_after_discount) FROM package_variants v WHERE v.package_id = p.id), p.price_after_discount) AS top_price,
       COALESCE((SELECT MIN(v.price_before_discount) FROM package_variants v WHERE v.package_id = p.id), p.price_before_discount) AS starting_before_price,
-      COALESCE((SELECT SUM(v.stock)::int FROM package_variants v WHERE v.package_id = p.id), 0) AS stock_total
+      COALESCE((SELECT SUM(v.stock)::int FROM package_variants v WHERE v.package_id = p.id), 0) AS stock_total,
+      COALESCE((SELECT array_agg(DISTINCT fv.color) FILTER (WHERE fv.color IS NOT NULL)
+        FROM package_variants pv
+        JOIN package_variant_items psi ON psi.package_variant_id = pv.id
+        JOIN product_variants fv ON fv.id = psi.product_variant_id
+        WHERE pv.package_id = p.id), '{}') AS colors,
+      COALESCE((SELECT array_agg(DISTINCT fv.size) FILTER (WHERE fv.size IS NOT NULL)
+        FROM package_variants pv
+        JOIN package_variant_items psi ON psi.package_variant_id = pv.id
+        JOIN product_variants fv ON fv.id = psi.product_variant_id
+        WHERE pv.package_id = p.id), '{}') AS sizes
     FROM packages p
     ORDER BY p.created_at DESC
   `);

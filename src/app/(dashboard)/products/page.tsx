@@ -5,6 +5,8 @@ export default async function ProductsPage() {
   await ensureProductsTables();
   const result = await db.query(`
     SELECT p.id, p.name, p.primary_sku, p.image_url, p.created_at,
+      COALESCE((SELECT array_agg(DISTINCT fv.color) FILTER (WHERE fv.color IS NOT NULL) FROM product_variants fv WHERE fv.product_id = p.id), '{}') AS colors,
+      COALESCE((SELECT array_agg(DISTINCT fv.size) FILTER (WHERE fv.size IS NOT NULL) FROM product_variants fv WHERE fv.product_id = p.id), '{}') AS sizes,
       COUNT(v.id)::int AS variant_count,
       MIN(v.price) AS starting_price,
       MAX(v.price) AS top_price,

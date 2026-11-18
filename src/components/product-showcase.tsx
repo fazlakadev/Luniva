@@ -4,6 +4,7 @@ import {
   BadgePercent,
   CalendarDays,
   ChevronLeft,
+  Expand,
   Layers3,
   Package,
   ReceiptText,
@@ -59,6 +60,7 @@ export default function ProductShowcase({
   variants: ShowcaseVariant[];
 }) {
   const [selectedId, setSelectedId] = useState<string>(variants[0]?.id ?? "");
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
 
   const selected = variants.find((variant) => variant.id === selectedId) ?? variants[0];
 
@@ -94,7 +96,6 @@ export default function ProductShowcase({
   }, [variants]);
 
   const selectedNumbers = selected ? variantNumbers(selected) : null;
-  const heroImage = selected?.image_url || product.image_url;
 
   const gallery = useMemo(() => {
     const seen = new Set<string>();
@@ -112,7 +113,17 @@ export default function ProductShowcase({
     return items;
   }, [product.image_url, variants]);
 
+  const galleryUrls = gallery.map((item) => item.url);
+  const heroImage = gallery[activeImageIndex]?.url ?? product.image_url ?? selected?.image_url ?? null;
   const selectedColorName = selected ? canonicalColorName(selected.color) || selected.color : "";
+
+  function focusVariant(variant: ShowcaseVariant) {
+    setSelectedId(variant.id);
+    if (variant.image_url) {
+      const index = galleryUrls.indexOf(variant.image_url);
+      if (index >= 0) setActiveImageIndex(index);
+    }
+  }
 
   function pickColor(color: string) {
     const isSameColor = (variant: ShowcaseVariant) =>
@@ -120,14 +131,14 @@ export default function ProductShowcase({
     const sameSize = variants.find((variant) => isSameColor(variant) && variant.size === selected?.size);
     const fallback = variants.find(isSameColor);
     const target = sameSize ?? fallback;
-    if (target) setSelectedId(target.id);
+    if (target) focusVariant(target);
   }
 
   function pickSize(size: string) {
     const sameColor = variants.find((variant) => matchesSelectedColor(variant) && variant.size === size);
     const fallback = variants.find((variant) => variant.size === size);
     const target = sameColor ?? fallback;
-    if (target) setSelectedId(target.id);
+    if (target) focusVariant(target);
   }
 
   function matchesSelectedColor(variant: ShowcaseVariant) {
@@ -150,9 +161,10 @@ export default function ProductShowcase({
             <div className="relative min-h-[280px] flex-1 overflow-hidden sm:min-h-[360px] lg:min-h-[430px]">
               {heroImage ? (
                 <ZoomableImage
-                  key={heroImage}
                   src={heroImage}
-                  alt={selected ? `${product.name} — ${selected.color} ${selected.size}` : product.name}
+                  alt={selected ? `${product.name} — ${canonicalColorName(selected.color)} ${selected.size}` : product.name}
+                  images={galleryUrls}
+                  initialIndex={activeImageIndex}
                   className="h-full min-h-[280px] w-full sm:min-h-[360px] lg:min-h-[430px]"
                 />
               ) : (
@@ -162,6 +174,12 @@ export default function ProductShowcase({
                     <p className="mt-3 text-sm font-extrabold" style={{ color: "var(--lav-strong)" }}>منتج لونيفا</p>
                   </div>
                 </div>
+              )}
+
+              {heroImage && (
+                <span className="pointer-events-none absolute right-3 top-12 inline-flex items-center gap-1 rounded-full bg-[#21151a]/55 px-2.5 py-1 text-[9px] font-black text-white backdrop-blur-sm">
+                  <Expand size={10} />اضغط للتكبير
+                </span>
               )}
 
               <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
@@ -179,7 +197,7 @@ export default function ProductShowcase({
                 <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center gap-1.5 p-3">
                   <span
                     className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold shadow-sm"
-                    style={{ background: colorSwatch(selected.color), color: colorInk(colorSwatch(selected.color)) }}
+                    style={{ background: colorSwatch(selected.color), color: colorInk(selected.color) }}
                   >
                     <span className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(255,255,255,.85)", boxShadow: "inset 0 0 0 1px rgba(0,0,0,.18)" }} />
                     {canonicalColorName(selected.color)}
@@ -191,21 +209,27 @@ export default function ProductShowcase({
 
             {gallery.length > 1 && (
               <div className="flex flex-wrap gap-2 p-3" style={{ background: "color-mix(in srgb, var(--surface) 70%, transparent)" }}>
-                {gallery.map((item) => {
-                  const active = item.variant ? item.variant.id === selected?.id : !selected?.image_url;
+                {gallery.map((item, index) => {
+                  const active = index === activeImageIndex;
                   return (
                     <button
                       key={item.url}
                       type="button"
-                      onClick={() => item.variant && setSelectedId(item.variant.id)}
-                      className="relative h-14 w-14 overflow-hidden rounded-xl transition"
+                      onClick={() => {
+                        setActiveImageIndex(index);
+                        if (item.variant) focusVariant(item.variant);
+                      }}
+                      className="relative h-14 w-14 overflow-hidden rounded-xl transition motion-reduce:transition-none"
                       style={{
                         border: active ? "2px solid var(--lav-strong)" : "1px solid var(--line)",
                         background: "var(--surface)",
                         opacity: active ? 1 : 0.75,
+                        boxShadow: active ? "0 6px 16px var(--lav-ring)" : "none",
                       }}
-                      aria-label={item.variant ? `${item.variant.color} ${item.variant.size}` : "الصورة الأساسية"}
+                      aria-label={item.variant ? `${canonicalColorName(item.variant.color)} ${item.variant.size}` : "الصورة الأساسية"}
+                      aria-pressed={active}
                     >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={item.url} alt="" className="h-full w-full object-cover" />
                     </button>
                   );
@@ -290,7 +314,7 @@ export default function ProductShowcase({
                     {colorGroups.map((group) => {
                       const active = selectedColorName === group.name;
                       const hex = colorSwatch(group.name);
-                      const ink = colorInk(hex);
+                      const ink = colorInk(group.name);
                       return (
                         <button
                           key={group.name}
@@ -362,7 +386,7 @@ export default function ProductShowcase({
                 <span className="text-[10px] font-extrabold" style={{ color: "var(--muted-2)" }}>المتغير المحدد</span>
                 <span
                   className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold"
-                  style={{ background: colorSwatch(selected.color), color: colorInk(colorSwatch(selected.color)) }}
+                  style={{ background: colorSwatch(selected.color), color: colorInk(selected.color) }}
                 >
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: "rgba(255,255,255,.85)", boxShadow: "inset 0 0 0 1px rgba(0,0,0,.18)" }} />
                   {canonicalColorName(selected.color)}
@@ -410,53 +434,63 @@ export default function ProductShowcase({
           {variants.map((variant) => {
             const numbers = variantNumbers(variant);
             const active = variant.id === selected?.id;
+            const colorName = canonicalColorName(variant.color) || variant.color;
             return (
-              <button
+              <article
                 key={variant.id}
-                type="button"
-                onClick={() => setSelectedId(variant.id)}
-                className="app-card flex items-center gap-3 p-3 text-right transition hover:-translate-y-0.5"
+                className="app-card flex items-center gap-3 p-3 transition hover:-translate-y-0.5 motion-reduce:transition-none"
                 style={{
                   borderColor: active ? "var(--lav-strong)" : "var(--line)",
                   boxShadow: active ? "0 12px 30px var(--lav-ring)" : "var(--shadow-sm)",
                 }}
-                aria-pressed={active}
               >
-                <span
+                <div
                   className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl"
                   style={{ background: "linear-gradient(135deg, var(--lav-soft), var(--surface-3))", border: "1px solid var(--line)" }}
                 >
-                  {variant.image_url ? (
-                    <img src={variant.image_url} alt={`${variant.color} ${variant.size}`} className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="grid h-full w-full place-items-center">
-                      <span className="h-7 w-7 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
-                    </span>
-                  )}
-                </span>
+                  <ZoomableImage
+                    src={variant.image_url}
+                    alt={`${product.name} ${colorName} ${variant.size}`}
+                    images={galleryUrls}
+                    initialIndex={variant.image_url ? Math.max(0, galleryUrls.indexOf(variant.image_url)) : 0}
+                    className="h-full w-full"
+                    placeholder={
+                      <span className="grid h-full w-full place-items-center">
+                        <span className="h-7 w-7 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
+                      </span>
+                    }
+                  />
+                </div>
 
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-center gap-1.5">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
-                    <span className="truncate text-sm font-extrabold" style={{ color: "var(--ink)" }}>
-                      {canonicalColorName(variant.color)} · {variant.size}
+                <button
+                  type="button"
+                  onClick={() => focusVariant(variant)}
+                  className="flex min-w-0 flex-1 items-center gap-2 text-right"
+                  aria-pressed={active}
+                  aria-label={`اختيار ${colorName} مقاس ${variant.size}`}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
+                      <span className="truncate text-sm font-extrabold" style={{ color: "var(--ink)" }}>
+                        {colorName} · {variant.size}
+                      </span>
+                      {active && <span className="badge badge-lav shrink-0">محدد</span>}
                     </span>
-                    {active && <span className="badge badge-lav shrink-0">محدد</span>}
+                    <span className="mono mt-0.5 block truncate text-[10px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{variant.sku}</span>
+                    <span className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
+                      <span className="money text-base" style={{ color: "var(--lav-strong)" }}>{formatMoney(numbers.after)}</span>
+                      {numbers.hasDiscount && (
+                        <span className="text-[11px] line-through" style={{ color: "var(--muted-2)" }}>{formatMoney(numbers.before)}</span>
+                      )}
+                      {numbers.hasDiscount && (
+                        <span className="badge badge-success">-{formatNumber(numbers.percent)}%</span>
+                      )}
+                    </span>
                   </span>
-                  <span className="mono mt-0.5 block truncate text-[10px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{variant.sku}</span>
-                  <span className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
-                    <span className="money text-base" style={{ color: "var(--lav-strong)" }}>{formatMoney(numbers.after)}</span>
-                    {numbers.hasDiscount && (
-                      <span className="text-[11px] line-through" style={{ color: "var(--muted-2)" }}>{formatMoney(numbers.before)}</span>
-                    )}
-                    {numbers.hasDiscount && (
-                      <span className="badge badge-success">-{formatNumber(numbers.percent)}%</span>
-                    )}
-                  </span>
-                </span>
-
-                <ChevronLeft size={17} className="shrink-0" style={{ color: active ? "var(--lav-strong)" : "var(--muted-2)" }} />
-              </button>
+                  <ChevronLeft size={17} className="shrink-0" style={{ color: active ? "var(--lav-strong)" : "var(--muted-2)" }} />
+                </button>
+              </article>
             );
           })}
         </div>
