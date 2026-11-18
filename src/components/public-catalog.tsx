@@ -10,9 +10,11 @@ import {
   Sparkles,
   Tag,
 } from "lucide-react";
+import ClothingRailSection from "@/components/home/clothing-rail-section";
 import ValueCard from "@/components/home/value-card";
 import AmbientGlow from "@/components/motion/ambient-glow";
 import { BlurFade } from "@/components/motion/blur-fade";
+import HeroShader from "@/components/motion/hero-shader";
 import HeroTitle from "@/components/motion/hero-title";
 import MagneticLink from "@/components/motion/magnetic-link";
 import { NumberTicker } from "@/components/motion/number-ticker";
@@ -88,6 +90,7 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
         className="relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14"
         style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 88%, transparent)" }}
       >
+        {isHome && <HeroShader />}
         <AmbientGlow
           className="pointer-events-none absolute -left-24 -top-24 h-72 w-72 rounded-full"
           style={{ background: "var(--lav-soft)" }}
@@ -162,6 +165,8 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
           </BlurFade>
         </div>
       </section>
+
+      {isHome && <ClothingRailSection />}
 
       {isHome && (
         <section id="values" className="mt-12 scroll-mt-28 sm:mt-16">

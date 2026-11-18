@@ -357,6 +357,14 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   50% { transform: translateY(-8px); }
 }
 
+/* Lightweight fallback for the rail caption's animate-in / fade-in utilities. */
+@keyframes rail-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-in.fade-in { animation: rail-fade-in 300ms ease-out both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
