@@ -2,7 +2,6 @@
 
 import {
   AlertCircle,
-  Camera,
   Check,
   ChevronRight,
   Hash,
@@ -18,6 +17,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import type { Customer } from "@/components/customers-list";
+import FolderUpload from "@/components/folder-upload";
 import { useToast } from "@/components/toast";
 import { formatDate } from "@/lib/format";
 
@@ -221,18 +221,16 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
             </div>
 
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-              <button
-                type="button"
-                onClick={() => input.current?.click()}
-                className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl text-2xl font-extrabold transition hover:brightness-95"
-                style={{ background: "var(--brand-soft)", border: "1px dashed var(--brand)", color: "var(--brand-strong)" }}
-              >
-                {preview ? <img src={preview} alt="معاينة العميلة" className="h-full w-full object-cover" /> : initials || <Camera size={26} />}
-                <span className="absolute bottom-1 left-1 grid h-7 w-7 place-items-center rounded-full shadow-sm" style={{ background: "var(--brand-strong)", color: "#fff" }}>
-                  <Camera size={13} />
-                </span>
-              </button>
-              <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" onChange={photo} className="hidden" />
+              <FolderUpload
+                inputRef={input}
+                onChange={photo}
+                preview={preview}
+                previewAlt="معاينة العميلة"
+                fallback={initials}
+                label={preview ? "تغيير الصورة" : "ارفع صورة العميلة"}
+                hint="اختياري · JPG أو PNG أو WEBP"
+                className="shrink-0"
+              />
               <label className="flex-1">
                 <span className="field-label">الاسم الكامل</span>
                 <input required name="fullName" defaultValue={customer?.full_name} placeholder="مثال: نور أحمد" maxLength={160} className="field" />

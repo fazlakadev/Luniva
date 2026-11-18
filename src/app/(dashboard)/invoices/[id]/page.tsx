@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, CalendarDays, Pencil, ReceiptText, Truck } from "lucide-react";
 import DeliveryStatusControl from "@/components/delivery-status-control";
 import InvoiceActions from "@/components/invoice-actions";
+import InvoiceCta from "@/components/invoice-cta";
 import InvoiceDocument, { type InvoiceDocumentData } from "@/components/invoice-document";
 import PrintInvoiceButton from "@/components/invoice-print-button";
 import InvoiceShareCard from "@/components/invoice-share-card";
@@ -97,7 +98,7 @@ export default async function InvoiceDetailPage({
         <div className="flex flex-wrap gap-2">
           <Link href={`/invoices/${invoice.id}/edit`} className="btn btn-outline"><Pencil size={15} />تعديل الفاتورة</Link>
           <PrintInvoiceButton autoPrint={autoPrint} />
-          <Link href="/invoices/new" className="btn btn-soft"><ReceiptText size={15} />فاتورة جديدة</Link>
+          <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="compact" />
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { BarChart3, Download, FileText, Plus, TrendingUp, Wallet } from "lucide-react";
+import { BarChart3, Download, FileText, TrendingUp, Wallet } from "lucide-react";
+import InvoiceCta from "@/components/invoice-cta";
 import PaymentsList from "@/components/payments-list";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { getInvoiceStats, getPaymentsLedger } from "@/lib/invoice-queries";
@@ -27,9 +28,7 @@ export default async function PaymentsPage() {
           <a href="/api/reports/export?type=payments" className="btn btn-soft w-full text-[11px] sm:w-auto">
             <Download size={15} />تصدير الدفعات
           </a>
-          <Link href="/invoices/new" className="btn btn-primary w-full text-[11px] sm:w-auto">
-            <Plus size={16} />فاتورة جديدة
-          </Link>
+          <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="compact" className="w-full sm:w-auto" />
         </div>
       </div>
 

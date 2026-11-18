@@ -15,6 +15,7 @@ import {
   UsersRound,
   Wallet,
 } from "lucide-react";
+import InvoiceCta from "@/components/invoice-cta";
 import { getRecentActivity } from "@/lib/activity";
 import { db, ensureCustomersTable, ensureInvoiceTables, ensurePackagesTables } from "@/lib/db";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
@@ -211,9 +212,7 @@ export default async function WorkspacePage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Link href="/invoices/new" className="btn bg-white text-[#7c4354] hover:bg-white/90">
-              <ReceiptText size={17} />فاتورة جديدة
-            </Link>
+            <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="compact" className="txn-cta--on-dark" />
             <Link href="/packages/new" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
               <Gift size={17} />إنشاء بكدج
             </Link>
@@ -324,7 +323,7 @@ export default async function WorkspacePage() {
                 </div>
               ))}
             </div>
-            <Link href="/invoices/new" className="btn btn-primary mt-4 w-full"><Plus size={15} />فاتورة جديدة</Link>
+            <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="compact" className="mt-4 w-full" />
           </div>
 
           <div className="app-card p-2 sm:p-3">

@@ -1,11 +1,10 @@
-import Link from "next/link";
 import {
   CircleDollarSign,
-  Plus,
   ReceiptText,
   TrendingUp,
   Wallet,
 } from "lucide-react";
+import InvoiceCta from "@/components/invoice-cta";
 import InvoicesList, { type InvoiceRow } from "@/components/invoices-list";
 import { db, ensureCustomersTable } from "@/lib/db";
 import { getInvoiceStats, getInvoicesList } from "@/lib/invoice-queries";
@@ -76,9 +75,7 @@ export default async function InvoicesPage({
             أنشئي فواتير المنتجات والبكدجات ومتغيراتها، طباعيها، وطبّقي الخصم والتوصيل وتابعي المدفوع والمتبقي.
           </p>
         </div>
-        <Link href="/invoices/new" className="btn btn-primary self-start sm:self-auto">
-          <Plus size={18} />فاتورة جديدة
-        </Link>
+        <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="hero" className="self-start sm:self-auto" />
       </div>
 
       <section className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

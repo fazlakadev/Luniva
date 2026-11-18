@@ -4,11 +4,9 @@ import {
   AlertCircle,
   BadgePercent,
   Calculator,
-  Camera,
   Check,
   ChevronRight,
   CircleDollarSign,
-  ImagePlus,
   Layers3,
   LoaderCircle,
   Plus,
@@ -21,6 +19,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { COLOR_SUGGESTIONS, canonicalColorName, colorSwatch } from "@/lib/colors";
+import FolderUpload from "@/components/folder-upload";
 import { useToast } from "@/components/toast";
 import {
   applyDiscount,
@@ -347,18 +346,15 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-              <button
-                type="button"
-                onClick={() => input.current?.click()}
-                className="relative grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-2xl transition hover:brightness-95"
-                style={{ background: "var(--lav-soft)", border: "1px dashed var(--lav)", color: "var(--lav-strong)" }}
-              >
-                {mainPreview ? <img src={mainPreview} alt="صورة المنتج" className="h-full w-full object-cover" /> : <ImagePlus size={26} />}
-                <span className="absolute bottom-1 left-1 grid h-7 w-7 place-items-center rounded-full shadow-sm" style={{ background: "var(--lav-strong)", color: "#fff" }}>
-                  <Camera size={13} />
-                </span>
-              </button>
-              <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseMain} className="hidden" />
+              <FolderUpload
+                inputRef={input}
+                onChange={chooseMain}
+                preview={mainPreview}
+                previewAlt="صورة المنتج"
+                label={mainPreview ? "تغيير الصورة" : "ارفع صورة المنتج"}
+                hint="JPG · PNG · WEBP حتى 5 MB"
+                className="shrink-0"
+              />
               <div className="grid flex-1 gap-4 sm:grid-cols-2">
                 <label>
                   <span className="field-label">اسم المنتج</span>
@@ -453,11 +449,13 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
                       </label>
                       <div>
                         <span className="field-label">صورة المتغير</span>
-                        <label className="flex h-[42px] cursor-pointer items-center justify-center gap-2 rounded-xl text-xs font-extrabold transition hover:border-[var(--lav)]" style={{ background: "var(--surface)", border: "1px dashed var(--line-strong)", color: "var(--muted)" }}>
-                          {variant.preview ? <img src={variant.preview} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <Camera size={15} />}
-                          {variant.preview ? "تغيير" : "إضافة صورة"}
-                          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => chooseVariant(index, event)} className="hidden" />
-                        </label>
+                        <FolderUpload
+                          compact
+                          onChange={(event) => chooseVariant(index, event)}
+                          preview={variant.preview}
+                          label={variant.preview ? "تغيير الصورة" : "إضافة صورة"}
+                          className="w-full"
+                        />
                       </div>
                     </div>
 

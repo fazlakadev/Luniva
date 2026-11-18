@@ -6,7 +6,6 @@ import {
   Eye,
   Layers3,
   Package,
-  ReceiptText,
   Search,
   ShieldCheck,
   Sparkles,
@@ -15,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { colorInk, colorSwatch, canonicalColorName, normalizeColorName } from "@/lib/colors";
+import InvoiceCta from "@/components/invoice-cta";
 import ZoomableImage from "@/components/zoomable-image";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
@@ -435,9 +435,13 @@ export default function PackageVariants({
                   <button type="button" onClick={() => setActiveId(variant.id)} className="btn btn-outline px-2 py-2 text-[11px]">
                     <Eye size={14} />التفاصيل
                   </button>
-                  <Link href={`/invoices/new?packageVariant=${variant.id}`} className="btn btn-primary px-2 py-2 text-[11px]">
-                    <ReceiptText size={14} />بيع
-                  </Link>
+                  <InvoiceCta
+                    href={`/invoices/new?packageVariant=${variant.id}`}
+                    label="بيع"
+                    variant="mini"
+                    ariaLabel="إصدار فاتورة لهذا البكدج الفرعي"
+                    className="w-full"
+                  />
                 </div>
               </div>
             </article>
@@ -579,9 +583,12 @@ export default function PackageVariants({
                 <button type="button" onClick={() => setActiveId(null)} className="btn btn-outline">
                   <Check size={15} />إغلاق
                 </button>
-                <Link href={`/invoices/new?packageVariant=${active.id}`} className="btn btn-primary">
-                  <ReceiptText size={15} />إصدار فاتورة بهذه التوليفة
-                </Link>
+                <InvoiceCta
+                  href={`/invoices/new?packageVariant=${active.id}`}
+                  label="إصدار فاتورة بهذه التوليفة"
+                  variant="compact"
+                  className="w-full"
+                />
               </div>
             </div>
           </div>

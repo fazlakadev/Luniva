@@ -9,13 +9,13 @@ import {
   Gift,
   Layers3,
   Pencil,
-  ReceiptText,
   Sparkles,
   Tag,
   Warehouse,
 } from "lucide-react";
 import CatalogShareCard from "@/components/catalog-share-card";
 import DeleteButton from "@/components/delete-button";
+import InvoiceCta from "@/components/invoice-cta";
 import PackageVariants, { type PackageVariantView } from "@/components/package-variants";
 import ZoomableImage from "@/components/zoomable-image";
 import { getPackageDetail } from "@/lib/package-queries";
@@ -68,7 +68,7 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
           <ChevronRight size={16} />كل البكدجات
         </Link>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/invoices/new?package=${id}`} className="btn btn-primary"><ReceiptText size={16} />إصدار فاتورة</Link>
+          <InvoiceCta href={`/invoices/new?package=${id}`} label="إصدار فاتورة" variant="compact" />
           <Link href={`/packages/${id}/edit`} className="btn btn-soft"><Pencil size={16} />تعديل البكدج</Link>
           <DeleteButton endpoint={`/api/packages/${id}`} returnTo="/packages" label="البكدج" />
         </div>

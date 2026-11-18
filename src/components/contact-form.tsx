@@ -1,7 +1,7 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, Loader2, Send } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { AlertCircle, CheckCircle2, Loader2, Send, X } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
 
 type FormValues = {
   name: string;
@@ -26,6 +26,17 @@ export default function ContactForm() {
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [feedback, setFeedback] = useState("");
+
+  useEffect(() => {
+    if (status !== "success") return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      setStatus("idle");
+      setFeedback("");
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [status]);
 
   function update(field: keyof FormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -190,6 +201,69 @@ export default function ContactForm() {
         {status === "sending" ? <Loader2 size={17} className="animate-spin" /> : <Send size={17} />}
         {status === "sending" ? "جارٍ الإرسال..." : "إرسال الرسالة"}
       </button>
+
+      {status === "success" && (
+        <div
+          dir="rtl"
+          role="dialog"
+          aria-modal="false"
+          aria-labelledby="contact-success-title"
+          className="luniva-mail-popup print:hidden"
+        >
+          <button
+            type="button"
+            className="luniva-mail-popup__backdrop"
+            aria-label="إغلاق رسالة الإرسال"
+            onClick={() => {
+              setStatus("idle");
+              setFeedback("");
+            }}
+          />
+          <div className="luniva-mail-popup__card">
+            <button
+              type="button"
+              autoFocus
+              onClick={() => {
+                setStatus("idle");
+                setFeedback("");
+              }}
+              className="luniva-mail-popup__close"
+              aria-label="إغلاق"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="luniva-mail is-revealed" aria-hidden="true">
+              <div className="luniva-mail__mail">
+                <div className="luniva-mail__back-fold" />
+                <div className="luniva-mail__letter">
+                  <div className="luniva-mail__letter-border" />
+                  <div className="luniva-mail__letter-title" />
+                  <div className="luniva-mail__letter-context" />
+                  <div className="luniva-mail__stamp" />
+                </div>
+                <div className="luniva-mail__top-fold" />
+                <div className="luniva-mail__body" />
+                <div className="luniva-mail__left-fold" />
+              </div>
+              <div className="luniva-mail__shadow" />
+            </div>
+
+            <h3 id="contact-success-title" className="luniva-mail-popup__title">وصلت رسالتك!</h3>
+            <p className="luniva-mail-popup__text">{feedback}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setStatus("idle");
+                setFeedback("");
+              }}
+              className="btn btn-primary mt-5 w-full py-2.5 text-xs"
+            >
+              تمام، شكرًا لكِ
+            </button>
+          </div>
+        </div>
+      )}
     </form>
   );
 }

@@ -13,6 +13,7 @@ import {
   Wallet,
 } from "lucide-react";
 import DeleteButton from "@/components/delete-button";
+import InvoiceCta from "@/components/invoice-cta";
 import ZoomableImage from "@/components/zoomable-image";
 import { db, ensureCustomersTable } from "@/lib/db";
 import { getCustomerBalance, getCustomerInvoices } from "@/lib/invoice-queries";
@@ -58,7 +59,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           <ChevronRight size={16} />كل العملاء
         </Link>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/invoices/new?customer=${id}`} className="btn btn-primary"><ReceiptText size={16} />فاتورة جديدة</Link>
+          <InvoiceCta href={`/invoices/new?customer=${id}`} label="فاتورة جديدة" variant="compact" />
           <Link href={`/customers/${id}/statement`} className="btn btn-soft"><FileText size={16} />كشف الحساب</Link>
           <Link href={`/customers/${id}/edit`} className="btn btn-soft"><Pencil size={16} />تعديل البيانات</Link>
           <DeleteButton endpoint={`/api/customers/${id}`} returnTo="/customers" label="العميلة" />
@@ -173,7 +174,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             <div>
               <ReceiptText size={26} className="mx-auto mb-2" style={{ color: "var(--muted-2)" }} />
               <p className="text-sm font-extrabold" style={{ color: "var(--ink)" }}>لا توجد فواتير لهذه العميلة</p>
-              <Link href={`/invoices/new?customer=${id}`} className="btn btn-primary mt-3"><ReceiptText size={14} />إصدار أول فاتورة</Link>
+              <InvoiceCta href={`/invoices/new?customer=${id}`} label="إصدار أول فاتورة" variant="compact" className="mt-3" />
             </div>
           </div>
         ) : (

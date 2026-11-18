@@ -5,14 +5,12 @@ import {
   BadgePercent,
   Boxes,
   Calculator,
-  Camera,
   Check,
   ChevronDown,
   ChevronRight,
   ChevronUp,
   CircleDollarSign,
   Gift,
-  ImagePlus,
   Layers3,
   LoaderCircle,
   Plus,
@@ -24,6 +22,7 @@ import {
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import FolderUpload from "@/components/folder-upload";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { canonicalColorName } from "@/lib/colors";
 import {
@@ -498,11 +497,14 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
             </label>
 
             <div className="mt-4 flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-              <label className="relative grid h-20 w-20 shrink-0 cursor-pointer place-items-center overflow-hidden rounded-2xl" style={{ background: "var(--brand-soft)", border: "1px dashed var(--brand)", color: "var(--brand-strong)" }}>
-                {mainPreview ? <img src={mainPreview} alt="صورة البكدج" className="h-full w-full object-cover" /> : <ImagePlus size={24} />}
-                <span className="absolute bottom-1 left-1 grid h-6 w-6 place-items-center rounded-full" style={{ background: "var(--brand)", color: "#fff" }}><Camera size={12} /></span>
-                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseMainImage} className="hidden" />
-              </label>
+              <FolderUpload
+                onChange={chooseMainImage}
+                preview={mainPreview}
+                previewAlt="صورة البكدج"
+                label={mainPreview ? "تغيير الصورة" : "ارفع صورة البكدج"}
+                hint="JPG · PNG · WEBP حتى 5 MB"
+                className="shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-extrabold" style={{ color: "var(--ink)" }}>الصورة الرئيسية للبكدج</p>
                 <p className="mt-1 text-xs leading-5 muted">تظهر في صفحة العروض وتفاصيل البكدج. JPG أو PNG أو WEBP حتى 5 MB.</p>
@@ -767,11 +769,13 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
                             </label>
                             <div>
                               <span className="field-label">صورة البكدج الفرعي</span>
-                              <label className="flex h-[42px] cursor-pointer items-center justify-center gap-2 rounded-xl text-xs font-extrabold" style={{ background: "var(--surface-2)", border: "1px dashed var(--line-strong)", color: "var(--muted)" }}>
-                                {sub.preview ? <img src={sub.preview} alt="" className="h-8 w-8 rounded-lg object-cover" /> : <Camera size={15} />}
-                                {sub.preview ? "تغيير" : "إضافة صورة"}
-                                <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => chooseSubImage(sub.id, event)} className="hidden" />
-                              </label>
+                              <FolderUpload
+                                compact
+                                onChange={(event) => chooseSubImage(sub.id, event)}
+                                preview={sub.preview}
+                                label={sub.preview ? "تغيير الصورة" : "إضافة صورة"}
+                                className="w-full"
+                              />
                             </div>
                           </div>
 

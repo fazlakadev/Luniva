@@ -7,13 +7,13 @@ import {
   Expand,
   Layers3,
   Package,
-  ReceiptText,
   Sparkles,
   Tag,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import InvoiceCta from "@/components/invoice-cta";
 import ZoomableImage from "@/components/zoomable-image";
 import { colorInk, colorSwatch, canonicalColorName } from "@/lib/colors";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
@@ -293,12 +293,12 @@ export default function ProductShowcase({
                   </div>
                 )}
 
-                <Link
+                <InvoiceCta
                   href={`/invoices/new?productVariant=${selected.id}`}
-                  className="btn btn-product mt-3.5 w-full"
-                >
-                  <ReceiptText size={15} />إصدار فاتورة بهذا المتغير
-                </Link>
+                  label="إصدار فاتورة بهذا المتغير"
+                  variant="compact"
+                  className="mt-3.5 w-full"
+                />
               </div>
             )}
 

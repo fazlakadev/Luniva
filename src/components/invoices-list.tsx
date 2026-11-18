@@ -14,6 +14,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import InvoiceCta from "@/components/invoice-cta";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import {
   deliveryStatusLabels,
@@ -165,7 +166,7 @@ export default function InvoicesList({
             <ReceiptText size={34} className="mx-auto mb-3" style={{ color: "var(--muted-2)" }} />
             <p className="font-extrabold" style={{ color: "var(--ink)" }}>لا توجد فواتير مطابقة</p>
             <p className="mt-1 text-sm muted">ابدئي فاتورة جديدة أو غيّري كلمة البحث والفلتر.</p>
-            <Link href="/invoices/new" className="btn btn-primary mt-4"><ReceiptText size={15} />فاتورة جديدة</Link>
+            <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="compact" className="mt-4" />
           </div>
         </div>
       ) : (

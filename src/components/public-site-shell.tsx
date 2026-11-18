@@ -3,7 +3,9 @@ import Link from "next/link";
 import { ArrowUpLeft, Heart, Layers3, Mail, MapPin, Phone, ShieldCheck, Sparkles } from "lucide-react";
 import HomeAtmosphere from "@/components/motion/home-atmosphere";
 import MobileGooeyNav from "@/components/motion/mobile-gooey-nav";
+import NewsletterForm from "@/components/newsletter-form";
 import PublicNav from "@/components/public-nav";
+import SocialRail from "@/components/social-rail";
 import { getSettings } from "@/lib/settings";
 import type { PublicSection } from "@/lib/public-sections";
 
@@ -110,6 +112,7 @@ export default async function PublicSiteShell({
       >
         {children}
       </div>
+      <SocialRail email={contactEmail} phone={settings.companyPhone} />
       <MobileGooeyNav />
 
       <footer
@@ -276,6 +279,10 @@ export default async function PublicSiteShell({
               </Link>
             </div>
           </div>
+        </div>
+
+        <div className="mx-auto w-full max-w-7xl px-3 pb-2 sm:px-6">
+          <NewsletterForm />
         </div>
 
         <div className="border-t" style={{ borderColor: "var(--line)" }}>

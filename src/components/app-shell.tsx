@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import InvoiceCta from "@/components/invoice-cta";
 import ThemeToggle from "@/components/theme-toggle";
 import WelcomeDialog from "@/components/welcome-dialog";
 
@@ -355,9 +356,13 @@ export default function AppShell({ children, name }: { children: React.ReactNode
             <span className="truncate text-xs font-extrabold" style={{ color: "var(--ink)" }}>مساحة العمل</span>
           </Link>
           <div className="flex items-center gap-1.5">
-            <Link href="/invoices/new" className="btn btn-primary px-2.5 py-2 text-[11px] sm:px-3" aria-label="فاتورة جديدة">
-              <ReceiptText size={14} /><span className="hidden sm:inline">فاتورة</span>
-            </Link>
+            <InvoiceCta
+              href="/invoices/new"
+              label="فاتورة"
+              variant="mini"
+              ariaLabel="فاتورة جديدة"
+              className="txn-cta--header"
+            />
             <button
               type="button"
               onClick={() => setMoreOpen(true)}

@@ -956,3 +956,842 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   .luniva-3d-card__panel { transform: none !important; }
 }
 
+/* ------------------------------------------------------------------
+   Uiverse-inspired accents, recolored with Luniva identity tokens.
+   ------------------------------------------------------------------ */
+
+/* Contact success envelope */
+.luniva-mail-popup {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.luniva-mail-popup__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  cursor: default;
+  background: color-mix(in srgb, var(--plum) 58%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.luniva-mail-popup__card {
+  position: relative;
+  width: min(100%, 22rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 1px solid color-mix(in srgb, var(--brand) 32%, var(--line));
+  border-radius: 1.75rem;
+  background: linear-gradient(160deg, var(--surface), color-mix(in srgb, var(--brand-soft) 58%, var(--surface)));
+  box-shadow: var(--shadow-lg);
+  padding: 1.15rem 1.25rem 1.5rem;
+  text-align: center;
+  animation: page-enter 420ms cubic-bezier(.22, .8, .24, 1) both;
+}
+
+.luniva-mail-popup__close {
+  position: absolute;
+  top: .7rem;
+  left: .7rem;
+  z-index: 5;
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: .7rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background .25s, color .25s;
+}
+
+.luniva-mail-popup__close:hover { background: var(--surface-3); color: var(--brand-strong); }
+
+.luniva-mail-popup__title {
+  position: relative;
+  margin-top: .25rem;
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--brand-strong);
+}
+
+.luniva-mail-popup__text {
+  position: relative;
+  margin: .45rem auto 0;
+  max-width: 17rem;
+  font-size: .72rem;
+  font-weight: 700;
+  line-height: 1.8;
+  color: var(--muted);
+}
+
+.luniva-mail {
+  position: relative;
+  width: 200px;
+  height: 178px;
+  margin: .35rem auto .25rem;
+  cursor: pointer;
+}
+
+.luniva-mail__mail {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 200px;
+  height: 150px;
+  transform: translateX(-50%);
+  transition: transform .4s ease;
+}
+
+.luniva-mail.is-revealed .luniva-mail__mail,
+.luniva-mail:hover .luniva-mail__mail { transform: translateX(-50%) translateY(34px); }
+
+.luniva-mail__back-fold {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 200px;
+  height: 100px;
+  border-radius: 6px 6px 0 0;
+  background: var(--brand-strong);
+  z-index: 0;
+}
+
+.luniva-mail__body {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 0 100px 200px;
+  border-color: transparent transparent var(--brand) transparent;
+  z-index: 2;
+}
+
+.luniva-mail__left-fold {
+  position: absolute;
+  bottom: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 50px 0 50px 100px;
+  border-color: transparent transparent transparent color-mix(in srgb, var(--brand) 86%, var(--lav));
+  z-index: 2;
+}
+
+.luniva-mail__top-fold {
+  position: absolute;
+  top: 50px;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 50px 100px 0 100px;
+  border-color: var(--brand-strong) transparent transparent transparent;
+  transform-origin: 50% 0;
+  z-index: 2;
+  transition: transform .4s .35s, z-index .2s .35s;
+}
+
+.luniva-mail.is-revealed .luniva-mail__top-fold,
+.luniva-mail:hover .luniva-mail__top-fold {
+  transform: rotateX(180deg);
+  z-index: 0;
+  transition-delay: .12s;
+}
+
+.luniva-mail__letter {
+  position: absolute;
+  left: 20px;
+  bottom: 0;
+  width: 160px;
+  height: 60px;
+  overflow: hidden;
+  border-radius: 4px 4px 0 0;
+  background: var(--surface);
+  z-index: 1;
+  transition: height .4s .25s;
+}
+
+.luniva-mail.is-revealed .luniva-mail__letter,
+.luniva-mail:hover .luniva-mail__letter { height: 180px; }
+
+.luniva-mail__letter-border {
+  width: 100%;
+  height: 10px;
+  background: repeating-linear-gradient(-45deg, var(--brand), var(--brand) 8px, transparent 8px, transparent 18px);
+}
+
+.luniva-mail__letter-title,
+.luniva-mail__letter-context {
+  height: 9px;
+  margin-top: 10px;
+  margin-left: 5px;
+  border-radius: 99px;
+  background: var(--lav);
+}
+
+.luniva-mail__letter-title { width: 42%; }
+.luniva-mail__letter-context { width: 24%; }
+
+.luniva-mail__stamp {
+  width: 30px;
+  height: 30px;
+  margin-top: 28px;
+  margin-left: 120px;
+  border-radius: 50%;
+  background: var(--brand);
+  opacity: .32;
+}
+
+.luniva-mail__shadow {
+  position: absolute;
+  top: 152px;
+  left: 50%;
+  width: 250px;
+  height: 26px;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(color-mix(in srgb, var(--plum) 42%, transparent), transparent 70%);
+  transition: width .4s, opacity .4s;
+}
+
+.luniva-mail.is-revealed .luniva-mail__shadow,
+.luniva-mail:hover .luniva-mail__shadow { width: 190px; opacity: .65; }
+
+/* Gooey left social rail */
+.luniva-social {
+  position: fixed;
+  top: 50%;
+  left: 0;
+  z-index: 45;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.luniva-social__toggle {
+  pointer-events: auto;
+  display: grid;
+  width: 2.15rem;
+  height: 3.4rem;
+  place-items: center;
+  margin-left: .2rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 48%, transparent);
+  border-right: 0;
+  border-radius: 0 999px 999px 0;
+  background: linear-gradient(180deg, var(--brand-strong), var(--plum));
+  color: #fff;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: transform .45s cubic-bezier(.22, 1, .36, 1);
+}
+
+.luniva-social__toggle:hover { transform: translateX(4px); }
+
+.luniva-social__panel {
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  filter: blur(5px);
+  transform: translateX(-14px) scale(.88);
+  border-radius: 45% 1.25rem 1.25rem 45%;
+  pointer-events: none;
+  transition: width .55s cubic-bezier(.22, 1, .36, 1), opacity .35s ease, transform .55s cubic-bezier(.22, 1, .36, 1), filter .35s ease, border-radius .55s ease;
+}
+
+.luniva-social.is-open .luniva-social__panel {
+  width: 9.25rem;
+  opacity: 1;
+  filter: none;
+  transform: none;
+  border-radius: 1.25rem;
+  pointer-events: auto;
+}
+
+.luniva-social__card {
+  position: relative;
+  width: 9.25rem;
+  min-height: 13.5rem;
+  overflow: hidden;
+  padding: 1rem .65rem .85rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  background: var(--plum);
+  color: #fff;
+  text-align: center;
+  clip-path: polygon(0 0, 82% 0, 100% 12%, 100% 62%, 92% 67%, 93% 78%, 99% 82%, 99% 91%, 88% 100%, 0 100%);
+}
+
+.luniva-social__aura {
+  position: absolute;
+  top: -30%;
+  left: -60%;
+  width: 250%;
+  aspect-ratio: 1;
+  opacity: .5;
+  background: conic-gradient(from 90deg, transparent, color-mix(in srgb, var(--brand) 75%, transparent), color-mix(in srgb, var(--lav) 75%, transparent), transparent);
+  animation: luniva-social-spin 9s linear infinite;
+}
+
+.luniva-social__card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, transparent 0 3px, color-mix(in srgb, var(--brand) 10%, transparent) 3px 4px);
+}
+
+.luniva-social__title,
+.luniva-social__links,
+.luniva-social__footer { position: relative; z-index: 1; }
+
+.luniva-social__title {
+  font-size: .66rem;
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: color-mix(in srgb, var(--brand) 55%, #fff);
+}
+
+.luniva-social__links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .45rem;
+  margin-top: .9rem;
+}
+
+.luniva-social__link {
+  display: grid;
+  height: 2.15rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: .7rem;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand) 30%, transparent), transparent);
+  color: #fff;
+  transition: transform .25s, background .25s;
+}
+
+.luniva-social__link:hover,
+.luniva-social__link:focus-visible {
+  transform: translateY(-3px);
+  background: color-mix(in srgb, var(--brand) 58%, transparent);
+}
+
+.luniva-social__footer {
+  margin-top: .9rem;
+  font-size: .54rem;
+  font-weight: 800;
+  color: rgba(255, 255, 255, .62);
+}
+
+@keyframes luniva-social-spin { to { transform: rotate(360deg); } }
+
+/* Welcome hover card */
+.luniva-welcome-scene {
+  position: relative;
+  width: min(100%, 22rem);
+  height: 21rem;
+  filter: drop-shadow(0 20px 34px color-mix(in srgb, var(--plum) 32%, transparent));
+}
+
+.luniva-welcome-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
+  border-radius: 1.25rem;
+  background: var(--surface);
+  clip-path: polygon(0 0, 85% 0, 100% 14%, 100% 62%, 92% 67%, 93% 78%, 99% 82%, 99% 91%, 88% 100%, 0 100%);
+}
+
+.luniva-welcome-card::before {
+  content: "";
+  position: absolute;
+  top: -70%;
+  left: -30%;
+  width: 150%;
+  aspect-ratio: 1;
+  opacity: .4;
+  background: conic-gradient(from 90deg, transparent, var(--brand-soft), var(--lav-soft), transparent);
+  animation: luniva-social-spin 12s linear infinite;
+}
+
+.luniva-welcome-card__front,
+.luniva-welcome-card__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .8rem;
+  padding: 1.6rem;
+  text-align: center;
+  transition: transform .6s cubic-bezier(.23, 1, .32, 1), opacity .45s ease;
+}
+
+.luniva-welcome-card__front { z-index: 2; }
+
+.luniva-welcome-card__icon {
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, transparent);
+  border-radius: 1.5rem;
+  background: linear-gradient(135deg, var(--brand-soft), var(--lav-soft));
+  color: var(--brand-strong);
+}
+
+.luniva-welcome-card__title {
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1.7;
+  background: linear-gradient(-45deg, var(--brand-strong), var(--lav-strong));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.luniva-welcome-card__more {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  border: 0;
+  border-radius: 999px;
+  padding: .45rem .9rem;
+  background: var(--brand-soft);
+  color: var(--brand-strong);
+  font-size: .68rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.luniva-welcome-card__content {
+  z-index: 3;
+  background: linear-gradient(-45deg, var(--plum), color-mix(in srgb, var(--lav-strong) 82%, var(--plum)));
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(96%);
+}
+
+.luniva-welcome-card__description {
+  max-width: 16rem;
+  font-size: .78rem;
+  font-weight: 600;
+  line-height: 2;
+  color: rgba(255, 255, 255, .82);
+}
+
+.luniva-welcome-card:hover .luniva-welcome-card__content,
+.luniva-welcome-card:focus-within .luniva-welcome-card__content,
+.luniva-welcome-card.is-revealed .luniva-welcome-card__content {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.luniva-welcome-card:hover .luniva-welcome-card__front,
+.luniva-welcome-card:focus-within .luniva-welcome-card__front,
+.luniva-welcome-card.is-revealed .luniva-welcome-card__front {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-24%);
+}
+
+.luniva-welcome-card__close {
+  position: absolute;
+  top: .35rem;
+  left: .35rem;
+  z-index: 6;
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, var(--line));
+  border-radius: .8rem;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.luniva-welcome-card__close:hover { color: var(--brand-strong); }
+
+/* Folder-style image uploads */
+.luniva-folder {
+  --folder-transition: 350ms;
+  position: relative;
+  display: flex;
+  width: 9.5rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+  padding: .7rem .6rem .8rem;
+  border: 1px dashed color-mix(in srgb, var(--lav) 48%, var(--line));
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--lav-soft), var(--brand-soft));
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--folder-transition), box-shadow var(--folder-transition), transform var(--folder-transition);
+}
+
+.luniva-folder:hover,
+.luniva-folder:focus-within {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+  box-shadow: 0 12px 26px -14px var(--brand-ring);
+}
+
+.luniva-folder__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.luniva-folder__art { position: relative; display: block; width: 100%; height: 4.6rem; }
+
+.luniva-folder__front,
+.luniva-folder__back,
+.luniva-folder__back-2 {
+  position: absolute;
+  bottom: .35rem;
+  left: 50%;
+  width: 5.6rem;
+  height: 3.6rem;
+  margin-left: -2.8rem;
+  border-radius: .75rem;
+  transform-origin: bottom center;
+  transition: transform var(--folder-transition);
+}
+
+.luniva-folder__back { background: color-mix(in srgb, #fff 68%, var(--lav-soft)); opacity: .8; }
+.luniva-folder__back-2 { background: color-mix(in srgb, #fff 45%, var(--brand-soft)); opacity: .85; }
+.luniva-folder__front { z-index: 2; }
+
+.luniva-folder:hover .luniva-folder__front,
+.luniva-folder:focus-within .luniva-folder__front { transform: rotateX(-34deg) skewX(10deg); }
+.luniva-folder:hover .luniva-folder__back,
+.luniva-folder:focus-within .luniva-folder__back { transform: rotateX(-6deg) skewX(5deg); }
+.luniva-folder:hover .luniva-folder__back-2,
+.luniva-folder:focus-within .luniva-folder__back-2 { transform: rotateX(-12deg) skewX(9deg); }
+
+.luniva-folder__cover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  overflow: hidden;
+  place-items: center;
+  border-radius: .6rem;
+  background-color: var(--brand);
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 10px 20px -10px color-mix(in srgb, var(--plum) 80%, transparent);
+}
+
+.luniva-folder__initials { font-size: 1.1rem; font-weight: 900; color: #fff; }
+
+.luniva-folder__tab {
+  position: absolute;
+  top: -.5rem;
+  left: .6rem;
+  width: 3.2rem;
+  height: .9rem;
+  border-radius: .7rem .7rem 0 0;
+  background: linear-gradient(135deg, var(--brand), var(--lav));
+  box-shadow: 0 6px 14px -6px var(--plum);
+}
+
+.luniva-folder__text { position: relative; z-index: 3; display: grid; gap: .1rem; }
+.luniva-folder__title { font-size: .7rem; font-weight: 900; color: var(--brand-strong); }
+.luniva-folder__hint { font-size: .57rem; font-weight: 700; color: var(--muted); line-height: 1.5; }
+
+.luniva-folder--compact {
+  min-height: 2.625rem;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: .5rem;
+  padding: .3rem .55rem;
+  border-radius: .75rem;
+  background: var(--surface);
+}
+
+.luniva-folder--compact .luniva-folder__art { width: 1.9rem; height: 1.9rem; margin: 0; flex-shrink: 0; }
+.luniva-folder--compact .luniva-folder__front,
+.luniva-folder--compact .luniva-folder__back,
+.luniva-folder--compact .luniva-folder__back-2 { bottom: 0; width: 2rem; height: 1.3rem; margin-left: -1rem; border-radius: .3rem; }
+.luniva-folder--compact .luniva-folder__tab { top: -.18rem; left: .25rem; width: 1.1rem; height: .35rem; border-radius: .3rem .3rem 0 0; }
+.luniva-folder--compact .luniva-folder__cover { border-radius: .28rem; }
+.luniva-folder--compact .luniva-folder__title { font-size: .63rem; }
+.luniva-folder--compact:hover,
+.luniva-folder--compact:focus-within { transform: none; }
+
+/* Footer newsletter */
+.luniva-newsletter {
+  position: relative;
+  display: grid;
+  gap: 1rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand) 26%, var(--line));
+  border-radius: 1.5rem;
+  padding: 1.25rem;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--surface) 93%, var(--brand-soft)), color-mix(in srgb, var(--surface) 88%, var(--lav-soft)));
+  box-shadow: var(--shadow-sm);
+}
+
+.luniva-newsletter__glow {
+  position: absolute;
+  z-index: 0;
+  width: 8rem;
+  height: 6rem;
+  border-radius: 999px;
+  filter: blur(32px);
+  opacity: .38;
+  pointer-events: none;
+}
+
+.luniva-newsletter__glow--brand { top: -2rem; right: 8%; background: var(--brand); }
+.luniva-newsletter__glow--lav { bottom: -2rem; left: 2%; background: var(--lav); }
+
+.luniva-newsletter__copy { position: relative; z-index: 1; min-width: 0; }
+.luniva-newsletter__eyebrow { display: flex; align-items: center; gap: .35rem; font-size: .62rem; font-weight: 900; color: var(--brand-strong); }
+.luniva-newsletter__title { margin-top: .45rem; font-size: 1rem; font-weight: 900; line-height: 1.8; color: var(--ink); }
+.luniva-newsletter__desc { margin-top: .25rem; font-size: .68rem; font-weight: 600; line-height: 1.9; color: var(--muted); }
+
+.luniva-newsletter__controls { position: relative; z-index: 1; display: flex; min-width: 0; flex-direction: column; gap: .5rem; }
+.luniva-newsletter__field { position: relative; flex: 1 1 auto; min-width: 0; overflow: hidden; border-radius: .75rem; }
+
+.luniva-newsletter__field::before,
+.luniva-newsletter__field::after {
+  content: "";
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(12px);
+  opacity: .55;
+  pointer-events: none;
+}
+
+.luniva-newsletter__field::before { top: -.8rem; left: -.4rem; width: 3rem; height: 3rem; background: var(--lav); }
+.luniva-newsletter__field::after { top: .2rem; left: 3.5rem; width: 2.5rem; height: 2.5rem; background: var(--brand); opacity: .35; }
+
+.luniva-newsletter__input {
+  position: relative;
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: .75rem;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  padding: .65rem .8rem;
+  font-size: .76rem;
+  color: var(--ink);
+  text-align: right;
+  outline: none;
+  transition: border-color .25s, box-shadow .25s;
+}
+
+.luniva-newsletter__input:focus { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-ring); }
+
+.luniva-newsletter__button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: .4rem;
+  border: 0;
+  border-radius: .75rem;
+  padding: .65rem 1rem;
+  background: linear-gradient(135deg, var(--lav), var(--lav-strong));
+  color: #fff;
+  font-size: .74rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 10px 20px -12px var(--lav-ring);
+  transition: transform .25s, filter .25s;
+}
+
+.luniva-newsletter__button:hover { transform: translateY(-2px); filter: brightness(1.06); }
+.luniva-newsletter__button:disabled { opacity: .7; cursor: wait; }
+
+.luniva-newsletter__feedback {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: .9rem;
+  align-items: center;
+  gap: .3rem;
+  font-size: .64rem;
+  font-weight: 800;
+  line-height: 1.6;
+  color: var(--success);
+}
+
+.luniva-newsletter__feedback[data-tone="error"] { color: var(--danger); }
+
+@media (min-width: 520px) {
+  .luniva-newsletter__controls { flex-direction: row; align-items: flex-start; }
+}
+
+@media (min-width: 768px) {
+  .luniva-newsletter { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 1.5rem; padding: 1.5rem 1.75rem; }
+  .luniva-newsletter__title { font-size: 1.1rem; }
+}
+
+/* Branded "new transaction" invoice CTA */
+.txn-cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--brand) 42%, transparent);
+  border-radius: 1rem;
+  background: linear-gradient(120deg, var(--plum), color-mix(in srgb, var(--lav) 72%, var(--plum)));
+  color: #fff;
+  font-weight: 900;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 12px 26px -16px color-mix(in srgb, var(--plum) 85%, transparent);
+  transition: transform .3s ease, box-shadow .3s ease, border-color .3s ease;
+}
+
+.txn-cta:hover,
+.txn-cta:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--brand);
+  box-shadow: 0 16px 30px -14px color-mix(in srgb, var(--brand) 72%, transparent);
+}
+
+.txn-cta--hero { min-height: 3.5rem; padding: .55rem .9rem .55rem .55rem; font-size: .85rem; }
+.txn-cta--compact { min-height: 2.6rem; padding: .4rem .75rem .4rem .45rem; font-size: .72rem; }
+.txn-cta--mini { min-height: 2.3rem; padding: .3rem .55rem; border-radius: .8rem; font-size: .68rem; }
+
+.txn-cta--on-dark {
+  border-color: rgba(255, 255, 255, .32);
+  background: linear-gradient(120deg, rgba(255, 255, 255, .18), rgba(255, 255, 255, .08));
+}
+
+.txn-cta__art {
+  position: relative;
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: .7rem;
+  background: linear-gradient(135deg, var(--brand), var(--lav));
+}
+
+.txn-cta--hero .txn-cta__art { width: 3rem; height: 3rem; }
+.txn-cta--mini .txn-cta__art { width: 1.6rem; height: 1.6rem; border-radius: .5rem; }
+
+.txn-cta__card {
+  position: absolute;
+  top: 22%;
+  left: 14%;
+  z-index: 2;
+  width: 58%;
+  height: 34%;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--brand-soft) 84%, #fff);
+  box-shadow: 0 5px 9px -4px rgba(0, 0, 0, .5);
+  transition: transform .6s cubic-bezier(.645, .045, .355, 1);
+}
+
+.txn-cta__card-line { position: absolute; top: 18%; left: 8%; width: 84%; height: 20%; border-radius: 2px; background: var(--brand); }
+.txn-cta__dots { position: absolute; bottom: 14%; left: 16%; width: 4px; height: 4px; border-radius: 50%; background: var(--lav); box-shadow: 0 -7px 0 var(--lav-strong), 7px 0 0 var(--brand-strong); }
+
+.txn-cta__post {
+  position: absolute;
+  bottom: -18%;
+  left: 30%;
+  z-index: 3;
+  width: 38%;
+  height: 48%;
+  overflow: hidden;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--plum) 90%, transparent);
+  box-shadow: 0 6px 12px -5px rgba(0, 0, 0, .6);
+  transform: translateY(55%);
+  transition: transform .7s cubic-bezier(.165, .84, .44, 1);
+}
+
+.txn-cta__post-line { position: absolute; top: 8%; right: 10%; width: 70%; height: 12%; border-radius: 0 0 2px 2px; background: rgba(255, 255, 255, .2); }
+
+.txn-cta__screen {
+  position: absolute;
+  top: 26%;
+  left: 12%;
+  display: grid;
+  width: 76%;
+  height: 24%;
+  place-items: center;
+  border-radius: 2px;
+  background: #fff;
+  color: var(--brand-strong);
+  font-size: .5rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.txn-cta__numbers,
+.txn-cta__numbers-2 { position: absolute; left: 40%; width: 16%; height: 13%; border-radius: 2px; background: rgba(255, 255, 255, .45); }
+.txn-cta__numbers { top: 60%; }
+.txn-cta__numbers-2 { top: 82%; background: rgba(255, 255, 255, .28); }
+
+.txn-cta:hover .txn-cta__card,
+.txn-cta:focus-visible .txn-cta__card,
+.txn-cta:hover .txn-cta__post,
+.txn-cta:focus-visible .txn-cta__post { transform: translateY(-6px) rotate(90deg); }
+
+.txn-cta:hover .txn-cta__post,
+.txn-cta:focus-visible .txn-cta__post { transform: translateY(0); }
+
+.txn-cta__label { position: relative; z-index: 4; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.txn-cta__arrow { position: relative; z-index: 4; flex-shrink: 0; transition: transform .3s ease; }
+.txn-cta:hover .txn-cta__arrow,
+.txn-cta:focus-visible .txn-cta__arrow { transform: translateX(-3px); }
+
+@media (max-width: 480px) {
+  .txn-cta--header .txn-cta__label { display: none; }
+  .txn-cta--header { padding: .3rem; }
+  .luniva-social.is-open .luniva-social__panel { width: 8rem; }
+  .luniva-social__card,
+  .luniva-social__panel { width: 8rem; min-height: 12rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luniva-mail__mail,
+  .luniva-mail__top-fold,
+  .luniva-mail__letter,
+  .luniva-mail__shadow,
+  .luniva-social__aura,
+  .luniva-welcome-card::before,
+  .txn-cta__card,
+  .txn-cta__post,
+  .txn-cta__arrow { animation: none !important; transition: none !important; }
+  .luniva-mail.is-revealed .luniva-mail__mail,
+  .luniva-mail:hover .luniva-mail__mail { transform: translateX(-50%); }
+  .luniva-folder:hover,
+  .luniva-folder:focus-within,
+  .luniva-social__toggle:hover,
+  .luniva-social__link:hover,
+  .txn-cta:hover,
+  .txn-cta:focus-visible,
+  .txn-cta:hover .txn-cta__arrow,
+  .txn-cta:focus-visible .txn-cta__arrow,
+  .luniva-newsletter__button:hover { transform: none !important; }
+}
+
