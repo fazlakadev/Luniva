@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronRight, Pencil } from "lucide-react";
+import CatalogShareCard from "@/components/catalog-share-card";
 import DeleteButton from "@/components/delete-button";
 import ProductShowcase, {
   type ShowcaseProduct,
   type ShowcaseVariant,
 } from "@/components/product-showcase";
 import { db, ensureProductsTables } from "@/lib/db";
+import { getCatalogShareData } from "@/lib/public-links";
 
 export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
   await ensureProductsTables();
@@ -25,6 +27,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     [id],
   );
   const variants = variantsResult.rows as ShowcaseVariant[];
+  const share = await getCatalogShareData("product", id);
 
   return (
     <>
@@ -41,6 +44,14 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           <DeleteButton endpoint={`/api/products/${id}`} returnTo="/products" label="المنتج" />
         </div>
       </div>
+
+      <CatalogShareCard
+        url={share.url}
+        qr={share.qr}
+        name={product.name}
+        kindLabel="المنتج"
+        layout="inline"
+      />
 
       <ProductShowcase product={product} variants={variants} />
     </>

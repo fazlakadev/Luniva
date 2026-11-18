@@ -926,10 +926,9 @@ export function ClothingRailHero({
       data-mode={size.carousel ? "carousel" : "rail"}
       data-active={active ?? ""}
       aria-roledescription="clothing rail"
-      className={`relative isolate w-full overflow-hidden bg-background text-foreground ${className ?? ""}`}
+      className={`relative isolate w-full overflow-hidden bg-transparent text-foreground ${className ?? ""}`}
     >
       <Defs uid={uid} />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10" style={{ background: "radial-gradient(120% 70% at 18% 0%, color-mix(in oklab, var(--ink) 7%, transparent), transparent 62%), linear-gradient(to bottom, transparent 55%, color-mix(in oklab, var(--ink) 5%, transparent))" }} />
       {(eyebrow || heading) && (
         <header className="relative z-10 flex flex-col items-center gap-2 px-6 pt-8 text-center">
           {eyebrow && <p className="text-[11px] font-semibold tracking-[0.12em] text-muted-foreground">{eyebrow}</p>}

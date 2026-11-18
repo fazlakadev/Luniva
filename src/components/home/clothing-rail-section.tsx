@@ -146,7 +146,7 @@ export default function ClothingRailSection() {
           </Link>
         }
         className="rounded-[1.75rem] border sm:rounded-[2.25rem]"
-        style={{ borderColor: "var(--line)", boxShadow: "var(--shadow-sm)" }}
+        style={{ borderColor: "color-mix(in srgb, var(--line) 72%, transparent)" }}
       />
     </section>
   );

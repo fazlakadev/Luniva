@@ -14,9 +14,11 @@ import {
   Tag,
   Warehouse,
 } from "lucide-react";
+import CatalogShareCard from "@/components/catalog-share-card";
 import DeleteButton from "@/components/delete-button";
 import PackageVariants, { type PackageVariantView } from "@/components/package-variants";
 import { getPackageDetail } from "@/lib/package-queries";
+import { getCatalogShareData } from "@/lib/public-links";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent, packageStatusLabels, type PackageStatus } from "@/lib/packages";
 
@@ -49,6 +51,7 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
   const stock = variants.reduce((sum, variant) => sum + Number(variant.stock || 0), 0);
   const minPrice = variants.length ? Math.min(...variants.map((variant) => Number(variant.price_after_discount))) : baseAfter;
   const maxPrice = variants.length ? Math.max(...variants.map((variant) => Number(variant.price_after_discount))) : baseAfter;
+  const share = await getCatalogShareData("package", id);
 
   return (
     <>
@@ -165,6 +168,13 @@ export default async function PackagePage({ params }: { params: Promise<{ id: st
               <div className="flex items-center justify-between"><span className="muted">آخر تحديث</span><b style={{ color: "var(--ink)" }}>{formatDate(pkg.updated_at)}</b></div>
             </div>
           </section>
+
+          <CatalogShareCard
+            url={share.url}
+            qr={share.qr}
+            name={pkg.name}
+            kindLabel="البكدج"
+          />
 
           <section className="app-card p-5" style={{ background: "linear-gradient(150deg, var(--surface), var(--brand-soft))" }}>
             <Tag size={18} style={{ color: "var(--brand-strong)" }} />

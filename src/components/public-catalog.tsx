@@ -12,9 +12,8 @@ import {
   X,
 } from "lucide-react";
 import ClothingRailSection from "@/components/home/clothing-rail-section";
-import SectionDivider from "@/components/home/section-divider";
 import TurningPortraitHero from "@/components/home/turning-portrait-hero";
-import ValueCard from "@/components/home/value-card";
+import ValuesSection from "@/components/home/values-section";
 import AmbientGlow from "@/components/motion/ambient-glow";
 import { BlurFade } from "@/components/motion/blur-fade";
 import HeroTitle from "@/components/motion/hero-title";
@@ -129,10 +128,7 @@ export default async function PublicCatalog({ page = "home", query = "" }: Publi
   return (
     <PublicSiteShell section={page}>
       {isHome ? (
-        <>
-          <TurningPortraitHero />
-          <SectionDivider />
-        </>
+        <TurningPortraitHero />
       ) : (
       <section
         className="relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14"
@@ -231,52 +227,6 @@ export default async function PublicCatalog({ page = "home", query = "" }: Publi
       )}
 
       {isHome && <ClothingRailSection />}
-
-      {isHome && (
-        <section id="values" className="mt-12 scroll-mt-28 sm:mt-16">
-          <BlurFade inView className="mb-6 max-w-2xl">
-            <p className="eyebrow">لماذا لونيفا</p>
-            <h2 className="section-title mt-1 text-lg">تفاصيل صغيرة تصنع اختيارك بسهولة</h2>
-            <p className="mt-2 text-xs leading-6 muted">
-              عرض واضح، وأسعار نهائية، ومعلومات كافية عن كل قطعة أو بكدج قبل أن تقرري.
-            </p>
-          </BlurFade>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <BlurFade inView delay={0.04} className="min-w-0 h-full sm:col-span-2">
-              <ValueCard
-                icon="palette"
-                tone="brand"
-                title="ألوان ومقاسات واضحة"
-                description="كل متغير له صورته ولونه ومقاسه، لتعرفي بالضبط ما تختاره قبل الطلب."
-              />
-            </BlurFade>
-            <BlurFade inView delay={0.1} className="min-w-0 h-full">
-              <ValueCard
-                icon="ruler"
-                tone="lav"
-                title="مقارنة سهلة"
-                description="قارني بين المنتجات والبكدجات في صفحة واحدة، واختاري ما يناسب ذوقك وميزانيتك."
-              />
-            </BlurFade>
-            <BlurFade inView delay={0.16} className="min-w-0 h-full">
-              <ValueCard
-                icon="badge-percent"
-                tone="success"
-                title="أسعار بعد الخصم"
-                description="السعر النهائي وقيمة الخصم ظاهرين بوضوح، من غير أي خطوات إضافية."
-              />
-            </BlurFade>
-            <BlurFade inView delay={0.22} className="min-w-0 h-full">
-              <ValueCard
-                icon="shield-check"
-                tone="warning"
-                title="تجربة بثقة"
-                description="تفاصيل كاملة وشركة مصرية تأسست عام 2026، وتصميم يحترم وقتك وذوقك."
-              />
-            </BlurFade>
-          </div>
-        </section>
-      )}
 
       {loadError && (
         <div className="app-card mt-6 p-5 text-sm font-bold" style={{ color: "var(--danger)" }}>
@@ -446,6 +396,8 @@ export default async function PublicCatalog({ page = "home", query = "" }: Publi
           )}
         </section>
       )}
+
+      {isHome && <ValuesSection />}
     </PublicSiteShell>
   );
 }
