@@ -17,7 +17,7 @@ import { formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
 
 type PublicCatalogProps = {
-  page?: "home" | "catalog";
+  page?: "home" | "catalog" | "products" | "packages";
 };
 
 function priceStats(variants: CatalogVariant[]) {
@@ -62,13 +62,34 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
   const offerCount = packages.filter((item) => priceStats(item.variants).topDiscount > 0).length;
 
   const isHome = page === "home";
-  const heroHref = isHome ? "/catalog" : "#products";
-  const heroLabel = isHome ? "تصفّح كتالوج العملاء" : "ابدئي بالمنتجات";
-  const heroTitleTop = isHome ? "قطع مختارة" : "كل تشكيلة لونيفا";
-  const heroTitleBottom = isHome ? "بروح مصرية" : "في مكان واحد";
+  const isProducts = page === "products";
+  const isPackages = page === "packages";
+
+  const heroHref = isHome
+    ? "/catalog"
+    : isProducts
+      ? "/catalog/packages"
+      : isPackages
+        ? "/catalog/products"
+        : "#products";
+  const heroLabel = isHome
+    ? "تصفّح كتالوج العملاء"
+    : isProducts
+      ? "تصفّح البكدجات"
+      : isPackages
+        ? "تصفّح المنتجات"
+        : "ابدئي بالمنتجات";
+  const heroTitleTop = isHome ? "قطع مختارة" : isProducts ? "كل المنتجات" : isPackages ? "بكدجات لونيفا" : "كل تشكيلة لونيفا";
+  const heroTitleBottom = isHome ? "بروح مصرية" : isProducts ? "بالتفاصيل الكاملة" : isPackages ? "بأسعار بعد الخصم" : "في مكان واحد";
+  const HeroIcon = isPackages ? Gift : Package;
+
   const heroText = isHome
     ? "اكتشفي تشكيلة تجمع القطع اليومية والبكدجات المُنسّقة، بألوان ومقاسات واضحة وأسعار نهائية، لتجدي ما يناسب ذوقك بثقة وسهولة."
-    : "من هنا تفتحي الكتالوج كاملًا: منتجات بكل الألوان والمقاسات، وبكدجات جاهزة بأسعارها بعد الخصم، وتفاصيل كل قطعة قبل الطلب.";
+    : isProducts
+      ? "تصفّحي كل منتجات لونيفا في صفحة واحدة: الألوان والمقاسات والصور والسعر النهائي لكل متغير، وكل التفاصيل التي تساعدك على المقارنة قبل الطلب."
+      : isPackages
+        ? "توليفات جاهزة تجمع أكثر من قطعة في بكدج واحد بسعر بعد الخصم. افتحي كل بكدج لتري مكوناته والبكدجات الفرعية المتاحة له."
+        : "من هنا تفتحي الكتالوج كاملًا: منتجات بكل الألوان والمقاسات، وبكدجات جاهزة بأسعارها بعد الخصم، وتفاصيل كل قطعة قبل الطلب.";
 
   return (
     <PublicSiteShell section={page}>
@@ -101,7 +122,7 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
             </div>
             <div className="mt-8 flex flex-wrap items-center gap-2 sm:gap-3">
               <Link href={heroHref} className="btn btn-primary px-4 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm">
-                <Package size={16} />{heroLabel}
+                <HeroIcon size={16} />{heroLabel}
               </Link>
               <Link href="/about" className="btn btn-outline px-4 py-2.5 text-xs sm:px-5 sm:py-3 sm:text-sm">
                 <Sparkles size={16} />قصتنا
@@ -149,6 +170,7 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
         </div>
       )}
 
+      {!isPackages && (
       <section id="products" className="mt-12 scroll-mt-28 sm:mt-16">
         <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -222,7 +244,9 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
           </div>
         )}
       </section>
+      )}
 
+      {!isProducts && (
       <section id="packages" className="mt-12 scroll-mt-28 sm:mt-16">
         <div className="mb-5 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -297,6 +321,7 @@ export default async function PublicCatalog({ page = "home" }: PublicCatalogProp
           </div>
         )}
       </section>
+      )}
     </PublicSiteShell>
   );
 }

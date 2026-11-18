@@ -7,7 +7,8 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
-import PublicSiteShell, { type PublicSection } from "@/components/public-site-shell";
+import PublicSiteShell from "@/components/public-site-shell";
+import type { PublicSection } from "@/lib/public-sections";
 
 type InfoBlock = {
   icon: typeof ShieldCheck;
