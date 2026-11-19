@@ -20,6 +20,10 @@ export type LiquidNavItem = {
   icon?: React.ReactNode
   /** the little scene the icon plays when tapped */
   fx?: NimbusFx
+  /** when set, this item is a button that controls the dropdown with this id */
+  menuId?: string
+  /** open state of the dropdown this item controls */
+  menuExpanded?: boolean
 }
 
 export type LiquidNavbarProps = {
@@ -85,6 +89,9 @@ const NIMBUS_CSS = `
 .nimbus-item:focus-visible{outline:2px solid #00A2FF;outline-offset:2px}
 .nv-ico{position:relative;display:inline-flex;flex:none}
 .nv-ico svg{transition:transform .45s cubic-bezier(.3,1.6,.5,1)}
+.nv-caret{width:10px;height:10px;margin-inline-start:1px;flex:none;opacity:.6;transition:transform .25s,opacity .25s}
+.nv-caret path{fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.nimbus-item[aria-expanded="true"] .nv-caret{transform:rotate(180deg);opacity:1}
 .nimbus-item[aria-current="page"] .nv-ico svg{transform:translateY(-1px) scale(1.08)}
 .nv-door{fill:transparent}
 .nv-ico[data-fx="pop"] svg{animation:nvPop .5s cubic-bezier(.3,1.6,.5,1) both}
@@ -112,7 +119,7 @@ const NIMBUS_CSS = `
 .nimbus-nav[data-compact="true"] .nimbus-item{padding:0 var(--n-pad-x-compact,13px)}
 .nimbus-nav[data-compact="true"] .nimbus-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 @media (max-width:520px){.nimbus-nav:not([data-compact="false"]) .nimbus-item{padding:0 var(--n-pad-x-compact,13px)}.nimbus-nav:not([data-compact="false"]) .nimbus-label{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}}
-@media (prefers-reduced-motion:reduce){.nv-ico svg,.nv-ico::before,.nv-ico::after,.nv-door{animation:none!important;transition:none}}
+@media (prefers-reduced-motion:reduce){.nv-ico svg,.nv-ico::before,.nv-ico::after,.nv-door,.nv-caret{animation:none!important;transition:none}}
 `
 
 /* ---------- the water shader ---------- */
@@ -560,6 +567,10 @@ export function LiquidNavbar({
           ref: (el: HTMLElement | null) => { itemRefs.current[i] = el },
           className: "nimbus-item",
           "aria-current": i === current ? ("page" as const) : undefined,
+          "aria-haspopup": it.menuId ? ("menu" as const) : undefined,
+          "aria-expanded": it.menuId ? Boolean(it.menuExpanded) : undefined,
+          "aria-controls": it.menuId ? `nav-menu-${it.menuId}` : undefined,
+          "data-menu-id": it.menuId,
           onClick: () => select(i),
         }
         const content = (
@@ -570,6 +581,11 @@ export function LiquidNavbar({
               </span>
             )}
             <span className="nimbus-label">{it.label}</span>
+            {it.menuId && (
+              <svg className="nv-caret" viewBox="0 0 12 12" aria-hidden="true">
+                <path d="M2.5 4.5 6 8l3.5-3.5" />
+              </svg>
+            )}
           </>
         )
         return it.href ? (
