@@ -7,6 +7,7 @@ import {
   CircleDollarSign,
   Gift,
   Layers3,
+  MoreHorizontal,
   Package,
   Plus,
   ReceiptText,
@@ -19,13 +20,14 @@ import {
 } from "lucide-react";
 import InvoiceCta from "@/components/invoice-cta";
 import { getRecentActivity } from "@/lib/activity";
-import { db, ensureCustomersTable, ensureInvoiceTables, ensurePackagesTables } from "@/lib/db";
+import { db, ensureCustomersTable, ensureInvoiceTables, ensurePackagesTables, ensureSuppliersTable } from "@/lib/db";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
 import { invoiceStatusLabels, type InvoiceStatus } from "@/lib/invoices";
 
 type Overview = {
   customers: number;
+  suppliers: number;
   products: number;
   variants: number;
   packages: number;
@@ -47,10 +49,11 @@ const invoiceStatusStyle: Record<InvoiceStatus, string> = {
 };
 
 export default async function WorkspacePage() {
-  await Promise.all([ensureCustomersTable(), ensurePackagesTables(), ensureInvoiceTables()]);
+  await Promise.all([ensureCustomersTable(), ensureSuppliersTable(), ensurePackagesTables(), ensureInvoiceTables()]);
   const overviewResult = await db.query(`
     SELECT
       (SELECT COUNT(*)::int FROM customers) AS customers,
+      (SELECT COUNT(*)::int FROM suppliers) AS suppliers,
       (SELECT COUNT(*)::int FROM products) AS products,
       (SELECT COUNT(*)::int FROM product_variants) AS variants,
       (SELECT COUNT(*)::int FROM packages) AS packages,
@@ -66,6 +69,7 @@ export default async function WorkspacePage() {
   const row = overviewResult.rows[0] ?? {};
   const overview: Overview = {
     customers: Number(row.customers ?? 0),
+    suppliers: Number(row.suppliers ?? 0),
     products: Number(row.products ?? 0),
     variants: Number(row.variants ?? 0),
     packages: Number(row.packages ?? 0),
@@ -108,11 +112,15 @@ export default async function WorkspacePage() {
     getRecentActivity(5),
   ]);
   const alerts = alertResult.rows[0] ?? {};
+  const collectionRate =
+    overview.billed > 0
+      ? Math.max(0, Math.min(100, Math.round((overview.collected / overview.billed) * 100)))
+      : 0;
 
   const stats = [
     { label: "العملاء", value: formatNumber(overview.customers), hint: "عميلة مسجلة", icon: UsersRound, tone: "brand" },
     { label: "المنتجات", value: formatNumber(overview.products), hint: `${formatNumber(overview.variants)} متغير لون ومقاس`, icon: Package, tone: "lav" },
-    { label: "البكدجات", value: formatNumber(overview.packages), hint: `${formatNumber(overview.subPackages)} بكدج فرعي`, icon: Gift, tone: "success" },
+    { label: "البكدجات", value: formatNumber(overview.packages), hint: `${formatNumber(overview.subPackages)} توليفة · ${formatNumber(overview.stock)} قطعة`, icon: Gift, tone: "success" },
     { label: "الفواتير", value: formatNumber(overview.invoices), hint: `${formatMoney(overview.collected)} محصّل`, icon: ReceiptText, tone: "warning" },
   ];
 
@@ -165,6 +173,22 @@ export default async function WorkspacePage() {
       tone: "success",
     },
     {
+      href: "/profits",
+      title: "نظام الأرباح",
+      description: "سعر التوريد مقابل سعر البيع، الفرق والربح النهائي لكل منتج وبكدج.",
+      meta: "هامش وربح لحظي",
+      icon: TrendingUp,
+      tone: "lav",
+    },
+    {
+      href: "/suppliers",
+      title: "الموردون",
+      description: "دليل الموردين وأسعار التوريد المرتبطة بكل متغير من متغيرات المنتجات.",
+      meta: `${formatNumber(overview.suppliers)} مورد مسجل`,
+      icon: Truck,
+      tone: "success",
+    },
+    {
       href: "/reports",
       title: "التقارير والتحليلات",
       description: "التحصيل حسب الطريقة، أعمار المتأخرات، وأعلى العملاء مديونية.",
@@ -184,50 +208,75 @@ export default async function WorkspacePage() {
 
   return (
     <>
-      <section
-        className="relative overflow-hidden rounded-[2rem] px-6 py-9 text-white sm:px-10 sm:py-12"
-        style={{ background: "linear-gradient(135deg, var(--plum), var(--brand-strong))", boxShadow: "var(--shadow-md)" }}
-      >
-        <div className="absolute -left-16 -top-20 h-56 w-56 rounded-full border-[30px] border-white/10" />
-        <div className="absolute -bottom-24 right-24 h-52 w-52 rounded-full border-[30px] border-white/10" />
-        <div className="relative flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-2xl">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-white/85">
-              <Sparkles size={14} />نظام لونيفا · مساحة الإدارة
+      <section className="ws-hero">
+        <div className="ws-hero__orbit" aria-hidden="true" />
+        <div className="ws-hero__grid">
+          <div className="min-w-0">
+            <span className="ws-hero__eyebrow">
+              <Sparkles size={14} />LUNIVA OS · مركز القيادة
             </span>
-            <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight sm:text-4xl">
-              مساحة عمل لونيفا
+            <h1 className="ws-hero__title">
+              مركز قيادة <span className="ws-hero__accent">لونيفا</span>
             </h1>
-            <p className="mt-3 max-w-xl text-sm leading-7 text-white/75">
-              تابعي العملاء والمنتجات والبكدجات والفواتير والتحصيل من مكان واحد، وابدئي من حيث توقفتِ.
+            <p className="ws-hero__lead">
+              من أول عميلة لآخر تحصيل، تابعي المبيعات والمخزون والأرباح من لوحة واحدة مصممة لسرعة قرارك.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/85">
-                {formatNumber(overview.invoices)} فاتورة
-              </span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/85">
-                {formatMoney(overview.collected)} محصّل
-              </span>
-              <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white/85">
-                {formatNumber(overview.customers)} عميلة
-              </span>
+            <div className="ws-hero__chips">
+              <span className="ws-hero__chip"><ReceiptText size={13} />{formatNumber(overview.invoices)} فاتورة</span>
+              <span className="ws-hero__chip"><Wallet size={13} />{formatMoney(overview.collected)} محصّل</span>
+              <span className="ws-hero__chip"><UsersRound size={13} />{formatNumber(overview.customers)} عميلة</span>
+            </div>
+            <div className="ws-hero__actions">
+              <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="compact" className="txn-cta--on-dark" />
+              <Link href="/packages/new" className="ws-hero__action"><Gift size={16} />بكدج جديد</Link>
+              <Link href="/products/new" className="ws-hero__action"><Boxes size={16} />منتج جديد</Link>
+              <details className="ws-hero__more">
+                <summary className="ws-hero__action"><MoreHorizontal size={16} />المزيد</summary>
+                <div className="ws-hero__menu">
+                  <Link href="/profits"><TrendingUp size={14} />الأرباح</Link>
+                  <Link href="/suppliers"><Truck size={14} />الموردون</Link>
+                  <Link href="/payments"><Wallet size={14} />سجل التحصيل</Link>
+                  <Link href="/reports"><BarChart3 size={14} />التقارير</Link>
+                </div>
+              </details>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <InvoiceCta href="/invoices/new" label="فاتورة جديدة" variant="compact" className="txn-cta--on-dark" />
-            <Link href="/packages/new" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
-              <Gift size={17} />إنشاء بكدج
-            </Link>
-            <Link href="/products/new" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
-              <Boxes size={17} />إضافة منتج
-            </Link>
-            <Link href="/profits" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
-              <TrendingUp size={17} />الأرباح
-            </Link>
-            <Link href="/suppliers" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
-              <Truck size={17} />الموردون
-            </Link>
-          </div>
+
+          <aside className="ws-pulse" aria-label="نبض اليوم">
+            <div className="ws-pulse__head">
+              <div>
+                <p className="ws-pulse__eyebrow">نبض اليوم</p>
+                <p className="ws-pulse__title">حالة التحصيل</p>
+              </div>
+              <span className="ws-pulse__live"><i />مباشر</span>
+            </div>
+            <div
+              className="ws-pulse__ring"
+              style={{ background: `conic-gradient(from -90deg, rgba(217, 201, 255, 0.96) 0 ${collectionRate}%, rgba(255, 255, 255, 0.14) ${collectionRate}% 100%)` }}
+            >
+              <div className="ws-pulse__ring-core">
+                <strong>{formatNumber(collectionRate)}%</strong>
+                <span>تم تحصيله</span>
+              </div>
+            </div>
+            <div className="ws-pulse__mini">
+              <div>
+                <span className="ws-pulse__mini-label">إيصالات اليوم</span>
+                <strong>{formatNumber(Number(alerts.receipts_today ?? 0))}</strong>
+              </div>
+              <div>
+                <span className="ws-pulse__mini-label">متأخرات</span>
+                <strong>{formatNumber(Number(alerts.overdue_count ?? 0))}</strong>
+              </div>
+            </div>
+            <div className="ws-pulse__footer">
+              <div className="ws-pulse__footer-row">
+                <span>المتبقي</span>
+                <strong className="money">{formatMoney(overview.outstanding)}</strong>
+              </div>
+              <div className="ws-pulse__bar"><span style={{ width: `${collectionRate}%` }} /></div>
+            </div>
+          </aside>
         </div>
       </section>
 
