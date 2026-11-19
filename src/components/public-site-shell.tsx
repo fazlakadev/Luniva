@@ -2,10 +2,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpLeft, Heart, Layers3, Mail, MapPin, Phone, ShieldCheck, Sparkles } from "lucide-react";
 import HomeAtmosphere from "@/components/motion/home-atmosphere";
-import MobileGooeyNav from "@/components/motion/mobile-gooey-nav";
 import NewsletterForm from "@/components/newsletter-form";
 import PublicNav from "@/components/public-nav";
 import SocialRail from "@/components/social-rail";
+import FloatingMenu from "@/components/ui/floating-menu";
 import { getSettings } from "@/lib/settings";
 import type { PublicSection } from "@/lib/public-sections";
 
@@ -24,6 +24,15 @@ const SUPPORT_FOOTER_LINKS = [
   { href: "/faq", label: "الأسئلة الشائعة" },
   { href: "/privacy", label: "سياسة الخصوصية" },
   { href: "/terms", label: "الشروط والأحكام" },
+];
+
+// Mobile quick navigation — replaces the old gooey bar.
+const MOBILE_NAV_ITEMS = [
+  { label: "الرئيسية", href: "/" },
+  { label: "المنتجات", href: "/catalog/products" },
+  { label: "البكدجات", href: "/catalog/packages" },
+  { label: "الأحذية", href: "/shoes" },
+  { label: "تواصل", href: "/contact" },
 ];
 
 export default async function PublicSiteShell({
@@ -107,16 +116,16 @@ export default async function PublicSiteShell({
         className={
           section === "home"
             ? "relative z-10 w-full"
-            : "relative z-10 mx-auto w-full max-w-7xl px-3 pb-24 pt-6 sm:px-6 sm:pb-14 md:pb-14"
+            : "relative z-10 mx-auto w-full max-w-7xl px-3 pb-32 pt-6 sm:px-6 sm:pb-24 md:pb-14"
         }
       >
         {children}
       </div>
       <SocialRail email={contactEmail} phone={settings.companyPhone} />
-      <MobileGooeyNav />
+      <FloatingMenu items={MOBILE_NAV_ITEMS} />
 
       <footer
-        className="site-footer relative z-10 mt-14 overflow-hidden border-t pb-20 md:pb-0"
+        className="site-footer relative z-10 mt-14 overflow-hidden border-t pb-32 md:pb-0"
         style={{
           borderColor: "var(--line)",
           background:

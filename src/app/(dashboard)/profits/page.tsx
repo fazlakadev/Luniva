@@ -14,6 +14,7 @@ import {
 import { db, ensureSuppliersTable } from "@/lib/db";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { getProfitReport, type ProfitFilters } from "@/lib/profit-queries";
+import PeakAnalytics from "@/components/analytics/peak-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,26 @@ export default async function ProfitsPage({
   const maxMonth = Math.max(1, ...monthly.map((row) => Math.abs(Number(row.profit ?? 0))));
   const maxProduct = Math.max(1, ...products.map((row) => Math.abs(Number(row.profit ?? 0))));
   const activeFilters = Boolean(from || to || supplierId || type && type !== "all");
+
+  const profitValue = (row: NumericRow) => Number(row.profit ?? 0);
+  const recentMonths = monthly.slice(-3);
+  const profitSeries = [
+    {
+      period: "آخر ٦ أشهر",
+      labels: monthly.map((row) => monthLabel(String(row.month ?? ""))),
+      data: monthly.map(profitValue),
+      value: profit,
+    },
+    {
+      period: "آخر ٣ أشهر",
+      labels: recentMonths.map((row) => monthLabel(String(row.month ?? ""))),
+      data: recentMonths.map(profitValue),
+      value: recentMonths.reduce((sum, row) => sum + profitValue(row), 0),
+    },
+  ];
+  const lastProfit = monthly.length ? profitValue(monthly[monthly.length - 1]) : 0;
+  const previousProfit = monthly.length > 1 ? profitValue(monthly[monthly.length - 2]) : 0;
+  const profitTrend = previousProfit !== 0 ? (lastProfit >= previousProfit ? "up" : "down") : "none";
   const exportQuery = new URLSearchParams({ type: "profits" });
   if (from) exportQuery.set("from", from);
   if (to) exportQuery.set("to", to);
@@ -141,6 +162,30 @@ export default async function ProfitsPage({
             </div>
           </div>
         ))}
+      </section>
+
+      <section className="app-card mb-5 min-w-0 overflow-hidden p-4 sm:p-5">
+        <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="stat-icon shrink-0" style={{ background: "var(--lav-soft)", color: "var(--lav-strong)" }}>
+              <TrendingUp size={18} />
+            </span>
+            <div className="min-w-0">
+              <h2 className="section-title">اتجاه الربح الشهري</h2>
+              <p className="mt-1 text-[11px] leading-5 muted">الربح الصافي محسوب من أسعار التوريد المحفوظة في الفواتير.</p>
+            </div>
+          </div>
+          <span className="badge badge-lav">تحليلات لونيفا</span>
+        </div>
+        <PeakAnalytics
+          series={profitSeries}
+          title="الربح الصافي"
+          caption={monthly.length ? "إجمالي الربح في الفترة المختارة" : "لا توجد أرباح محسوبة في هذه الفترة"}
+          updatedText={`آخر تحديث: ${formatDate(new Date().toISOString())}`}
+          valueSuffix="ج.م"
+          trend={profitTrend}
+          accent="#5c498f"
+        />
       </section>
 
       <section className="balance-report mb-5 overflow-hidden p-5 sm:p-6">

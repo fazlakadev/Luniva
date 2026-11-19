@@ -20,7 +20,8 @@ import { useRouter } from "next/navigation";
 import { readJson } from "@/lib/client-response";
 import { optimizeImage } from "@/lib/image-client";
 import { formatMoney, formatNumber } from "@/lib/format";
-import { COLOR_SUGGESTIONS, canonicalColorName, colorSwatch } from "@/lib/colors";
+import { COLOR_SUGGESTIONS, canonicalColorName } from "@/lib/colors";
+import ColorField from "@/components/color-field";
 import FolderUpload from "@/components/folder-upload";
 import { useToast } from "@/components/toast";
 import {
@@ -456,27 +457,19 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
                     </div>
 
                     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                      <label>
-                        <span className="field-label">اللون</span>
-                        <span className="relative block">
-                          <span
-                            className="pointer-events-none absolute right-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 rounded-full shadow-sm"
-                            style={{ background: colorSwatch(variant.color), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.15)" }}
-                          />
-                          <input
-                            value={variant.color}
-                            onChange={(event) => update(index, { color: event.target.value })}
-                            onBlur={(event) => {
-                              const next = canonicalColorName(event.target.value);
-                              if (next !== event.target.value) update(index, { color: next });
-                            }}
-                            maxLength={80}
-                            placeholder="أحمر"
-                            list="luniva-colors"
-                            className="field py-2.5 pr-10"
-                          />
-                        </span>
-                      </label>
+                      <ColorField
+                        label="اللون"
+                        value={variant.color}
+                        onChange={(color) => update(index, { color })}
+                        onBlur={(color) => {
+                          const next = canonicalColorName(color);
+                          if (next !== color) update(index, { color: next });
+                        }}
+                        maxLength={80}
+                        placeholder="أحمر"
+                        listId="luniva-colors"
+                        inputClassName="py-2.5 pr-10"
+                      />
                       <label>
                         <span className="field-label">المقاس</span>
                         <input value={variant.size} onChange={(event) => update(index, { size: event.target.value })} maxLength={40} placeholder="M" className="field py-2.5 text-center" />

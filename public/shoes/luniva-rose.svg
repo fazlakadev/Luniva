@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="سنيكر لونيفا وردي">
+  <g stroke-linejoin="round" stroke-linecap="round">
+    <path d="M40 246 C120 272 516 280 592 250 C600 248 608 256 604 268 C596 288 520 302 380 304 L158 298 C96 296 54 280 44 262 C40 256 38 250 40 246 Z" fill="#7c3a51"/>
+    <path d="M36 226 C36 214 48 206 66 206 L560 214 C582 216 596 230 594 246 C592 262 576 272 552 274 L122 268 C74 266 44 252 38 238 C36 234 36 230 36 226 Z" fill="#fff0f2"/>
+    <path d="M42 224 C56 194 106 174 170 170 L252 168 C292 168 320 182 344 188 C370 194 388 174 402 148 C418 118 442 102 480 102 L518 106 C548 110 566 140 570 176 L576 226 C500 216 356 212 232 220 L80 232 C58 234 44 232 42 224 Z" fill="#a95d73"/>
+    <path d="M126 178 C106 196 96 214 96 228" fill="none" stroke="#d494a7" stroke-width="3"/>
+    <path d="M330 190 C364 196 384 176 398 150 C414 122 438 108 476 108 L512 112 C536 116 552 140 556 174" fill="none" stroke="#d494a7" stroke-width="4"/>
+    <path d="M518 112 C548 120 562 150 566 188 L570 222" fill="none" stroke="#d494a7" stroke-width="4"/>
+    <path d="M508 106 l18 -2 l4 16 l-20 2 Z" fill="#d494a7"/>
+    <path d="M282 180 C310 176 336 184 356 194" fill="none" stroke="#fff8fa" stroke-width="4"/>
+    <g stroke="#fff8fa" stroke-width="5">
+      <path d="M292 180 l20 14"/>
+      <path d="M308 174 l20 14"/>
+      <path d="M324 169 l20 14"/>
+      <path d="M340 166 l20 14"/>
+    </g>
+    <g fill="#fff8fa">
+      <circle cx="292" cy="180" r="3"/><circle cx="308" cy="174" r="3"/>
+      <circle cx="324" cy="169" r="3"/><circle cx="340" cy="166" r="3"/>
+    </g>
+    <path d="M60 236 C180 250 460 254 566 236" fill="none" stroke="#e8b9c7" stroke-width="3"/>
+  </g>
+</svg>

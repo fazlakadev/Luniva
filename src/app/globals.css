@@ -706,7 +706,7 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   border: 1px solid rgba(255, 255, 255, 0.16);
   background:
     radial-gradient(circle at 12% 8%, rgba(255, 255, 255, 0.1), transparent 32%),
-    linear-gradient(135deg, #45283a 0%, #6b4059 48%, #392843 100%);
+    linear-gradient(135deg, #3a2030 0%, #5a344a 48%, #2f2138 100%);
   box-shadow: 0 34px 90px -34px rgba(55, 25, 42, 0.62), inset 0 1px 0 rgba(255, 255, 255, 0.16);
   transform: rotateX(var(--rx)) rotateY(var(--ry));
   transform-style: preserve-3d;
@@ -1804,9 +1804,9 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   padding: clamp(1.5rem, 3.2vw, 2.75rem);
   color: #fff;
   background:
-    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--lav) 74%, transparent), transparent 34%),
-    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--brand) 58%, transparent), transparent 36%),
-    linear-gradient(135deg, var(--plum), color-mix(in srgb, var(--brand-strong) 78%, var(--plum)));
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--lav) 46%, transparent), transparent 30%),
+    radial-gradient(circle at 8% 100%, color-mix(in srgb, var(--brand) 40%, transparent), transparent 32%),
+    linear-gradient(135deg, color-mix(in srgb, var(--plum) 88%, #150d14), color-mix(in srgb, var(--brand-strong) 52%, #150d14));
   box-shadow: 0 30px 70px -34px color-mix(in srgb, var(--plum) 80%, transparent);
 }
 
@@ -2153,5 +2153,20 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   .ws-hero__action,
   .ws-pulse__bar span { transition: none !important; }
   .ws-hero__action:hover { transform: none !important; }
+}
+
+/* Colour picker popover (adapted from the supplied Base UI component). */
+.luniva-color-pop {
+  max-width: min(92vw, 24rem);
+  padding: .5rem;
+  border-radius: 1.25rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-lg);
+  direction: ltr;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luniva-color-pop * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 

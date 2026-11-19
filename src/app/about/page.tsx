@@ -11,6 +11,7 @@ import {
   Sparkles,
   Target,
 } from "lucide-react";
+import AboutTunnel from "@/components/about/about-tunnel";
 import BrandGlassCard from "@/components/about/brand-glass-card";
 import PublicSiteShell from "@/components/public-site-shell";
 
@@ -63,6 +64,10 @@ const steps = [
 export default function AboutPage() {
   return (
     <PublicSiteShell section="about">
+      <div className="mb-6">
+        <AboutTunnel />
+      </div>
+
       <section
         className="page-enter relative overflow-hidden rounded-[1.75rem] border px-5 py-10 sm:rounded-[2.25rem] sm:px-10 sm:py-14"
         style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 88%, transparent)" }}

@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
+import DateField from "@/components/date-field";
 import { useToast } from "@/components/toast";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
@@ -288,10 +289,12 @@ export default function InvoiceActions({
                   {PAYMENT_METHODS.map((entry) => <option key={entry} value={entry}>{paymentMethodLabels[entry]}</option>)}
                 </select>
               </label>
-              <label>
-                <span className="field-label">التاريخ</span>
-                <input value={paidAt} onChange={(event) => setPaidAt(event.target.value)} type="date" className="field py-2 text-[11px]" />
-              </label>
+              <DateField
+                label="التاريخ"
+                value={paidAt}
+                onChange={setPaidAt}
+                controlClassName="py-2 text-[11px]"
+              />
             </div>
             <label className="block">
               <span className="field-label">الرقم المرجعي (اختياري)</span>
@@ -370,10 +373,13 @@ export default function InvoiceActions({
             <span className="field-label">رسوم التوصيل</span>
             <input value={fee} onChange={(event) => setFee(event.target.value)} type="number" min={0} step="0.01" inputMode="decimal" className="field py-2 text-[11px] money" disabled={cancelled} />
           </label>
-          <label>
-            <span className="field-label">تاريخ الاستحقاق</span>
-            <input value={due} onChange={(event) => setDue(event.target.value)} type="date" className="field py-2 text-[11px]" disabled={cancelled} />
-          </label>
+          <DateField
+            label="تاريخ الاستحقاق"
+            value={due}
+            onChange={setDue}
+            disabled={cancelled}
+            controlClassName="py-2 text-[11px]"
+          />
           <label className="col-span-2">
             <span className="field-label">منطقة التوصيل</span>
             <input value={area} onChange={(event) => setArea(event.target.value)} maxLength={120} className="field py-2 text-[11px]" disabled={cancelled} />

@@ -3,64 +3,37 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  BarChart3,
-  ChevronLeft,
-  Gift,
-  LayoutGrid,
-  LogOut,
-  MoreHorizontal,
-  Package,
-  PanelRightClose,
-  PanelRightOpen,
-  Plus,
-  ReceiptText,
-  Settings2,
-  ShieldCheck,
-  TrendingUp,
-  Truck,
-  UsersRound,
-  Wallet,
-  X,
-} from "lucide-react";
-import { useEffect, useState } from "react";
+import { LogOut, Menu, MoreHorizontal, Plus, ShieldCheck, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import InvoiceCta from "@/components/invoice-cta";
 import ThemeToggle from "@/components/theme-toggle";
 import WelcomeDialog from "@/components/welcome-dialog";
-
-const nav = [
-  { href: "/workspace", label: "مساحة العمل", short: "الرئيسية", hint: "لوحة البداية", icon: LayoutGrid },
-  { href: "/invoices", label: "الفواتير", short: "الفواتير", hint: "بيع وتحصيل وطباعة", icon: ReceiptText },
-  { href: "/payments", label: "سجل التحصيل", short: "التحصيل", hint: "الدفعات والإيصالات", icon: Wallet },
-  { href: "/reports", label: "التقارير", short: "التقارير", hint: "تحليلات وأعمار متأخرات", icon: BarChart3 },
-  { href: "/profits", label: "الأرباح", short: "الأرباح", hint: "سعر التوريد والربح والهامش", icon: TrendingUp },
-  { href: "/customers", label: "إدارة العملاء", short: "العملاء", hint: "دليل العميلات", icon: UsersRound },
-  { href: "/suppliers", label: "الموردون", short: "الموردون", hint: "أسعار التوريد والموردون", icon: Truck },
-  { href: "/products", label: "إدارة المنتجات", short: "المنتجات", hint: "الكتالوج والمتغيرات", icon: Package },
-  { href: "/packages", label: "البكدجات", short: "البكدجات", hint: "عروض ومنتجات مجمعة", icon: Gift },
-  { href: "/settings", label: "الإعدادات", short: "الإعدادات", hint: "بيانات الشركة والشروط", icon: Settings2 },
-];
+import {
+  Component as AdminSidebar,
+  adminNav as nav,
+  adminQuickLinks as quickLinks,
+} from "@/components/ui/gsap-fullscreen-menu";
 
 const mobileNav = nav.filter(({ href }) =>
   ["/workspace", "/invoices", "/payments", "/customers", "/reports"].includes(href),
 );
-
-const quickLinks = [
-  { href: "/invoices/new", label: "فاتورة جديدة", hint: "بيع وتحصيل", icon: ReceiptText },
-  { href: "/packages/new", label: "بكدج جديد", hint: "تجميع منتجات", icon: Gift },
-  { href: "/products/new", label: "منتج جديد", hint: "إضافة للكتالوج", icon: Package },
-  { href: "/customers/new", label: "عميلة جديدة", hint: "ملف عميلة", icon: UsersRound },
-];
 
 export default function AppShell({ children, name }: { children: React.ReactNode; name: string }) {
   const pathname = usePathname();
   const router = useRouter();
   const [collapsed, setCollapsed] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const closeDrawer = useCallback(() => setDrawerOpen(false), []);
 
   // Restore the persisted sidebar state once the client is available.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setCollapsed(window.localStorage.getItem("luniva_sidebar") === "collapsed"); }, []);
+
+  // A completed client navigation should always dismiss the mobile sidebar.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { setDrawerOpen(false); }, [pathname]);
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -99,230 +72,13 @@ export default function AppShell({ children, name }: { children: React.ReactNode
         }}
       />
 
-      <aside
-        className={`fixed inset-y-0 right-0 z-40 hidden overflow-hidden border-l shadow-sm backdrop-blur-2xl transition-[width] duration-300 ease-out xl:flex xl:flex-col print:hidden ${
-          collapsed ? "w-[88px]" : "w-[286px]"
-        }`}
-        style={{
-          borderColor: "var(--line)",
-          background: "linear-gradient(180deg, color-mix(in srgb, var(--surface) 96%, transparent), color-mix(in srgb, var(--surface-2) 92%, transparent))",
-        }}
-      >
-        <button
-          onClick={toggleSidebar}
-          className="absolute -left-3.5 top-24 z-10 grid h-8 w-8 place-items-center rounded-full shadow-md transition hover:scale-105 active:scale-95"
-          style={{ border: "1px solid var(--line)", background: "var(--surface)", color: "var(--brand-strong)" }}
-          aria-label={collapsed ? "فتح القائمة" : "طي القائمة"}
-          title={collapsed ? "فتح القائمة" : "طي القائمة"}
-        >
-          {collapsed ? <PanelRightOpen size={15} /> : <PanelRightClose size={15} />}
-        </button>
-
-        <div className={`flex h-full min-h-0 flex-col ${collapsed ? "gap-4 px-3 py-4" : "gap-5 px-4 py-5"}`}>
-          {/* Logo */}
-          <Link
-            href="/workspace"
-            title="شعار لونيفا"
-            className={`relative flex shrink-0 items-center overflow-hidden rounded-2xl transition hover:brightness-[1.02] ${
-              collapsed ? "h-14 justify-center" : "gap-3 px-3 py-3"
-            }`}
-            style={{
-              background: "linear-gradient(135deg, var(--brand-soft), var(--surface))",
-              border: "1px solid var(--line)",
-            }}
-          >
-            <span
-              className="pointer-events-none absolute -left-8 -top-10 h-20 w-20 rounded-full opacity-60 blur-2xl"
-              style={{ background: "var(--lav-soft)" }}
-            />
-            <Image
-              src="/luniva-logo-v2.png"
-              alt="شعار لونيفا"
-              width={128}
-              height={128}
-              priority
-              className={`relative shrink-0 object-contain transition-all duration-300 ${collapsed ? "h-9 w-9" : "h-10 w-10"}`}
-            />
-            {!collapsed && (
-              <span className="relative min-w-0 leading-tight">
-                <span className="block text-[13px] font-black tracking-[0.12em]" style={{ color: "var(--ink)" }}>
-                  لونيفا
-                </span>
-                <span className="mt-1 block whitespace-nowrap text-[8px] font-extrabold" style={{ color: "var(--brand-strong)" }}>
-                  تأسست عام 2026
-                </span>
-              </span>
-            )}
-          </Link>
-
-          {/* Navigation */}
-          <div
-            data-lenis-prevent
-            data-lenis-prevent-wheel
-            className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain"
-          >
-            <div className={`mb-2 flex items-center gap-2 ${collapsed ? "justify-center" : "px-1"}`}>
-              {collapsed ? (
-                <span className="h-px w-6" style={{ background: "var(--line-strong)" }} />
-              ) : (
-                <>
-                  <span className="text-[10px] font-black tracking-[0.18em]" style={{ color: "var(--muted-2)" }}>التنقل</span>
-                  <span className="h-px flex-1" style={{ background: "var(--line)" }} />
-                </>
-              )}
-            </div>
-
-            <nav className="space-y-1.5">
-              {nav.map(({ href, label, hint, icon: Icon }) => {
-                const active = isActive(href);
-                return (
-                  <Link
-                    key={href}
-                    href={href}
-                    title={collapsed ? label : undefined}
-                    aria-current={active ? "page" : undefined}
-                    className={`group relative flex items-center rounded-xl text-sm font-bold transition-all duration-200 ${
-                      collapsed ? "h-12 justify-center" : "gap-3 px-2.5 py-2.5"
-                    } ${active ? "shadow-sm" : "hover:translate-x-[-2px]"}`}
-                    style={
-                      active
-                        ? {
-                            background: "linear-gradient(90deg, var(--brand-soft), color-mix(in srgb, var(--brand-soft) 35%, var(--surface)))",
-                            color: "var(--brand-strong)",
-                            border: "1px solid color-mix(in srgb, var(--brand) 22%, var(--line))",
-                          }
-                        : { color: "var(--ink-soft)", border: "1px solid transparent" }
-                    }
-                  >
-                    {active && (
-                      <span className="absolute inset-y-2.5 right-0 w-[3px] rounded-full" style={{ background: "var(--brand)" }} />
-                    )}
-                    <span
-                      className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors"
-                      style={
-                        active
-                          ? { background: "var(--surface)", color: "var(--brand-strong)", boxShadow: "var(--shadow-sm)" }
-                          : { background: "var(--surface-2)", color: "var(--muted)" }
-                      }
-                    >
-                      <Icon size={18} strokeWidth={active ? 2.4 : 2} />
-                    </span>
-                    {!collapsed && (
-                      <>
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate leading-5">{label}</span>
-                          <span className="mt-0.5 block truncate text-[10px] font-medium" style={{ color: active ? "var(--brand)" : "var(--muted-2)" }}>
-                            {hint}
-                          </span>
-                        </span>
-                        <ChevronLeft
-                          size={14}
-                          className={`shrink-0 transition-transform ${active ? "opacity-80" : "opacity-0 group-hover:opacity-60"}`}
-                        />
-                      </>
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* Quick add */}
-            {collapsed ? (
-              <div className="mt-4 space-y-1.5 border-t pt-4" style={{ borderColor: "var(--line)" }}>
-                {quickLinks.map(({ href, label, icon: Icon }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    title={label}
-                    className="grid h-11 place-items-center rounded-xl transition hover:bg-[var(--surface-3)]"
-                    style={{ color: "var(--brand-strong)" }}
-                  >
-                    <Icon size={18} />
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="mt-5 rounded-2xl p-2.5" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-                <p className="flex items-center justify-between px-1.5 pb-2 text-[10px] font-black tracking-[0.14em]" style={{ color: "var(--muted-2)" }}>
-                  <span className="flex items-center gap-1.5"><Plus size={12} />إضافة سريعة</span>
-                  <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--success)" }} />
-                </p>
-                {quickLinks.map(({ href, label, hint, icon: Icon }) => (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="group flex items-center gap-2.5 rounded-xl px-2 py-2 transition hover:bg-[var(--surface)]"
-                  >
-                    <span
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-lg transition group-hover:scale-105"
-                      style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}
-                    >
-                      <Icon size={15} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-xs font-bold" style={{ color: "var(--ink-soft)" }}>{label}</span>
-                      <span className="block truncate text-[9px]" style={{ color: "var(--muted-2)" }}>{hint}</span>
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="shrink-0 space-y-3 border-t pt-4" style={{ borderColor: "var(--line)" }}>
-            <div className={`flex ${collapsed ? "justify-center" : "items-center justify-between gap-2"}`}>
-              <ThemeToggle showLabel={false} />
-              {!collapsed && (
-                <span className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-extrabold" style={{ background: "var(--success-soft)", color: "var(--success)" }}>
-                  <ShieldCheck size={11} />جلسة آمنة
-                </span>
-              )}
-            </div>
-
-            <div
-              className={`flex items-center rounded-2xl ${collapsed ? "justify-center p-2" : "gap-3 p-2.5"}`}
-              style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
-            >
-              <span
-                className="grid h-10 w-10 shrink-0 place-items-center rounded-xl text-sm font-black text-white shadow-sm"
-                style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-strong))" }}
-              >
-                ل
-              </span>
-              {!collapsed && (
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[13px] font-extrabold leading-5" style={{ color: "var(--ink)" }}>مساحة الإدارة</p>
-                  <p className="text-[10px]" style={{ color: "var(--muted-2)" }}>لونيفا · تأسست عام 2026</p>
-                </div>
-              )}
-              {!collapsed && (
-                <button
-                  onClick={logout}
-                  title="تسجيل الخروج"
-                  aria-label="تسجيل الخروج"
-                  className="grid h-9 w-9 shrink-0 place-items-center rounded-lg transition hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-                  style={{ color: "var(--muted)" }}
-                >
-                  <LogOut size={16} />
-                </button>
-              )}
-            </div>
-
-            {collapsed && (
-              <button
-                onClick={logout}
-                title="تسجيل الخروج"
-                aria-label="تسجيل الخروج"
-                className="grid h-10 w-full place-items-center rounded-xl transition hover:bg-[var(--danger-soft)] hover:text-[var(--danger)]"
-                style={{ color: "var(--muted)", border: "1px solid var(--line)" }}
-              >
-                <LogOut size={16} />
-              </button>
-            )}
-          </div>
-        </div>
-      </aside>
+      {/* Supplied GSAP fullscreen menu, adapted into the admin sidebar */}
+      <AdminSidebar
+        collapsed={collapsed}
+        onToggle={toggleSidebar}
+        open={drawerOpen}
+        onClose={closeDrawer}
+      />
 
       <main
         className={`page-enter relative min-h-screen w-full transition-[padding] duration-300 ${
@@ -357,9 +113,19 @@ export default function AppShell({ children, name }: { children: React.ReactNode
         >
           <Link href="/workspace" className="flex min-w-0 items-center gap-2">
             <Image src="/luniva-logo-v2.png" alt="شعار لونيفا" width={128} height={128} className="h-9 w-9 shrink-0 object-contain" />
-            <span className="truncate text-xs font-extrabold" style={{ color: "var(--ink)" }}>مساحة العمل</span>
+            <span className="hidden truncate text-xs font-extrabold min-[400px]:inline" style={{ color: "var(--ink)" }}>مساحة العمل</span>
           </Link>
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setDrawerOpen(true)}
+              className="btn btn-soft shrink-0 px-2.5 py-2"
+              aria-label="فتح القائمة الجانبية"
+              title="القائمة الجانبية"
+              aria-expanded={drawerOpen}
+            >
+              <Menu size={16} />
+            </button>
             <InvoiceCta
               href="/invoices/new"
               label="فاتورة"

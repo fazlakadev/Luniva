@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ChevronDown,
   CircleHelp,
   FileText,
+  Footprints,
   Gift,
   Home,
   Layers3,
@@ -18,10 +19,14 @@ import {
   Sparkles,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import HeaderSearch from "@/components/header-search";
 import ThemeToggle from "@/components/theme-toggle";
+import LiquidNavbar, {
+  NimbusIcons,
+  type LiquidNavItem,
+} from "@/components/ui/nimbus-liquid-nav";
 import {
   isCatalogMenuActive,
   isSupportSection,
@@ -41,8 +46,12 @@ type PublicNavProps = {
   phone?: string;
 };
 
+type NavKey = PublicSection | "shoes";
+type DropdownKey = "catalog" | "support";
+
 const HOME_LINK: NavLink = { href: "/", label: "الرئيسية", icon: Home, section: "home" };
 const ABOUT_LINK: NavLink = { href: "/about", label: "من نحن", icon: Sparkles, section: "about" };
+const SHOES_LINK: NavLink = { href: "/shoes", label: "الأحذية", icon: Footprints, section: "products" };
 const CONTACT_LINK: NavLink = { href: "/contact", label: "تواصل معنا", icon: Mail, section: "contact" };
 
 const CATALOG_LINKS: NavLink[] = [
@@ -57,6 +66,20 @@ const SUPPORT_LINKS: NavLink[] = [
   { href: "/terms", label: "الشروط والأحكام", icon: FileText, section: "terms" },
 ];
 
+// The pills keep every icon's little water scene from the supplied component.
+// Catalog + Help are buttons (no href) so they can open the preserved dropdowns.
+const LIQUID_ITEMS: LiquidNavItem[] = [
+  { label: "الرئيسية", href: "/", icon: NimbusIcons.home, fx: "glow" },
+  { label: "الكتالوج", icon: NimbusIcons.globe, fx: "spin" },
+  { label: "من نحن", href: "/about", icon: <Sparkles size={16} />, fx: "pop" },
+  { label: "الأحذية", href: "/shoes", icon: <Footprints size={16} />, fx: "wave" },
+  { label: "المساعدة", icon: <CircleHelp size={16} />, fx: "drop" },
+  { label: "تواصل", href: "/contact", icon: <Mail size={16} />, fx: "pop" },
+];
+
+const CATALOG_LABEL = "الكتالوج";
+const SUPPORT_LABEL = "المساعدة";
+
 function resolveActive(pathname: string, section: PublicSection): PublicSection {
   if (pathname.startsWith("/catalog/products")) return "products";
   if (pathname.startsWith("/catalog/packages")) return "packages";
@@ -70,14 +93,34 @@ function resolveActive(pathname: string, section: PublicSection): PublicSection 
   return section;
 }
 
-function navStyle(active: boolean) {
-  return {
-    background: active ? "var(--brand-soft)" : "transparent",
-    color: active ? "var(--brand-strong)" : "var(--muted)",
-    border: active
-      ? "1px solid color-mix(in srgb, var(--brand) 24%, transparent)"
-      : "1px solid transparent",
-  };
+// Home is only lit on the real homepage — never on /catalog, /shoes, etc.
+function resolveNavKey(pathname: string, section: PublicSection): NavKey {
+  if (pathname.startsWith("/shoes")) return "shoes";
+  if (pathname === "/") return "home";
+  const resolved = resolveActive(pathname, section);
+  return resolved === "home" ? "products" : resolved;
+}
+
+function liquidIndex(key: NavKey) {
+  switch (key) {
+    case "products":
+    case "product":
+    case "packages":
+    case "package":
+      return 1;
+    case "about":
+      return 2;
+    case "shoes":
+      return 3;
+    case "faq":
+    case "privacy":
+    case "terms":
+      return 4;
+    case "contact":
+      return 5;
+    default:
+      return 0;
+  }
 }
 
 function dropdownStyle(active: boolean) {
@@ -88,18 +131,46 @@ function dropdownStyle(active: boolean) {
   };
 }
 
+function dropdownState(open: boolean) {
+  return open
+    ? "visible translate-y-0 opacity-100"
+    : "invisible translate-y-1 opacity-0 pointer-events-none";
+}
+
 export default function PublicNav({ section, contactEmail = "", phone = "" }: PublicNavProps) {
   const pathname = usePathname() || "/";
+  const router = useRouter();
+  const navKey = resolveNavKey(pathname, section);
   const active = resolveActive(pathname, section);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<DropdownKey | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [dark, setDark] = useState(false);
+  const navWrapRef = useRef<HTMLDivElement>(null);
 
   // The drawer is portalled out of the blurred header. Rendering the portal
   // only on the client keeps the server markup deterministic.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
+
+  // Follow the same document class / storage key used by ThemeToggle so the
+  // water tint always matches the active light/dark theme.
+  useEffect(() => {
+    const sync = () => setDark(document.documentElement.classList.contains("dark"));
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "luniva_theme" || event.key === "luniva-theme") sync();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -116,96 +187,149 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
     };
   }, [drawerOpen]);
 
-  const catalogActive = isCatalogMenuActive(active);
+  // Close the hover/click dropdowns on outside interaction or Escape.
+  useEffect(() => {
+    if (!openMenu) return;
+    const onDown = (event: globalThis.MouseEvent) => {
+      if (navWrapRef.current && !navWrapRef.current.contains(event.target as Node)) setOpenMenu(null);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenMenu(null);
+    };
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openMenu]);
+
+  const catalogActive = isCatalogMenuActive(active) && navKey !== "shoes";
   const supportActive = isSupportSection(active);
   const ctaHref = active === "contact" ? "/catalog/products" : "/contact";
   const ctaLabel = active === "contact" ? "تصفّح المنتجات" : "تواصل معنا";
 
+  const menuFromTarget = (target: EventTarget | null): DropdownKey | null => {
+    const element = target as HTMLElement | null;
+    const pill = element?.closest?.(".nimbus-item");
+    const label = pill?.getAttribute("aria-label");
+    if (label === CATALOG_LABEL) return "catalog";
+    if (label === SUPPORT_LABEL) return "support";
+    return null;
+  };
+
+  const onPillHover = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest("[data-nav-dropdown]")) return;
+    const pill = target.closest(".nimbus-item");
+    // Ignore the small gap between pill and panel so the pointer can travel.
+    if (!pill) return;
+    setOpenMenu(menuFromTarget(pill));
+  };
+
+  const onPillFocus = (event: FocusEvent<HTMLDivElement>) => {
+    setOpenMenu(menuFromTarget(event.target));
+  };
+
+  const onPillClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement;
+    // The supplied nav renders plain anchors; keep Next.js client navigation.
+    const anchor = target.closest("a.nimbus-item[href]");
+    if (
+      anchor &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey &&
+      event.button === 0
+    ) {
+      const href = anchor.getAttribute("href");
+      if (href?.startsWith("/")) {
+        event.preventDefault();
+        setOpenMenu(null);
+        router.push(href);
+        return;
+      }
+    }
+    const menu = menuFromTarget(target);
+    setOpenMenu((current) => (menu ? (current === menu ? null : menu) : null));
+  };
+
   return (
     <>
-      <nav className="hidden items-center gap-1 lg:flex" aria-label="القائمة الرئيسية">
-        <Link
-          href={HOME_LINK.href}
-          aria-current={active === "home" ? "page" : undefined}
-          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-extrabold transition hover:bg-[var(--brand-soft)]"
-          style={navStyle(active === "home")}
-        >
-          <Home size={14} />الرئيسية
-        </Link>
+      <div
+        ref={navWrapRef}
+        className="relative hidden min-w-0 shrink items-center lg:block"
+        onMouseOver={onPillHover}
+        onFocus={onPillFocus}
+        onMouseLeave={() => setOpenMenu(null)}
+        onClick={onPillClick}
+      >
+        <style>{`
+          .luniva-liquid-nav{--n-pad:5px;--n-pad-x:8px;--n-pad-x-compact:8px;--n-height:36px;--n-font:10.5px;--n-icon-gap:4px;--n-gap:0px}
+          @media (min-width:1280px){.luniva-liquid-nav{--n-pad:6px;--n-pad-x:12px;--n-height:40px;--n-font:12px;--n-icon-gap:6px;--n-gap:2px}}
+        `}</style>
+        <LiquidNavbar
+          items={LIQUID_ITEMS}
+          active={liquidIndex(navKey)}
+          tone={dark ? "dark" : "light"}
+          compact={false}
+          ariaLabel="القائمة الرئيسية"
+          className="luniva-liquid-nav"
+        />
 
-        <div className="group relative">
-          <button
-            type="button"
-            aria-haspopup="true"
-            aria-label="قائمة الكتالوج"
-            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-extrabold transition"
-            style={navStyle(catalogActive)}
+        <div
+          data-nav-dropdown="catalog"
+          className={`absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border p-2 shadow-lg transition duration-200 motion-reduce:transition-none ${dropdownState(openMenu === "catalog")}`}
+          style={dropdownStyle(catalogActive)}
+        >
+          <span className="absolute inset-x-0 -top-2 h-2" aria-hidden="true" />
+          <p className="px-3 py-2 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>
+            تصفّحي لونيفا في مكان واحد
+          </p>
+          {CATALOG_LINKS.slice(1).map(({ href, label, icon: Icon, section: key }) => (
+            <Link
+              key={key}
+              href={href}
+              aria-current={active === key ? "page" : undefined}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition hover:bg-[var(--brand-soft)] motion-reduce:transition-none"
+              style={{ color: active === key ? "var(--brand-strong)" : "var(--muted)" }}
+            >
+              <Icon size={13} />{label}
+            </Link>
+          ))}
+          <Link
+            href={SHOES_LINK.href}
+            aria-current={navKey === "shoes" ? "page" : undefined}
+            className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition hover:bg-[var(--brand-soft)] motion-reduce:transition-none"
+            style={{ color: navKey === "shoes" ? "var(--brand-strong)" : "var(--muted)" }}
           >
-            <Layers3 size={14} />الكتالوج
-            <ChevronDown size={12} className="transition group-hover:rotate-180 group-focus-within:rotate-180" />
-          </button>
-          <div
-            className="invisible absolute right-0 top-full z-50 mt-2 w-64 translate-y-1 rounded-2xl border p-2 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
-            style={dropdownStyle(catalogActive)}
-          >
-            <p className="px-3 py-2 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>
-              تصفّحي لونيفا في مكان واحد
-            </p>
-            {CATALOG_LINKS.slice(1).map(({ href, label, icon: Icon, section: key }) => (
-              <Link
-                key={key}
-                href={href}
-                aria-current={active === key ? "page" : undefined}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition hover:bg-[var(--brand-soft)]"
-                style={{ color: active === key ? "var(--brand-strong)" : "var(--muted)" }}
-              >
-                <Icon size={13} />{label}
-              </Link>
-            ))}
-          </div>
+            <Footprints size={13} />{SHOES_LINK.label}
+          </Link>
         </div>
 
-        <Link
-          href={ABOUT_LINK.href}
-          aria-current={active === "about" ? "page" : undefined}
-          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-extrabold transition hover:bg-[var(--brand-soft)]"
-          style={navStyle(active === "about")}
+        <div
+          data-nav-dropdown="support"
+          className={`absolute right-0 top-full z-50 mt-2 w-64 rounded-2xl border p-2 shadow-lg transition duration-200 motion-reduce:transition-none ${dropdownState(openMenu === "support")}`}
+          style={dropdownStyle(supportActive)}
         >
-          <Sparkles size={14} />من نحن
-        </Link>
-
-        <div className="group relative">
-          <button
-            type="button"
-            aria-haspopup="true"
-            aria-label="قائمة المساعدة والسياسات"
-            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-extrabold transition"
-            style={navStyle(supportActive)}
-          >
-            <CircleHelp size={14} />المساعدة
-            <ChevronDown size={12} className="transition group-hover:rotate-180 group-focus-within:rotate-180" />
-          </button>
-          <div
-            className="invisible absolute right-0 top-full z-50 mt-2 w-64 translate-y-1 rounded-2xl border p-2 opacity-0 shadow-lg transition group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100"
-            style={dropdownStyle(supportActive)}
-          >
-            <p className="px-3 py-2 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>
-              معلومات تهمّك
-            </p>
-            {SUPPORT_LINKS.map(({ href, label, icon: Icon, section: key }) => (
-              <Link
-                key={key}
-                href={href}
-                aria-current={active === key ? "page" : undefined}
-                className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition hover:bg-[var(--brand-soft)]"
-                style={{ color: active === key ? "var(--brand-strong)" : "var(--muted)" }}
-              >
-                <Icon size={13} />{label}
-              </Link>
-            ))}
-          </div>
+          <span className="absolute inset-x-0 -top-2 h-2" aria-hidden="true" />
+          <p className="px-3 py-2 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>
+            معلومات تهمّك
+          </p>
+          {SUPPORT_LINKS.map(({ href, label, icon: Icon, section: key }) => (
+            <Link
+              key={key}
+              href={href}
+              aria-current={active === key ? "page" : undefined}
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-[11px] font-bold transition hover:bg-[var(--brand-soft)] motion-reduce:transition-none"
+              style={{ color: active === key ? "var(--brand-strong)" : "var(--muted)" }}
+            >
+              <Icon size={13} />{label}
+            </Link>
+          ))}
         </div>
-      </nav>
+      </div>
 
       <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-2">
         <HeaderSearch />
@@ -283,6 +407,7 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
                 {CATALOG_LINKS.slice(1).map((link) => (
                   <DrawerLink key={link.section} link={link} active={active === link.section} onNavigate={() => setDrawerOpen(false)} nested />
                 ))}
+                <DrawerLink link={SHOES_LINK} active={navKey === "shoes"} onNavigate={() => setDrawerOpen(false)} nested />
               </DrawerGroup>
 
               <DrawerLink link={ABOUT_LINK} active={active === "about"} onNavigate={() => setDrawerOpen(false)} />

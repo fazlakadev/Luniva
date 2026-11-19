@@ -41,7 +41,7 @@ const SCHRITT = 6;
 const BILD_B = 1280;
 const BILD_H = 720;
 const MITTE = Math.floor((ANZAHL - 1) / 2);
-const GRUND = "#241820";
+const GRUND = "#1b1219";
 
 /* One grotesque for the whole section. It carries everything from the headline
    down to the smallest line in the strip; the difference between the levels
@@ -332,7 +332,7 @@ export function TurningPortraitHero() {
         className="pointer-events-none absolute inset-0 z-[1]"
         style={{
           background:
-            "linear-gradient(270deg, rgba(20,12,17,.9) 0%, rgba(20,12,17,.66) 25%, rgba(20,12,17,.22) 50%, rgba(20,12,17,.05) 70%, rgba(20,12,17,.34) 100%), linear-gradient(180deg, rgba(0,0,0,.26), transparent 34%, rgba(0,0,0,.08) 66%, rgba(0,0,0,.5))",
+            "linear-gradient(270deg, rgba(16,9,14,.94) 0%, rgba(16,9,14,.74) 25%, rgba(16,9,14,.3) 50%, rgba(16,9,14,.09) 70%, rgba(16,9,14,.4) 100%), linear-gradient(180deg, rgba(0,0,0,.3), transparent 34%, rgba(0,0,0,.12) 66%, rgba(0,0,0,.55))",
         }}
       />
       <span

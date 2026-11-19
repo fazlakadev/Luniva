@@ -21,6 +21,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import DateField from "@/components/date-field";
 import { useToast } from "@/components/toast";
 import { canonicalColorName, colorSwatch } from "@/lib/colors";
 import { formatMoney, formatNumber } from "@/lib/format";
@@ -705,10 +706,12 @@ export default function InvoiceBuilder({
                 {PAYMENT_METHODS.map((method) => <option key={method} value={method}>{paymentMethodLabels[method]}</option>)}
               </select>
             </label>
-            <label>
-              <span className="field-label">تاريخ الاستحقاق (اختياري)</span>
-              <input value={dueDate ?? ""} onChange={(event) => setDueDate(event.target.value)} type="date" className="field py-2 text-[11px]" />
-            </label>
+            <DateField
+              label="تاريخ الاستحقاق (اختياري)"
+              value={dueDate ?? ""}
+              onChange={setDueDate}
+              controlClassName="py-2 text-[11px]"
+            />
           </div>
 
           <div className="mt-3 flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: remaining > 0 ? "var(--danger-soft)" : "var(--success-soft)" }}>

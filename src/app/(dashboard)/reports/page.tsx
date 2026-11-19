@@ -12,6 +12,7 @@ import {
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { agingLabels, paymentMethodLabels, type PaymentMethod } from "@/lib/invoice-shared";
 import { getReportData } from "@/lib/invoice-queries";
+import PeakAnalytics from "@/components/analytics/peak-analytics";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,22 @@ export default async function ReportsPage() {
   const monthChange = previousAmount > 0 ? Math.round(((latestAmount - previousAmount) / previousAmount) * 100) : 0;
   const balanceBars = monthly.slice(-6);
 
+  const recentMonths = monthly.slice(-3);
+  const collectionSeries = [
+    {
+      period: "آخر ٦ أشهر",
+      labels: monthly.map((row) => monthLabel(row.month)),
+      data: monthly.map((row) => Number(row.amount)),
+      value: monthly.reduce((sum, row) => sum + Number(row.amount), 0),
+    },
+    {
+      period: "آخر ٣ أشهر",
+      labels: recentMonths.map((row) => monthLabel(row.month)),
+      data: recentMonths.map((row) => Number(row.amount)),
+      value: recentMonths.reduce((sum, row) => sum + Number(row.amount), 0),
+    },
+  ];
+
   return (
     <div className="page-enter min-w-0">
       <div className="mb-6 flex flex-col gap-4 sm:mb-7 sm:flex-row sm:items-end sm:justify-between">
@@ -92,6 +109,28 @@ export default async function ReportsPage() {
           </a>
         </div>
       </div>
+
+      <section className="app-card mb-5 min-w-0 overflow-hidden p-4 sm:p-5">
+        <div className="mb-2 flex flex-wrap items-start justify-between gap-3">
+          <SectionHeader
+            icon={TrendingUp}
+            tone="var(--lav-soft)"
+            color="var(--lav-strong)"
+            title="مؤشر التحصيل الشهري"
+            description="اتجاه الدفعات المسجلة شهريًا، مبني على بيانات الفواتير الحقيقية."
+          />
+          <span className="badge badge-lav">تحليلات لونيفا</span>
+        </div>
+        <PeakAnalytics
+          series={collectionSeries}
+          title="إجمالي التحصيل"
+          caption={latestMonth ? `آخر تحديث للفترة: ${monthLabel(latestMonth.month)} · ${formatNumber(latestMonth.count)} دفعة` : "لا توجد دفعات مسجلة بعد"}
+          updatedText={`آخر تحديث: ${formatDate(new Date().toISOString())}`}
+          valueSuffix="ج.م"
+          trend={previousAmount > 0 ? (monthChange >= 0 ? "up" : "down") : "none"}
+          accent="#5c498f"
+        />
+      </section>
 
       <section className="app-card mb-5 overflow-hidden p-4 sm:p-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
