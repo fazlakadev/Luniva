@@ -11,6 +11,7 @@ import {
   type CatalogSort,
 } from "@/lib/catalog-filters";
 import { colorInk, colorSwatch } from "@/lib/colors";
+import PriceRangeSlider from "@/components/ui/slider-06";
 
 type FilterBarProps = {
   filters: CatalogFilters;
@@ -22,6 +23,11 @@ type FilterBarProps = {
   resultCount?: number;
   totalCount?: number;
   onChange?: (filters: CatalogFilters) => void;
+  /**
+   * Public catalogs only: when the real price bounds are known, the two numeric
+   * price fields are replaced by a dual-thumb range slider.
+   */
+  priceBounds?: { min: number; max: number };
 };
 
 const sortOptions: Array<{ value: CatalogSort; label: string }> = [
@@ -44,6 +50,7 @@ export default function FilterBar({
   resultCount,
   totalCount,
   onChange,
+  priceBounds,
 }: FilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -65,6 +72,27 @@ export default function FilterBar({
   }
 
   const activeCount = activeFilterCount(filters);
+
+  const priceValue: [number, number] | null = priceBounds
+    ? filters.minPrice !== null || filters.maxPrice !== null
+      ? [filters.minPrice ?? priceBounds.min, filters.maxPrice ?? priceBounds.max]
+      : null
+    : null;
+  const priceStep = priceBounds
+    ? priceBounds.max - priceBounds.min > 4000
+      ? 50
+      : priceBounds.max - priceBounds.min > 1000
+        ? 25
+        : priceBounds.max - priceBounds.min > 200
+          ? 5
+          : 1
+    : 1;
+
+  function applyPrice(range: [number, number]) {
+    if (!priceBounds) return;
+    const isFull = range[0] <= priceBounds.min && range[1] >= priceBounds.max;
+    apply({ ...draft, minPrice: isFull ? null : range[0], maxPrice: isFull ? null : range[1] });
+  }
 
   function clearChip(key: keyof CatalogFilters) {
     apply({ ...draft, [key]: key === "minPrice" || key === "maxPrice" ? null : key === "discountOnly" ? false : key === "status" ? "all" : key === "sort" ? "featured" : "" });
@@ -92,6 +120,21 @@ export default function FilterBar({
           </button>
         )}
       </div>
+
+      {priceBounds && (
+        <div
+          className="mb-4 rounded-2xl p-3.5"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
+        >
+          <PriceRangeSlider
+            min={priceBounds.min}
+            max={priceBounds.max}
+            step={priceStep}
+            value={priceValue}
+            onCommit={applyPrice}
+          />
+        </div>
+      )}
 
       <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
         <label className="min-w-[210px] flex-[1_1_260px]">
@@ -139,33 +182,37 @@ export default function FilterBar({
           </label>
         )}
 
-        <label className="w-full min-w-[100px] flex-[0_1_110px]">
-          <span className="mb-1.5 block text-[10px] font-extrabold" style={{ color: "var(--muted-2)" }}>السعر من</span>
-          <input
-            value={draft.minPrice ?? ""}
-            onChange={(event) => setDraft((current) => ({ ...current, minPrice: event.target.value === "" ? null : Number(event.target.value) }))}
-            type="number"
-            min={0}
-            inputMode="decimal"
-            placeholder="0"
-            aria-label="أقل سعر"
-            className="field w-full py-2.5 text-xs"
-          />
-        </label>
+        {!priceBounds && (
+          <>
+            <label className="w-full min-w-[100px] flex-[0_1_110px]">
+              <span className="mb-1.5 block text-[10px] font-extrabold" style={{ color: "var(--muted-2)" }}>السعر من</span>
+              <input
+                value={draft.minPrice ?? ""}
+                onChange={(event) => setDraft((current) => ({ ...current, minPrice: event.target.value === "" ? null : Number(event.target.value) }))}
+                type="number"
+                min={0}
+                inputMode="decimal"
+                placeholder="0"
+                aria-label="أقل سعر"
+                className="field w-full py-2.5 text-xs"
+              />
+            </label>
 
-        <label className="w-full min-w-[100px] flex-[0_1_110px]">
-          <span className="mb-1.5 block text-[10px] font-extrabold" style={{ color: "var(--muted-2)" }}>السعر إلى</span>
-          <input
-            value={draft.maxPrice ?? ""}
-            onChange={(event) => setDraft((current) => ({ ...current, maxPrice: event.target.value === "" ? null : Number(event.target.value) }))}
-            type="number"
-            min={0}
-            inputMode="decimal"
-            placeholder="أي سعر"
-            aria-label="أعلى سعر"
-            className="field w-full py-2.5 text-xs"
-          />
-        </label>
+            <label className="w-full min-w-[100px] flex-[0_1_110px]">
+              <span className="mb-1.5 block text-[10px] font-extrabold" style={{ color: "var(--muted-2)" }}>السعر إلى</span>
+              <input
+                value={draft.maxPrice ?? ""}
+                onChange={(event) => setDraft((current) => ({ ...current, maxPrice: event.target.value === "" ? null : Number(event.target.value) }))}
+                type="number"
+                min={0}
+                inputMode="decimal"
+                placeholder="أي سعر"
+                aria-label="أعلى سعر"
+                className="field w-full py-2.5 text-xs"
+              />
+            </label>
+          </>
+        )}
 
         {statusOptions && (
           <label className="w-full min-w-[130px] flex-[0_1_150px]">

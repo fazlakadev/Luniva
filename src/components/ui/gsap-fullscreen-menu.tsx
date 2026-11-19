@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  CalendarDays,
   ChevronLeft,
   Gift,
   LayoutGrid,
@@ -52,6 +53,7 @@ export const adminNav: AdminNavItem[] = [
   { href: "/workspace", label: "مساحة العمل", short: "الرئيسية", hint: "لوحة البداية", icon: LayoutGrid },
   { href: "/invoices", label: "الفواتير", short: "الفواتير", hint: "بيع وتحصيل وطباعة", icon: ReceiptText },
   { href: "/payments", label: "سجل التحصيل", short: "التحصيل", hint: "الدفعات والإيصالات", icon: Wallet },
+  { href: "/appointments", label: "المواعيد والمتابعات", short: "المواعيد", hint: "متابعة وتحصيل وتسليم", icon: CalendarDays },
   { href: "/reports", label: "التقارير", short: "التقارير", hint: "تحليلات وأعمار متأخرات", icon: BarChart3 },
   { href: "/profits", label: "الأرباح", short: "الأرباح", hint: "سعر التوريد والربح والهامش", icon: TrendingUp },
   { href: "/customers", label: "إدارة العملاء", short: "العملاء", hint: "دليل العميلات", icon: UsersRound },
@@ -62,6 +64,7 @@ export const adminNav: AdminNavItem[] = [
 ];
 
 export const adminQuickLinks: AdminQuickLink[] = [
+  { href: "/appointments", label: "موعد متابعة", hint: "ربط بعميلة أو فاتورة", icon: CalendarDays },
   { href: "/invoices/new", label: "فاتورة جديدة", hint: "بيع وتحصيل", icon: ReceiptText },
   { href: "/packages/new", label: "بكدج جديد", hint: "تجميع منتجات", icon: Gift },
   { href: "/products/new", label: "منتج جديد", hint: "إضافة للكتالوج", icon: Package },

@@ -1,12 +1,18 @@
 import AccountSettingsForm from "@/components/account-settings-form";
+import AdminEmailForm from "@/components/admin-email-form";
 import SettingsForm from "@/components/settings-form";
+import { getAdminEmail } from "@/lib/admin-email";
 import { getSession } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [settings, session] = await Promise.all([getSettings(), getSession()]);
+  const [settings, session, adminEmail] = await Promise.all([
+    getSettings(),
+    getSession(),
+    getAdminEmail(),
+  ]);
 
   return (
     <div className="page-enter">
@@ -18,6 +24,9 @@ export default async function SettingsPage() {
       <SettingsForm initial={settings} />
       <div className="mt-6">
         <AccountSettingsForm username={session?.username ?? ""} />
+      </div>
+      <div className="mt-6">
+        <AdminEmailForm adminEmail={adminEmail} />
       </div>
     </div>
   );

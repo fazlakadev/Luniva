@@ -1,12 +1,18 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, CalendarDays, Pencil, ReceiptText, Truck } from "lucide-react";
+import { ArrowRight, CalendarClock, CalendarDays, Pencil, Plus, ReceiptText, Truck } from "lucide-react";
 import DeliveryStatusControl from "@/components/delivery-status-control";
 import InvoiceActions from "@/components/invoice-actions";
 import InvoiceCta from "@/components/invoice-cta";
 import InvoiceDocument, { type InvoiceDocumentData } from "@/components/invoice-document";
 import PrintInvoiceButton from "@/components/invoice-print-button";
 import InvoiceShareCard from "@/components/invoice-share-card";
+import { getInvoiceAppointments } from "@/lib/appointments";
+import {
+  appointmentKindLabels,
+  appointmentStatusClass,
+  appointmentStatusLabels,
+} from "@/lib/appointment-shared";
 import { getInvoiceDetail } from "@/lib/invoice-queries";
 import { getPublicInvoiceUrl, invoiceQrDataUrl } from "@/lib/invoice-view";
 import { formatDate } from "@/lib/format";
@@ -36,7 +42,11 @@ export default async function InvoiceDetailPage({
 }) {
   const { id } = await params;
   const query = await searchParams;
-  const [invoice, settings] = await Promise.all([getInvoiceDetail(id), getSettings()]);
+  const [invoice, settings, appointments] = await Promise.all([
+    getInvoiceDetail(id),
+    getSettings(),
+    getInvoiceAppointments(id, 3),
+  ]);
   if (!invoice) notFound();
 
   const status = invoice.status as InvoiceStatus;
@@ -113,6 +123,47 @@ export default async function InvoiceDetailPage({
           <InvoiceDocument invoice={document} />
         </div>
         <div className="print-hidden space-y-4">
+          <section className="app-card p-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="stat-icon" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
+                  <CalendarClock size={16} />
+                </span>
+                <h2 className="text-sm font-extrabold" style={{ color: "var(--ink)" }}>مواعيد الفاتورة</h2>
+              </div>
+              <Link href={`/appointments?invoice=${invoice.id}`} className="badge badge-brand text-[9px]">
+                <Plus size={10} />موعد
+              </Link>
+            </div>
+            {appointments.length === 0 ? (
+              <p className="mt-3 text-[11px] leading-6" style={{ color: "var(--muted)" }}>
+                لا توجد متابعات مجدولة لهذه الفاتورة.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {appointments.map((appointment) => (
+                  <li
+                    key={appointment.id}
+                    className="rounded-xl px-2.5 py-2"
+                    style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[11px] font-extrabold" style={{ color: "var(--ink)" }}>{appointment.title}</p>
+                      <span className={`badge ${appointmentStatusClass[appointment.status]} text-[9px]`}>
+                        {appointmentStatusLabels[appointment.status]}
+                      </span>
+                    </div>
+                    <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]" style={{ color: "var(--muted-2)" }}>
+                      <CalendarDays size={11} />
+                      {formatDate(appointment.appointment_date)}
+                      {appointment.appointment_time && <span dir="ltr">· {appointment.appointment_time}</span>}
+                      <span className="badge badge-muted text-[9px]">{appointmentKindLabels[appointment.kind]}</span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <DeliveryStatusControl
             id={invoice.id}
             invoiceNumber={invoice.invoice_number}

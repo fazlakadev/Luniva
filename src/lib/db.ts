@@ -461,7 +461,8 @@ export function ensureInvoiceTables() {
         ('company_address', '""'),
         ('tax_number', '""'),
         ('receipt_footer', '"شكرًا لتعاملك معنا"'),
-        ('payment_terms_days', '7')
+        ('payment_terms_days', '7'),
+        ('admin_email', '"fazlaka.dev@gmail.com"')
       ON CONFLICT (key) DO NOTHING
     `);
 
@@ -488,6 +489,35 @@ export function ensureInvoiceTables() {
       db.query("CREATE INDEX IF NOT EXISTS invoice_payments_date_idx ON invoice_payments(paid_at DESC)"),
       db.query("CREATE INDEX IF NOT EXISTS invoice_payments_receipt_idx ON invoice_payments(receipt_number)"),
       db.query("CREATE INDEX IF NOT EXISTS activity_log_created_idx ON activity_log(created_at DESC)"),
+    ]);
+  });
+}
+
+/** Follow-up appointments, optionally tied to a customer and an invoice/payment. */
+export function ensureAppointmentsTable() {
+  return runOnce("appointments", async () => {
+    await ensureInvoiceTables();
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS appointments (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        title VARCHAR(180) NOT NULL,
+        notes TEXT,
+        appointment_date DATE NOT NULL,
+        appointment_time VARCHAR(8),
+        tone VARCHAR(16) NOT NULL DEFAULT 'accent',
+        kind VARCHAR(24) NOT NULL DEFAULT 'followup',
+        status VARCHAR(16) NOT NULL DEFAULT 'pending',
+        customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+        invoice_id UUID REFERENCES invoices(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await Promise.all([
+      db.query("CREATE INDEX IF NOT EXISTS appointments_date_idx ON appointments (appointment_date, appointment_time)"),
+      db.query("CREATE INDEX IF NOT EXISTS appointments_customer_idx ON appointments (customer_id)"),
+      db.query("CREATE INDEX IF NOT EXISTS appointments_invoice_idx ON appointments (invoice_id)"),
+      db.query("CREATE INDEX IF NOT EXISTS appointments_status_idx ON appointments (status)"),
     ]);
   });
 }

@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  CalendarClock,
   CalendarDays,
   ChevronRight,
   FileText,
   MapPin,
   Pencil,
   Phone,
+  Plus,
   ReceiptText,
   Sparkles,
   UserRound,
@@ -15,6 +17,13 @@ import {
 import DeleteButton from "@/components/delete-button";
 import InvoiceCta from "@/components/invoice-cta";
 import ZoomableImage from "@/components/zoomable-image";
+import { getCustomerAppointments } from "@/lib/appointments";
+import {
+  appointmentKindLabels,
+  appointmentStatusClass,
+  appointmentStatusLabels,
+  isPastPending,
+} from "@/lib/appointment-shared";
 import { db, ensureCustomersTable } from "@/lib/db";
 import { getCustomerBalance, getCustomerInvoices } from "@/lib/invoice-queries";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
@@ -44,7 +53,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   );
   const phones: string[] = phonesResult.rows.map((row) => row.phone);
   const extraPhones = phones.filter((phone) => phone !== customer.phone);
-  const [invoices, balance] = await Promise.all([getCustomerInvoices(id), getCustomerBalance(id)]);
+  const [invoices, balance, appointments] = await Promise.all([
+    getCustomerInvoices(id),
+    getCustomerBalance(id),
+    getCustomerAppointments(id, 4),
+  ]);
   const initials = customer.full_name
     .split(/\s+/)
     .slice(0, 2)
@@ -156,6 +169,60 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="mt-6">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <p className="eyebrow">المتابعات</p>
+            <h2 className="mt-1 text-lg font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>مواعيد العميلة</h2>
+          </div>
+          <Link
+            href={`/appointments?customer=${id}`}
+            className="inline-flex items-center gap-1 text-xs font-extrabold"
+            style={{ color: "var(--brand-strong)" }}
+          >
+            <Plus size={13} />إضافة موعد
+          </Link>
+        </div>
+
+        {appointments.length === 0 ? (
+          <div className="app-card flex flex-wrap items-center justify-between gap-3 p-4">
+            <p className="flex items-center gap-2 text-xs font-bold" style={{ color: "var(--muted)" }}>
+              <CalendarClock size={16} />لا توجد مواعيد قادمة لهذه العميلة.
+            </p>
+            <Link href={`/appointments?customer=${id}`} className="btn btn-soft px-3 py-1.5 text-[11px]">
+              <Plus size={13} />جدولة متابعة
+            </Link>
+          </div>
+        ) : (
+          <div className="app-card divide-y p-1" style={{ borderColor: "var(--line)" }}>
+            {appointments.map((appointment) => (
+              <div key={appointment.id} className="flex flex-wrap items-center gap-2.5 px-3 py-3">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
+                  <CalendarDays size={16} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[12px] font-extrabold" style={{ color: "var(--ink)" }}>{appointment.title}</p>
+                  <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[10px]" style={{ color: "var(--muted-2)" }}>
+                    <span>{formatDate(appointment.appointment_date)}</span>
+                    {appointment.appointment_time && <span dir="ltr">{appointment.appointment_time}</span>}
+                    <span className="badge badge-muted text-[9px]">{appointmentKindLabels[appointment.kind]}</span>
+                  </p>
+                </div>
+                {isPastPending(appointment) && <span className="badge badge-warning text-[9px]">متأخر</span>}
+                <span className={`badge ${appointmentStatusClass[appointment.status]} text-[9px]`}>
+                  {appointmentStatusLabels[appointment.status]}
+                </span>
+                {appointment.invoice_id && appointment.invoice_number && (
+                  <Link href={`/invoices/${appointment.invoice_id}`} className="badge badge-lav text-[9px]">
+                    {appointment.invoice_number}
+                  </Link>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="mt-6">

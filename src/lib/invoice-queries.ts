@@ -1,5 +1,17 @@
 import { db, ensureInvoiceTables } from "@/lib/db";
 
+/**
+ * `pg` hydrates DATE columns as JS Date objects, but the UI and the API expect
+ * a plain `yyyy-mm-dd` string. Format in local time so the day never shifts.
+ */
+function isoDateOnly(value: unknown) {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return value;
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export async function getInvoicesList(customerId?: string | null) {
   await ensureInvoiceTables();
   const filter = customerId ? "WHERE i.customer_id = $1" : "";
@@ -51,6 +63,7 @@ export async function getInvoiceDetail(id: string) {
   const invoiceResult = await db.query("SELECT * FROM invoices WHERE id = $1", [id]);
   const invoice = invoiceResult.rows[0];
   if (!invoice) return null;
+  invoice.due_date = isoDateOnly(invoice.due_date);
 
   const [items, payments] = await Promise.all([
     db.query("SELECT * FROM invoice_items WHERE invoice_id = $1 ORDER BY sort_order, created_at", [id]),

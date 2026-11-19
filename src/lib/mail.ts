@@ -1,4 +1,4 @@
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
 export type ContactMessage = {
   name: string;
@@ -34,13 +34,137 @@ function formatAddress(name: string, email: string) {
   return `"${safeName}" <${email}>`;
 }
 
-export function isContactMailConfigured() {
+export function isMailConfigured() {
   return Boolean(
     readEnv("EMAIL_SERVER_HOST") &&
       readEnv("EMAIL_SERVER_USER") &&
       readEnv("EMAIL_SERVER_PASSWORD") &&
       readEnv("EMAIL_FROM"),
   );
+}
+
+export function isContactMailConfigured() {
+  return isMailConfigured();
+}
+
+type MailTransport = {
+  transporter: Transporter;
+  from: string;
+  senderName: string;
+  logoUrl: string;
+};
+
+/** Builds the SMTP transport, throwing a clear (secret-free) error when it is not configured. */
+function createTransport(): MailTransport {
+  const host = readEnv("EMAIL_SERVER_HOST");
+  const user = readEnv("EMAIL_SERVER_USER");
+  const password = readEnv("EMAIL_SERVER_PASSWORD").replace(/\s+/g, "");
+  const from = readEnv("EMAIL_FROM");
+
+  if (!host || !user || !password || !from) {
+    throw new Error("MAIL_NOT_CONFIGURED");
+  }
+
+  const portValue = Number(readEnv("EMAIL_SERVER_PORT") || "587");
+  const port = Number.isFinite(portValue) && portValue > 0 ? Math.trunc(portValue) : 587;
+
+  return {
+    transporter: nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass: password },
+    }),
+    from,
+    senderName: readEnv("EMAIL_SENDER_NAME") || "لونيفا",
+    logoUrl: readEnv("EMAIL_LOGO_URL"),
+  };
+}
+
+export type OtpMailPurpose = "login" | "email_current" | "email_new";
+
+const OTP_COPY: Record<OtpMailPurpose, { subject: string; title: string; intro: string }> = {
+  login: {
+    subject: "رمز الدخول إلى لوحة إدارة لونيفا",
+    title: "رمز التحقق للدخول",
+    intro: "استخدمي الرمز التالي لإتمام تسجيل الدخول إلى لوحة إدارة لونيفا.",
+  },
+  email_current: {
+    subject: "تأكيد تغيير بريد الإدارة · لونيفا",
+    title: "تأكيد تغيير بريد الإدارة",
+    intro: "طُلب تغيير بريد التحقق الخاص بالإدارة. استخدمي الرمز التالي لتفويض هذا التغيير.",
+  },
+  email_new: {
+    subject: "تأكيد بريد الإدارة الجديد · لونيفا",
+    title: "تأكيد البريد الجديد",
+    intro: "استخدمي الرمز التالي لتأكيد ملكية هذا البريد الجديد قبل حفظه لبريد الإدارة.",
+  },
+};
+
+/**
+ * Sends a one-time verification code. Throws when SMTP is unavailable so callers
+ * can block the action instead of silently weakening security.
+ */
+export async function sendOtpEmail(input: {
+  to: string;
+  code: string;
+  purpose: OtpMailPurpose;
+  expiryMinutes?: number;
+}) {
+  const { transporter, from, senderName, logoUrl } = createTransport();
+  const copy = OTP_COPY[input.purpose];
+  const expiry = Math.max(1, Math.round(input.expiryMinutes ?? 10));
+  const recipient = cleanLine(input.to, 254);
+  const code = input.code.replace(/\D/g, "").slice(0, 8);
+  const submittedAt = new Date().toLocaleString("ar-EG", { timeZone: "Africa/Cairo" });
+
+  const text = [
+    copy.title,
+    "",
+    copy.intro,
+    "",
+    `الرمز: ${code}`,
+    `صلاحية الرمز: ${expiry} دقائق`,
+    `الوقت: ${submittedAt}`,
+    "",
+    "إذا لم تطلبي هذا الإجراء، تجاهلي هذه الرسالة ولا تشاركي الرمز مع أي شخص.",
+  ].join("\n");
+
+  const html = `
+    <div dir="rtl" style="margin:0;padding:24px;background:#f9f5f3;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#2b2228;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;border-collapse:collapse;">
+        <tr>
+          <td style="padding:0 0 16px;text-align:right;">
+            ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(senderName)}" width="120" style="display:inline-block;max-width:120px;height:auto;border:0;" />` : `<span style="font-size:18px;font-weight:800;color:#8e445b;">${escapeHtml(senderName)}</span>`}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:30px;border:1px solid #eadcdf;border-radius:20px;background:#fffdfc;text-align:center;">
+            <p style="margin:0 0 6px;font-size:12px;font-weight:800;letter-spacing:.12em;color:#a95d73;">لونيفا · حماية الحساب</p>
+            <h1 style="margin:0 0 14px;font-size:22px;line-height:1.5;color:#2b2228;">${escapeHtml(copy.title)}</h1>
+            <p style="margin:0 auto 22px;max-width:380px;font-size:14px;line-height:1.9;color:#7d6c74;">${escapeHtml(copy.intro)}</p>
+            <div style="margin:0 auto 18px;padding:18px 20px;border-radius:16px;background:#fdf7f5;border:1px solid #eadcdf;">
+              <span dir="ltr" style="display:inline-block;font-size:34px;font-weight:800;letter-spacing:12px;color:#8e445b;font-variant-numeric:tabular-nums;">${escapeHtml(code)}</span>
+            </div>
+            <p style="margin:0;font-size:12px;color:#9c8b92;">صلاحية الرمز ${expiry} دقائق · ${escapeHtml(submittedAt)}</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 8px 0;text-align:center;font-size:11px;line-height:1.8;color:#9c8b92;">
+            إذا لم تطلبي هذا الإجراء، تجاهلي هذه الرسالة ولا تشاركي الرمز مع أي شخص.
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  await transporter.sendMail({
+    from: formatAddress(senderName, from),
+    to: recipient,
+    subject: copy.subject,
+    text,
+    html,
+  });
 }
 
 export async function sendContactEmail(input: ContactMessage) {

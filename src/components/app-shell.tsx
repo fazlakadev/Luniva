@@ -59,7 +59,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
   const isActive = (href: string) =>
     pathname === href || (href !== "/workspace" && pathname.startsWith(href));
 
-  const moreActive = ["/products", "/packages", "/settings", "/profits", "/suppliers", "/invoices/new", "/packages/new", "/products/new", "/customers/new"]
+  const moreActive = ["/products", "/packages", "/settings", "/profits", "/suppliers", "/appointments", "/invoices/new", "/packages/new", "/products/new", "/customers/new"]
     .some((prefix) => pathname.startsWith(prefix));
 
   return (
@@ -225,7 +225,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
 
             <p className="px-1 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>أقسام إضافية</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {nav.filter(({ href }) => ["/products", "/packages", "/profits", "/suppliers", "/settings"].includes(href)).map(({ href, label, icon: Icon }) => {
+              {nav.filter(({ href }) => ["/products", "/packages", "/appointments", "/profits", "/suppliers", "/settings"].includes(href)).map(({ href, label, icon: Icon }) => {
                 const active = isActive(href);
                 return (
                   <Link

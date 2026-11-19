@@ -83,6 +83,23 @@ function priceStats(variants: CatalogVariant[]) {
   };
 }
 
+/** Full min/max of the public price set, or `undefined` when there are no prices. */
+function priceBounds(values: number[]): { min: number; max: number } | undefined {
+  if (!values.length) return undefined;
+  let min = Number.POSITIVE_INFINITY;
+  let max = Number.NEGATIVE_INFINITY;
+  for (const value of values) {
+    if (!Number.isFinite(value)) continue;
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return undefined;
+  const low = Math.floor(min);
+  const high = Math.ceil(max);
+  // A single price point would collapse the slider, so give it one step of room.
+  return high > low ? { min: low, max: high } : { min: low, max: low + 1 };
+}
+
 function CardImage({
   src,
   alt,
@@ -121,8 +138,14 @@ export default async function PublicCatalog({ page = "home", query = "", filters
   const productSizes = uniqueSorted(productFacetData.flatMap((entry) => entry.facets.sizes));
   const packageColors = uniqueSorted(packageFacetData.flatMap((entry) => entry.facets.colors));
   const packageSizes = uniqueSorted(packageFacetData.flatMap((entry) => entry.facets.sizes));
-  const productPrices = allProducts.flatMap((product) => priceStats(product.variants).min).filter((price) => price > 0);
-  const packagePrices = allPackages.flatMap((item) => priceStats(item.variants).min).filter((price) => price > 0);
+  const productPrices = allProducts
+    .flatMap((product) => product.variants.map((variant) => Number(variant.price) || 0))
+    .filter((price) => price > 0);
+  const packagePrices = allPackages
+    .flatMap((item) => item.variants.map((variant) => Number(variant.price) || 0))
+    .filter((price) => price > 0);
+  const productPriceBounds = priceBounds(productPrices);
+  const packagePriceBounds = priceBounds(packagePrices);
 
   const productRows: Array<FilterableItem & { product: CatalogProduct }> = productFacetData.map(({ product, facets }) => ({
     id: product.id,
@@ -260,6 +283,7 @@ export default async function PublicCatalog({ page = "home", query = "", filters
             basePath={isProducts ? "/catalog/products" : "/catalog/packages"}
             resultCount={isProducts ? products.length : packages.length}
             totalCount={isProducts ? allProducts.length : allPackages.length}
+            priceBounds={isProducts ? productPriceBounds : packagePriceBounds}
           />
         </div>
       )}
