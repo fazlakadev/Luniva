@@ -19,8 +19,8 @@ export async function POST(request: Request) {
   const client = await db.connect();
   try {
     const form = await request.formData();
-    const prepared = await preparePackage(form);
     await ensurePackagesTables();
+    const prepared = await preparePackage(form);
     await client.query("BEGIN");
     const id = await savePackage(client, prepared);
     await client.query("COMMIT");

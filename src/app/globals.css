@@ -18,11 +18,11 @@
   --brand-strong: #8e445b;
   --brand-soft: #f8e9ee;
   --brand-ring: rgba(169, 93, 115, 0.14);
-  --plum: #4f3040;
-  --lav: #6f5aa7;
-  --lav-strong: #584487;
-  --lav-soft: #eee9fa;
-  --lav-ring: rgba(111, 90, 167, 0.14);
+  --plum: #422837;
+  --lav: #5c498f;
+  --lav-strong: #493673;
+  --lav-soft: #e7e0f4;
+  --lav-ring: rgba(92, 73, 143, 0.16);
   --success: #3f8267;
   --success-soft: #e9f5ef;
   --warning: #a97832;
@@ -50,11 +50,11 @@ html.dark {
   --brand-strong: #f4c2cf;
   --brand-soft: #432e38;
   --brand-ring: rgba(231, 163, 182, 0.16);
-  --plum: #2b1d25;
-  --lav: #c5b4f1;
-  --lav-strong: #d7c9fb;
-  --lav-soft: #382f4b;
-  --lav-ring: rgba(197, 180, 241, 0.16);
+  --plum: #241820;
+  --lav: #b5a2df;
+  --lav-strong: #c6b4ec;
+  --lav-soft: #302840;
+  --lav-ring: rgba(181, 162, 223, 0.16);
   --success: #7fd0ad;
   --success-soft: #223a31;
   --warning: #e6bd77;
@@ -554,7 +554,7 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   overflow: hidden;
   border-radius: 999px;
   border: 1px solid color-mix(in srgb, var(--brand) 26%, transparent);
-  background: linear-gradient(135deg, #fff4e8, #f6d9e3 58%, #ded4f8);
+  background: linear-gradient(135deg, #fff4e8, #f6d9e3 58%, #cec1ec);
   box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), 0 5px 14px rgba(92, 47, 68, 0.14);
   transition: background 400ms ease, border-color 400ms ease, box-shadow 400ms ease;
 }
@@ -654,8 +654,8 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
 .luniva-theme-switch__moon-icon { position: absolute; opacity: 0; transition: opacity 250ms ease; }
 .luniva-theme-switch[data-dark="true"] .luniva-theme-switch__sun {
   transform: translateX(-1.24rem);
-  background: linear-gradient(135deg, #f7e7ff, #c9b8ef);
-  box-shadow: 0 0 14px rgba(205, 179, 255, 0.45);
+  background: linear-gradient(135deg, #f0e2fb, #bca8e6);
+  box-shadow: 0 0 14px rgba(174, 148, 222, 0.4);
   color: #3b2b52;
 }
 .luniva-theme-switch[data-dark="true"] .luniva-theme-switch__sun-icon { opacity: 0; }

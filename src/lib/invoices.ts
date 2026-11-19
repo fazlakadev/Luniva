@@ -68,6 +68,8 @@ export type ResolvedInvoiceItem = {
   imageUrl: string | null;
   unitBefore: number;
   unitPrice: number;
+  unitCost: number;
+  supplierId: string | null;
   quantity: number;
   lineBefore: number;
   lineTotal: number;
@@ -194,7 +196,7 @@ export async function resolveInvoiceItems(items: InvoiceItemInput[]): Promise<Re
     variantIds.length
       ? db.query(
           `SELECT v.id AS variant_id, v.product_id, v.color, v.size, v.sku,
-                  v.price, v.price_before_discount, v.image_url, p.name AS product_name
+                  v.price, v.price_before_discount, v.image_url, p.name AS product_name, v.supply_price, v.supplier_id
            FROM product_variants v
            JOIN products p ON p.id = v.product_id
            WHERE v.id = ANY($1::uuid[])`,
@@ -205,6 +207,11 @@ export async function resolveInvoiceItems(items: InvoiceItemInput[]): Promise<Re
       ? db.query(
           `SELECT v.id AS package_variant_id, v.package_id, v.name AS variant_name, v.sku,
                   v.price_after_discount, v.price_before_discount, v.image_url, p.name AS package_name,
+                   v.supply_price, v.supplier_id,
+                   COALESCE((SELECT SUM(s.quantity * COALESCE(pv.supply_price, 0))
+                     FROM package_variant_items s
+                     JOIN product_variants pv ON pv.id = s.product_variant_id
+                     WHERE s.package_variant_id = v.id), 0) AS components_cost,
                   COALESCE((
                     SELECT json_agg(json_build_object(
                       'productName', pr.name,
@@ -239,6 +246,8 @@ export async function resolveInvoiceItems(items: InvoiceItemInput[]): Promise<Re
       const unitPrice = roundMoney(Number(row.price_after_discount ?? 0));
       const beforeValue = Number(row.price_before_discount ?? 0);
       const unitBefore = beforeValue > unitPrice ? roundMoney(beforeValue) : unitPrice;
+      const explicitCost = Number(row.supply_price ?? 0);
+      const unitCost = roundMoney(explicitCost > 0 ? explicitCost : Number(row.components_cost ?? 0));
       return {
         itemType: "package" as const,
         productId: null,
@@ -254,6 +263,8 @@ export async function resolveInvoiceItems(items: InvoiceItemInput[]): Promise<Re
         imageUrl: row.image_url ? String(row.image_url) : null,
         unitBefore,
         unitPrice,
+        unitCost,
+        supplierId: row.supplier_id ? String(row.supplier_id) : null,
         quantity: item.quantity,
         lineBefore: roundMoney(unitBefore * item.quantity),
         lineTotal: roundMoney(unitPrice * item.quantity),
@@ -265,6 +276,7 @@ export async function resolveInvoiceItems(items: InvoiceItemInput[]): Promise<Re
     const unitPrice = roundMoney(Number(row.price ?? 0));
     const beforeValue = Number(row.price_before_discount ?? 0);
     const unitBefore = beforeValue > unitPrice ? roundMoney(beforeValue) : unitPrice;
+    const unitCost = roundMoney(Math.max(0, Number(row.supply_price ?? 0)));
     return {
       itemType: "product" as const,
       productId: String(row.product_id),
@@ -277,6 +289,8 @@ export async function resolveInvoiceItems(items: InvoiceItemInput[]): Promise<Re
       imageUrl: row.image_url ? String(row.image_url) : null,
       unitBefore,
       unitPrice,
+      unitCost,
+      supplierId: row.supplier_id ? String(row.supplier_id) : null,
       quantity: item.quantity,
       lineBefore: roundMoney(unitBefore * item.quantity),
       lineTotal: roundMoney(unitPrice * item.quantity),
@@ -351,8 +365,8 @@ export async function createInvoice(input: InvoiceInput, actor?: string) {
         `INSERT INTO invoice_items
           (invoice_id, item_type, product_id, product_variant_id, package_id, package_variant_id,
            name, description, sku, image_url, unit_before, unit_price, quantity,
-           line_before, line_total, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+           line_before, line_total, sort_order, unit_cost, supplier_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
         [
           invoiceId,
           item.itemType,
@@ -370,6 +384,8 @@ export async function createInvoice(input: InvoiceInput, actor?: string) {
           item.lineBefore,
           item.lineTotal,
           index,
+          item.unitCost,
+          item.supplierId,
         ],
       );
     }
@@ -648,8 +664,8 @@ export async function updateInvoiceWithItems(id: string, input: InvoiceInput, ac
         `INSERT INTO invoice_items
           (invoice_id, item_type, product_id, product_variant_id, package_id, package_variant_id,
            name, description, sku, image_url, unit_before, unit_price, quantity,
-           line_before, line_total, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
+           line_before, line_total, sort_order, unit_cost, supplier_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
         [
           id,
           item.itemType,
@@ -667,6 +683,8 @@ export async function updateInvoiceWithItems(id: string, input: InvoiceInput, ac
           item.lineBefore,
           item.lineTotal,
           index,
+          item.unitCost,
+          item.supplierId,
         ],
       );
     }

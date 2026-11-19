@@ -11,7 +11,7 @@ export async function GET(_request: Request, { params }: Context) {
   await ensureProductsTables(); const { id } = await params;
   const product = await db.query("SELECT id, name, primary_sku, description, image_url, created_at, updated_at FROM products WHERE id = $1", [id]);
   if (!product.rowCount) return NextResponse.json({ error: "المنتج غير موجود." }, { status: 404 });
-  const variants = await db.query("SELECT id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, created_at FROM product_variants WHERE product_id = $1 ORDER BY color, size", [id]);
+  const variants = await db.query("SELECT id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price, created_at FROM product_variants WHERE product_id = $1 ORDER BY color, size", [id]);
   return NextResponse.json({ product: { ...product.rows[0], variants: variants.rows } });
 }
 
@@ -25,7 +25,12 @@ export async function PATCH(request: Request, { params }: Context) {
       WHERE id = $5 RETURNING id, name, primary_sku, description, image_url, created_at, updated_at`, [product.name, product.primarySku, product.description, imageUrl, id]);
     if (!updated.rowCount) { await client.query("ROLLBACK"); return NextResponse.json({ error: "المنتج غير موجود." }, { status: 404 }); }
     await client.query("DELETE FROM product_variants WHERE product_id = $1", [id]);
-    for (const variant of product.variants) await client.query("INSERT INTO product_variants (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", [id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice, variant.discountType, variant.discountValue, variant.imageUrl]);
+    for (const variant of product.variants) await client.query(
+      `INSERT INTO product_variants
+        (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice, variant.discountType, variant.discountValue, variant.imageUrl, variant.supplierId, variant.supplyPrice],
+    );
     await client.query(
       `UPDATE products SET
         price_before_discount = (SELECT MIN(price_before_discount) FROM product_variants WHERE product_id = $1),

@@ -14,9 +14,11 @@ import {
   Tag,
   Trash2,
 } from "lucide-react";
-import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { readJson } from "@/lib/client-response";
+import { optimizeImage } from "@/lib/image-client";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { COLOR_SUGGESTIONS, canonicalColorName, colorSwatch } from "@/lib/colors";
 import FolderUpload from "@/components/folder-upload";
@@ -45,8 +47,12 @@ export type ProductDetail = {
     discount_type?: string | null;
     discount_value?: string | number | null;
     image_url?: string | null;
+    supplier_id?: string | null;
+    supply_price?: string | number | null;
   }[];
 };
+
+type SupplierOption = { id: string; name: string };
 
 type VariantState = {
   color: string;
@@ -55,6 +61,8 @@ type VariantState = {
   beforePrice: string;
   discountType: DiscountType;
   discountValue: string;
+  supplierId: string;
+  supplyPrice: string;
   imageUrl: string | null;
   file: File | null;
   preview: string | null;
@@ -68,6 +76,8 @@ function blankVariant(): VariantState {
     beforePrice: "",
     discountType: "percent",
     discountValue: "0",
+    supplierId: "",
+    supplyPrice: "0",
     imageUrl: null,
     file: null,
     preview: null,
@@ -89,6 +99,8 @@ function initialVariant(item: NonNullable<ProductDetail["variants"]>[number]): V
     beforePrice: String(before),
     discountType,
     discountValue: String(discountValue),
+    supplierId: item.supplier_id ?? "",
+    supplyPrice: String(Number(item.supply_price ?? 0)),
     imageUrl: item.image_url ?? null,
     file: null,
     preview: item.image_url ?? null,
@@ -108,12 +120,28 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [suppliers, setSuppliers] = useState<SupplierOption[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/suppliers")
+      .then((response) => readJson<{ suppliers: SupplierOption[] }>(response))
+      .then((data) => {
+        if (active) setSuppliers(Array.isArray(data.suppliers) ? data.suppliers : []);
+      })
+      .catch(() => {
+        if (active) setSuppliers([]);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function validImage(file?: File) {
     return Boolean(file && file.type.startsWith("image/") && file.size <= 5 * 1024 * 1024);
   }
 
-  function chooseMain(event: ChangeEvent<HTMLInputElement>) {
+  async function chooseMain(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!validImage(file)) {
       const message = "اختاري صورة صالحة بحجم لا يتجاوز 5 MB.";
@@ -121,12 +149,13 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
       toast.error("صورة غير صالحة", message);
       return;
     }
-    setMainFile(file!);
-    setMainPreview(URL.createObjectURL(file!));
+    const optimized = await optimizeImage(file!);
+    setMainFile(optimized);
+    setMainPreview(URL.createObjectURL(optimized));
     setError("");
   }
 
-  function chooseVariant(index: number, event: ChangeEvent<HTMLInputElement>) {
+  async function chooseVariant(index: number, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!validImage(file)) {
       const message = "اختاري صورة صالحة بحجم لا يتجاوز 5 MB.";
@@ -134,8 +163,10 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
       toast.error("صورة غير صالحة", message);
       return;
     }
+    const optimized = await optimizeImage(file!);
+    const preview = URL.createObjectURL(optimized);
     setVariants((items) =>
-      items.map((item, i) => (i === index ? { ...item, file: file!, preview: URL.createObjectURL(file!) } : item)),
+      items.map((item, i) => (i === index ? { ...item, file: optimized, preview } : item)),
     );
     setError("");
   }
@@ -171,6 +202,10 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
       maxPrice: priced.length ? Math.max(...priced.map((entry) => entry.after)) : 0,
       maxDiscount: priced.reduce((best, entry) => Math.max(best, discountPercent(entry.before, entry.after)), 0),
       totalSaving: priced.reduce((sum, entry) => sum + Math.max(0, entry.before - entry.after), 0),
+      totalCost: roundMoney(variants.reduce((sum, item) => sum + Math.max(0, Number(item.supplyPrice) || 0), 0)),
+      potentialProfit: roundMoney(
+        variants.reduce((sum, item) => sum + afterPrice(item) - Math.max(0, Number(item.supplyPrice) || 0), 0),
+      ),
     };
   }, [variants]);
 
@@ -220,6 +255,8 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
           price: afterPrice(variant),
           discountType: variant.discountType,
           discountValue: Math.max(0, Number(variant.discountValue) || 0),
+          supplierId: variant.supplierId || null,
+          supplyPrice: Math.max(0, Number(variant.supplyPrice) || 0),
           imageUrl: variant.imageUrl,
         })),
       };
@@ -235,7 +272,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
         method: editing ? "PATCH" : "POST",
         body: data,
       });
-      const body = await response.json();
+      const body = await readJson<{ error?: string; product?: { id: string } }>(response);
       if (!response.ok) throw new Error(body.error || "تعذر حفظ المنتج.");
 
       toast.update(toastId, {
@@ -243,7 +280,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
         title: editing ? "تم حفظ التعديلات بنجاح" : "تمت إضافة المنتج بنجاح",
         description: "جارِ فتح صفحة المنتج...",
       });
-      router.push(`/products/${body.product.id}`);
+      router.push(`/products/${body.product?.id ?? ""}`);
       router.refresh();
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "تعذر حفظ المنتج.";
@@ -391,6 +428,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
                 const after = afterPrice(variant);
                 const percent = discountPercent(before, after);
                 const saving = Math.max(0, before - after);
+                const cost = Math.max(0, Number(variant.supplyPrice) || 0);
                 return (
                   <article
                     key={index}
@@ -459,6 +497,34 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
                       </div>
                     </div>
 
+                    <div className="mt-3 grid gap-3 rounded-xl p-3 sm:grid-cols-2" style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
+                      <label>
+                        <span className="field-label">المورد</span>
+                        <select
+                          value={variant.supplierId}
+                          onChange={(event) => update(index, { supplierId: event.target.value })}
+                          className="field py-2.5 text-xs"
+                        >
+                          <option value="">بدون مورد</option>
+                          {suppliers.map((supplier) => (
+                            <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span className="field-label">سعر التوريد (ج.م)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={variant.supplyPrice}
+                          onChange={(event) => update(index, { supplyPrice: event.target.value })}
+                          placeholder="0"
+                          className="field py-2.5 text-center"
+                        />
+                      </label>
+                    </div>
+
                     <div className="mt-3 grid gap-3 rounded-xl p-3 lg:grid-cols-[1fr_1fr_1fr_1.1fr]" style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
                       <label>
                         <span className="field-label">السعر قبل الخصم</span>
@@ -478,6 +544,11 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
                         <div>
                           <p className="text-[10px] font-bold" style={{ color: "var(--lav-strong)" }}>السعر النهائي</p>
                           <p className="money text-lg" style={{ color: "var(--lav-strong)" }}>{formatMoney(after)}</p>
+                          {cost > 0 && (
+                            <p className="mt-0.5 text-[10px] font-extrabold" style={{ color: after - cost >= 0 ? "var(--success)" : "var(--danger)" }}>
+                              الربح {formatMoney(after - cost)}
+                            </p>
+                          )}
                         </div>
                         {saving > 0 ? (
                           <div className="text-left">
@@ -527,6 +598,16 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
               <div className="flex items-center justify-between text-xs">
                 <span className="muted">إجمالي التوفير</span>
                 <b style={{ color: "var(--success)" }}>{formatMoney(summary.totalSaving)}</b>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="muted">إجمالي سعر التوريد</span>
+                <b style={{ color: "var(--ink)" }}>{formatMoney(summary.totalCost)}</b>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="muted">الربح المتوقع</span>
+                <b style={{ color: summary.potentialProfit >= 0 ? "var(--success)" : "var(--danger)" }}>
+                  {formatMoney(summary.potentialProfit)}
+                </b>
               </div>
 
               <div className="divider" />

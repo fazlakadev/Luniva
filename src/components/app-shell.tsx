@@ -17,6 +17,8 @@ import {
   ReceiptText,
   Settings2,
   ShieldCheck,
+  TrendingUp,
+  Truck,
   UsersRound,
   Wallet,
   X,
@@ -31,7 +33,9 @@ const nav = [
   { href: "/invoices", label: "الفواتير", short: "الفواتير", hint: "بيع وتحصيل وطباعة", icon: ReceiptText },
   { href: "/payments", label: "سجل التحصيل", short: "التحصيل", hint: "الدفعات والإيصالات", icon: Wallet },
   { href: "/reports", label: "التقارير", short: "التقارير", hint: "تحليلات وأعمار متأخرات", icon: BarChart3 },
+  { href: "/profits", label: "الأرباح", short: "الأرباح", hint: "سعر التوريد والربح والهامش", icon: TrendingUp },
   { href: "/customers", label: "إدارة العملاء", short: "العملاء", hint: "دليل العميلات", icon: UsersRound },
+  { href: "/suppliers", label: "الموردون", short: "الموردون", hint: "أسعار التوريد والموردون", icon: Truck },
   { href: "/products", label: "إدارة المنتجات", short: "المنتجات", hint: "الكتالوج والمتغيرات", icon: Package },
   { href: "/packages", label: "البكدجات", short: "البكدجات", hint: "عروض ومنتجات مجمعة", icon: Gift },
   { href: "/settings", label: "الإعدادات", short: "الإعدادات", hint: "بيانات الشركة والشروط", icon: Settings2 },
@@ -82,7 +86,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
   const isActive = (href: string) =>
     pathname === href || (href !== "/workspace" && pathname.startsWith(href));
 
-  const moreActive = ["/products", "/packages", "/settings", "/invoices/new", "/packages/new", "/products/new", "/customers/new"]
+  const moreActive = ["/products", "/packages", "/settings", "/profits", "/suppliers", "/invoices/new", "/packages/new", "/products/new", "/customers/new"]
     .some((prefix) => pathname.startsWith(prefix));
 
   return (
@@ -455,7 +459,7 @@ export default function AppShell({ children, name }: { children: React.ReactNode
 
             <p className="px-1 text-[10px] font-black" style={{ color: "var(--brand-strong)" }}>أقسام إضافية</p>
             <div className="mt-2 grid grid-cols-2 gap-2">
-              {nav.filter(({ href }) => ["/products", "/packages", "/settings"].includes(href)).map(({ href, label, icon: Icon }) => {
+              {nav.filter(({ href }) => ["/products", "/packages", "/profits", "/suppliers", "/settings"].includes(href)).map(({ href, label, icon: Icon }) => {
                 const active = isActive(href);
                 return (
                   <Link

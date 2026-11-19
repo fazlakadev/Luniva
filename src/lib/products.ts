@@ -6,6 +6,7 @@ import {
   type DiscountType,
 } from "@/lib/packages";
 import { canonicalColorName, normalizeColorName } from "@/lib/colors";
+import { supplierRef, supplyPrice } from "@/lib/suppliers";
 
 export type ProductVariantInput = {
   color: string;
@@ -15,6 +16,8 @@ export type ProductVariantInput = {
   beforePrice: number;
   discountType: DiscountType;
   discountValue: number;
+  supplierId: string | null;
+  supplyPrice: number;
   imageUrl: string | null;
 };
 
@@ -40,6 +43,8 @@ export function validateProduct(data: unknown) {
       beforePrice?: unknown;
       discountType?: unknown;
       discountValue?: unknown;
+      supplierId?: unknown;
+      supplyPrice?: unknown;
       imageUrl?: unknown;
     };
     const color = typeof variant.color === "string" ? canonicalColorName(variant.color) : "";
@@ -78,7 +83,18 @@ export function validateProduct(data: unknown) {
     }
 
     const imageUrl = typeof variant.imageUrl === "string" && variant.imageUrl.length ? variant.imageUrl : null;
-    return { color, size, sku, price, beforePrice, discountType, discountValue, imageUrl };
+    return {
+      color,
+      size,
+      sku,
+      price,
+      beforePrice,
+      discountType,
+      discountValue,
+      supplierId: supplierRef(variant.supplierId),
+      supplyPrice: supplyPrice(variant.supplyPrice),
+      imageUrl,
+    };
   });
 
   const codes = new Set([primarySku]);

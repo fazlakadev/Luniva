@@ -36,8 +36,8 @@ export async function PATCH(request: Request, { params }: Context) {
     if (!existing.rowCount) return NextResponse.json({ error: "البكدج غير موجود." }, { status: 404 });
 
     const form = await request.formData();
-    const prepared = await preparePackage(form, existing.rows[0].image_url);
     await ensurePackagesTables();
+    const prepared = await preparePackage(form, existing.rows[0].image_url);
     await client.query("BEGIN");
     const savedId = await savePackage(client, prepared, id);
     if (!savedId) throw new Error("البكدج غير موجود.");

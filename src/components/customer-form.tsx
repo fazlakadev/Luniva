@@ -19,6 +19,8 @@ import { ChangeEvent, FormEvent, useMemo, useRef, useState } from "react";
 import type { Customer } from "@/components/customers-list";
 import FolderUpload from "@/components/folder-upload";
 import { useToast } from "@/components/toast";
+import { readJson } from "@/lib/client-response";
+import { optimizeImage } from "@/lib/image-client";
 import { formatDate } from "@/lib/format";
 
 type CustomerWithPhones = Customer & { phones?: string[] | null };
@@ -45,7 +47,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
   const extraCount = extras.filter((value) => value.trim()).length;
   const totalPhones = phone.trim() ? 1 + extraCount : 0;
 
-  function photo(event: ChangeEvent<HTMLInputElement>) {
+  async function photo(event: ChangeEvent<HTMLInputElement>) {
     const selected = event.target.files?.[0];
     if (!selected || !selected.type.startsWith("image/") || selected.size > 5 * 1024 * 1024) {
       const message = "اختاري صورة صالحة بحجم لا يتجاوز 5 MB.";
@@ -53,8 +55,9 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
       toast.error("صورة غير صالحة", message);
       return;
     }
-    setFile(selected);
-    setPreview(URL.createObjectURL(selected));
+    const optimized = await optimizeImage(selected);
+    setFile(optimized);
+    setPreview(URL.createObjectURL(optimized));
     setError("");
   }
 
@@ -104,7 +107,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
         method: editing ? "PATCH" : "POST",
         body: data,
       });
-      const body = await response.json();
+      const body = await readJson<{ error?: string; customer?: { id: string } }>(response);
       if (!response.ok) throw new Error(body.error || "تعذر حفظ البيانات.");
 
       toast.update(toastId, {
@@ -112,7 +115,7 @@ export default function CustomerForm({ customer }: { customer?: CustomerWithPhon
         title: editing ? "تم حفظ بيانات العميلة" : "تمت إضافة العميلة بنجاح",
         description: "جارِ فتح ملف العميلة...",
       });
-      router.push(`/customers/${body.customer.id}`);
+      router.push(`/customers/${body.customer?.id ?? ""}`);
       router.refresh();
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : "تعذر حفظ البيانات.";

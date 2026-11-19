@@ -12,6 +12,8 @@ import {
   ReceiptText,
   Settings2,
   Sparkles,
+  TrendingUp,
+  Truck,
   UsersRound,
   Wallet,
 } from "lucide-react";
@@ -218,6 +220,12 @@ export default async function WorkspacePage() {
             </Link>
             <Link href="/products/new" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
               <Boxes size={17} />إضافة منتج
+            </Link>
+            <Link href="/profits" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
+              <TrendingUp size={17} />الأرباح
+            </Link>
+            <Link href="/suppliers" className="btn border-white/25 bg-white/10 text-white hover:bg-white/20">
+              <Truck size={17} />الموردون
             </Link>
           </div>
         </div>

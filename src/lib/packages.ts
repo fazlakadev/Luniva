@@ -55,6 +55,8 @@ export type VariantPriceSource = {
   price: string | number;
   price_before_discount: string | number | null;
   image_url: string | null;
+  supply_price?: string | number | null;
+  supplier_id?: string | null;
 };
 
 export function roundMoney(value: number) {

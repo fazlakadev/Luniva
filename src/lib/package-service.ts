@@ -14,6 +14,8 @@ import { uploadImage } from "@/lib/upload";
 export type PreparedVariant = PackageVariantInput & {
   before: number;
   after: number;
+  supplyPrice: number;
+  supplierId: string | null;
 };
 
 export type PreparedPackage = {
@@ -31,7 +33,7 @@ export async function preparePackage(form: FormData, fallbackImageUrl: string | 
 
   const variantIds = [...new Set(payload.variants.flatMap((variant) => variant.selections.map((selection) => selection.variantId)))];
   const variantResult = await db.query(
-    "SELECT id, product_id, color, size, sku, price, price_before_discount, image_url FROM product_variants WHERE id = ANY($1::uuid[])",
+    "SELECT id, product_id, color, size, sku, price, price_before_discount, image_url, supply_price, supplier_id FROM product_variants WHERE id = ANY($1::uuid[])",
     [variantIds],
   );
   const variantSources = new Map<string, VariantPriceSource>(
@@ -53,10 +55,21 @@ export async function preparePackage(form: FormData, fallbackImageUrl: string | 
     const after = applyDiscount(before, variant.discountType, variant.discountValue);
     const uploadedImage = await uploadImage(form.get(`variantImage-${index}`));
 
+    const supplyCost = variant.selections.reduce((sum, selection) => {
+      const source = variantSources.get(selection.variantId);
+      const quantity = payload.items.find((item) => item.productId === selection.productId)?.quantity ?? 1;
+      return sum + (Number(source?.supply_price ?? 0) || 0) * quantity;
+    }, 0);
+    const linkedSupplier = variant.selections
+      .map((selection) => variantSources.get(selection.variantId)?.supplier_id ?? null)
+      .find((value): value is string => Boolean(value)) ?? null;
+
     variants.push({
       ...variant,
       before: roundMoney(before),
       after: roundMoney(after),
+      supplyPrice: roundMoney(supplyCost),
+      supplierId: linkedSupplier,
       imageUrl: uploadedImage ?? variant.imageUrl,
     });
   }
@@ -132,8 +145,9 @@ export async function savePackage(client: PoolClient, prepared: PreparedPackage,
   for (const [index, variant] of variants.entries()) {
     const inserted = await client.query(
       `INSERT INTO package_variants
-        (package_id, name, sku, price_before_discount, price_after_discount, image_url, stock, discount_type, discount_value, is_default, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id`,
+        (package_id, name, sku, price_before_discount, price_after_discount, image_url, stock,
+         discount_type, discount_value, is_default, sort_order, supply_price, supplier_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
       [
         id,
         variant.name,
@@ -146,6 +160,8 @@ export async function savePackage(client: PoolClient, prepared: PreparedPackage,
         variant.discountValue,
         index === 0,
         index,
+        variant.supplyPrice,
+        variant.supplierId,
       ],
     );
     const packageVariantId = String(inserted.rows[0].id);

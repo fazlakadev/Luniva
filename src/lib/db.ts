@@ -151,8 +151,28 @@ export async function ensureInitialAdmin() {
   );
 }
 
+export function ensureSuppliersTable() {
+  return runOnce("suppliers", async () => {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS suppliers (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(160) NOT NULL,
+        contact_name VARCHAR(120),
+        phone VARCHAR(32),
+        email VARCHAR(160),
+        address TEXT,
+        notes TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await db.query("CREATE INDEX IF NOT EXISTS suppliers_name_idx ON suppliers (name)");
+  });
+}
+
 export function ensureProductsTables() {
   return runOnce("products", async () => {
+    await ensureSuppliersTable();
     await db.query(`
       CREATE TABLE IF NOT EXISTS products (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -201,8 +221,11 @@ export function ensureProductsTables() {
         ADD COLUMN IF NOT EXISTS image_url TEXT,
         ADD COLUMN IF NOT EXISTS price_before_discount NUMERIC(12,2),
         ADD COLUMN IF NOT EXISTS discount_type VARCHAR(16) NOT NULL DEFAULT 'percent',
-        ADD COLUMN IF NOT EXISTS discount_value NUMERIC(12,2) NOT NULL DEFAULT 0
+        ADD COLUMN IF NOT EXISTS discount_value NUMERIC(12,2) NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS supply_price NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (supply_price >= 0)
     `);
+    await db.query("CREATE INDEX IF NOT EXISTS product_variants_supplier_idx ON product_variants (supplier_id)");
   });
 }
 
@@ -271,8 +294,11 @@ export function ensurePackagesTables() {
         ADD COLUMN IF NOT EXISTS discount_type VARCHAR(16) NOT NULL DEFAULT 'percent',
         ADD COLUMN IF NOT EXISTS discount_value NUMERIC(12,2) NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS is_default BOOLEAN NOT NULL DEFAULT FALSE,
-        ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0
+        ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
+        ADD COLUMN IF NOT EXISTS supply_price NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (supply_price >= 0)
     `);
+    await db.query("CREATE INDEX IF NOT EXISTS package_variants_supplier_idx ON package_variants (supplier_id)");
     await db.query(`
       CREATE TABLE IF NOT EXISTS package_variant_items (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -356,6 +382,27 @@ export function ensureInvoiceTables() {
     await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS due_date DATE");
     await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS view_nonce VARCHAR(64)");
     await db.query("ALTER TABLE invoices ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(24) NOT NULL DEFAULT 'preparing'");
+    await db.query(`
+      ALTER TABLE invoice_items
+        ADD COLUMN IF NOT EXISTS unit_cost NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (unit_cost >= 0),
+        ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL
+    `);
+    await db.query("CREATE INDEX IF NOT EXISTS invoice_items_supplier_idx ON invoice_items (supplier_id)");
+
+    // Older invoices predate supply prices. Snapshot the current cost so profit
+    // reports stay useful without rewriting any existing invoice totals.
+    await db.query(`
+      UPDATE invoice_items it
+         SET unit_cost = COALESCE(pv.supply_price, 0), supplier_id = pv.supplier_id
+        FROM product_variants pv
+       WHERE it.product_variant_id = pv.id AND it.unit_cost = 0
+    `);
+    await db.query(`
+      UPDATE invoice_items it
+         SET unit_cost = COALESCE(gv.supply_price, 0), supplier_id = gv.supplier_id
+        FROM package_variants gv
+       WHERE it.package_variant_id = gv.id AND it.unit_cost = 0
+    `);
 
     // Every invoice gets its own random nonce. It is only useful together with
     // the server secret, so the public share link cannot be derived from the DB.

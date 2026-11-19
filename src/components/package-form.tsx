@@ -23,6 +23,8 @@ import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "re
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import FolderUpload from "@/components/folder-upload";
+import { readJson } from "@/lib/client-response";
+import { optimizeImage } from "@/lib/image-client";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { canonicalColorName } from "@/lib/colors";
 import {
@@ -338,24 +340,26 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
     }
   }
 
-  function chooseMainImage(event: ChangeEvent<HTMLInputElement>) {
+  async function chooseMainImage(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file || !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
       setError("اختاري صورة صالحة بحجم لا يتجاوز 5 MB.");
       return;
     }
-    setMainImage(file);
-    setMainPreview(URL.createObjectURL(file));
+    const optimized = await optimizeImage(file);
+    setMainImage(optimized);
+    setMainPreview(URL.createObjectURL(optimized));
     setError("");
   }
 
-  function chooseSubImage(subId: string, event: ChangeEvent<HTMLInputElement>) {
+  async function chooseSubImage(subId: string, event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file || !file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
       setError("اختاري صورة صالحة بحجم لا يتجاوز 5 MB.");
       return;
     }
-    updateSub(subId, { file, preview: URL.createObjectURL(file), imageUrl: null });
+    const optimized = await optimizeImage(file);
+    updateSub(subId, { file: optimized, preview: URL.createObjectURL(optimized), imageUrl: null });
     setError("");
   }
 
@@ -419,9 +423,9 @@ export default function PackageForm({ initial }: { initial?: PackageFormInitial 
         method: editing ? "PATCH" : "POST",
         body,
       });
-      const data = await response.json();
+      const data = await readJson<{ error?: string; package?: { id: string } }>(response);
       if (!response.ok) throw new Error(data.error || "تعذر حفظ البكدج.");
-      router.push(`/packages/${data.package.id}`);
+      router.push(`/packages/${data.package?.id ?? ""}`);
       router.refresh();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "تعذر حفظ البكدج.");

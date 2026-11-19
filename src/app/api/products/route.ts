@@ -18,9 +18,12 @@ export async function GET() {
       COALESCE(json_agg(json_build_object(
         'id', v.id, 'color', v.color, 'size', v.size, 'sku', v.sku,
         'price', v.price, 'price_before_discount', v.price_before_discount,
-        'discount_type', v.discount_type, 'discount_value', v.discount_value, 'image_url', v.image_url
+        'discount_type', v.discount_type, 'discount_value', v.discount_value, 'image_url', v.image_url,
+        'supplier_id', v.supplier_id, 'supplier_name', s.name, 'supply_price', v.supply_price
       ) ORDER BY v.color, v.size) FILTER (WHERE v.id IS NOT NULL), '[]') AS variants
-      FROM products p LEFT JOIN product_variants v ON v.product_id = p.id
+      FROM products p
+      LEFT JOIN product_variants v ON v.product_id = p.id
+      LEFT JOIN suppliers s ON s.id = v.supplier_id
       GROUP BY p.id ORDER BY p.created_at DESC`);
     return NextResponse.json({ products: result.rows });
   } catch { return NextResponse.json({ error: "تعذر تحميل المنتجات." }, { status: 500 }); }
@@ -39,8 +42,10 @@ export async function POST(request: Request) {
     const created = await client.query(`INSERT INTO products (name, primary_sku, description, image_url) VALUES ($1, $2, $3, $4)
       RETURNING id, name, primary_sku, description, image_url, created_at, updated_at`, [product.name, product.primarySku, product.description, imageUrl]);
     for (const variant of product.variants) await client.query(
-      "INSERT INTO product_variants (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
-      [created.rows[0].id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice, variant.discountType, variant.discountValue, variant.imageUrl],
+      `INSERT INTO product_variants
+        (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [created.rows[0].id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice, variant.discountType, variant.discountValue, variant.imageUrl, variant.supplierId, variant.supplyPrice],
     );
     await client.query(
       `UPDATE products SET
