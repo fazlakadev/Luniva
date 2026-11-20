@@ -122,7 +122,7 @@ export default function AdminLoginForm() {
         const response = await fetch("/api/auth/login/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ challengeId: challenge.id, token: challenge.token, code: value }),
+          body: JSON.stringify({ challengeId: challenge.id, token: challenge.token, code: value, purpose: "login" }),
         });
         const body = await response.json().catch(() => ({}));
         if (!response.ok) {

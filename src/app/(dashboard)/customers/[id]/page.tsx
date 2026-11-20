@@ -17,6 +17,7 @@ import {
 import DeleteButton from "@/components/delete-button";
 import InvoiceCta from "@/components/invoice-cta";
 import ZoomableImage from "@/components/zoomable-image";
+import CustomerAppointmentScheduler from "@/components/customer-appointment-scheduler";
 import { getCustomerAppointments } from "@/lib/appointments";
 import {
   appointmentKindLabels,
@@ -172,18 +173,28 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       </section>
 
       <section className="mt-6">
-        <div className="mb-3 flex items-end justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <div>
-            <p className="eyebrow">المتابعات</p>
+            <p className="eyebrow">المتابعات والجدولة</p>
             <h2 className="mt-1 text-lg font-extrabold tracking-tight" style={{ color: "var(--ink)" }}>مواعيد العميلة</h2>
           </div>
-          <Link
-            href={`/appointments?customer=${id}`}
-            className="inline-flex items-center gap-1 text-xs font-extrabold"
-            style={{ color: "var(--brand-strong)" }}
-          >
-            <Plus size={13} />إضافة موعد
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <CustomerAppointmentScheduler
+              customerId={id}
+              customerName={customer.full_name}
+              existingAppointments={appointments.map((a) => ({
+                appointment_date: a.appointment_date,
+                appointment_time: a.appointment_time,
+                title: a.title,
+              }))}
+            />
+            <Link
+              href={`/appointments?customer=${id}`}
+              className="btn btn-soft px-3 py-1.5 text-xs font-bold"
+            >
+              <Plus size={13} />إضافة موعد يدوي
+            </Link>
+          </div>
         </div>
 
         {appointments.length === 0 ? (

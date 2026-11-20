@@ -209,6 +209,21 @@ export default function PerspectiveTunnelHero() {
         return () => window.removeEventListener("resize", update);
     }, []);
 
+    // Page scroll drives the tunnel corridor directly as the visitor scrolls down.
+    useEffect(() => {
+        if (reduce) return;
+        const onScroll = () => {
+            const y = window.scrollY;
+            const heroHeight = containerRef.current?.offsetHeight || window.innerHeight || 800;
+            const scrollRatio = clamp01(y / (heroHeight * 0.85));
+            hasInteracted.current = true;
+            rawProgress.set(scrollRatio);
+        };
+
+        window.addEventListener("scroll", onScroll, { passive: true });
+        return () => window.removeEventListener("scroll", onScroll);
+    }, [reduce, rawProgress]);
+
     // Wheel advances the corridor, but never cancels the browser scroll.
     useEffect(() => {
         const el = containerRef.current;
@@ -306,11 +321,11 @@ export default function PerspectiveTunnelHero() {
         <div
             ref={containerRef}
             dir="rtl"
-            className="relative h-[70svh] min-h-[26rem] max-h-[46rem] w-full overflow-hidden rounded-[1.75rem] border sm:rounded-[2.25rem]"
+            className="relative h-[100svh] min-h-screen w-full overflow-hidden"
             style={{
                 borderColor: "color-mix(in srgb, var(--lav) 28%, transparent)",
                 background:
-                    "linear-gradient(160deg, color-mix(in srgb, var(--plum) 12%, var(--surface)), color-mix(in srgb, var(--lav) 16%, var(--bg)))",
+                    "linear-gradient(160deg, color-mix(in srgb, var(--plum) 14%, var(--surface)), color-mix(in srgb, var(--lav) 18%, var(--bg)))",
                 color: "var(--ink)",
                 perspective: stage.isMobile ? "900px" : "1200px",
                 transformStyle: "preserve-3d",
@@ -403,14 +418,14 @@ export default function PerspectiveTunnelHero() {
 
             <motion.div
                 style={reduce ? undefined : { opacity: promptOpacity }}
-                className="pointer-events-none absolute bottom-4 z-20 flex flex-col items-center gap-1.5 text-[9px] font-black tracking-[0.14em] sm:bottom-6 sm:text-[10px]"
+                className="pointer-events-none absolute inset-x-0 bottom-6 z-20 flex flex-col items-center justify-center gap-1.5 text-[9.5px] font-black tracking-[0.14em] sm:bottom-8 sm:text-[10.5px]"
             >
                 <span style={{ color: "var(--brand-strong)" }}>
-                    {reduce ? "اكتشفي تشكيلتنا" : "مرّري أو اسحبي للاستكشاف"}
+                    {reduce ? "اكتشفي تشكيلتنا" : "مرّري لأسفل للغوص في القصة"}
                 </span>
                 <span
                     aria-hidden="true"
-                    className="h-5 w-px"
+                    className="h-6 w-px animate-bounce"
                     style={{ background: "linear-gradient(to bottom, var(--brand), transparent)" }}
                 />
             </motion.div>

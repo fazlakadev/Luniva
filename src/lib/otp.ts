@@ -136,6 +136,8 @@ export type OtpVerifyResult =
   | { ok: true; userId: string | null; email: string; pendingEmail: string | null; remember: boolean }
   | { ok: false; reason: "expired" | "invalid" | "locked" };
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 /** Checks a code, records the attempt, and consumes the challenge on success. */
 export async function verifyOtpChallenge(input: {
   id: string;
@@ -143,6 +145,9 @@ export async function verifyOtpChallenge(input: {
   code: string;
   purpose: OtpPurpose;
 }): Promise<OtpVerifyResult> {
+  if (!input.id || !UUID_REGEX.test(input.id)) {
+    return { ok: false, reason: "invalid" };
+  }
   await ensureOtpTable();
   const result = await db.query(
     `SELECT id, purpose, email, code_hash, salt, token, user_id, pending_email, remember,

@@ -12,9 +12,8 @@ const PerspectiveTunnelHero = dynamic(
         loading: () => (
             <div
                 aria-hidden="true"
-                className="h-[70svh] min-h-[26rem] max-h-[46rem] w-full rounded-[1.75rem] border sm:rounded-[2.25rem]"
+                className="h-[100svh] min-h-screen w-full"
                 style={{
-                    borderColor: "color-mix(in srgb, var(--lav) 28%, transparent)",
                     background:
                         "linear-gradient(160deg, color-mix(in srgb, var(--plum) 12%, var(--surface)), color-mix(in srgb, var(--lav) 16%, var(--bg)))",
                 }}

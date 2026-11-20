@@ -220,44 +220,39 @@ export default function SocialRail({ email = "", phone = "" }: SocialRailProps) 
         )}
       </AnimatePresence>
 
-      {/* Floating Action Button (FAB) */}
-      <motion.button
-        type="button"
-        onClick={() => setOpen((current) => !current)}
-        whileHover={reduced ? undefined : { scale: 1.05 }}
-        whileTap={reduced ? undefined : { scale: 0.95 }}
-        aria-expanded={open}
-        aria-label={open ? "إغلاق نافذة التواصل" : "تواصل معنا"}
-        title={open ? "إغلاق نافذة التواصل" : "تواصل معنا"}
-        className="pointer-events-auto group relative flex items-center gap-2 rounded-full border px-4 py-2.5 text-white shadow-xl transition-all duration-300"
-        style={{
-          background: "linear-gradient(135deg, var(--brand-strong), var(--plum))",
-          borderColor: "color-mix(in srgb, var(--brand) 55%, transparent)",
-          boxShadow: open
-            ? "0 10px 25px -4px rgba(112, 36, 89, 0.6)"
-            : "0 10px 25px -4px rgba(112, 36, 89, 0.45), 0 0 16px -2px rgba(220, 100, 160, 0.35)",
-        }}
-      >
-        <span className="relative grid h-5 w-5 place-items-center">
-          <motion.span
-            animate={{ rotate: open ? 90 : 0, scale: open ? 0 : 1 }}
-            transition={{ duration: 0.2 }}
-            className="absolute"
+      {/* Floating Action Button (FAB) - Hides completely when panel is open */}
+      <AnimatePresence>
+        {!open && (
+          <motion.button
+            key="social-toggle-button"
+            type="button"
+            onClick={() => setOpen(true)}
+            initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.8, y: 14 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.75, y: 14 }}
+            transition={{ duration: reduced ? 0 : 0.26, ease }}
+            whileHover={reduced ? undefined : { scale: 1.05, y: -2 }}
+            whileTap={reduced ? undefined : { scale: 0.95 }}
+            aria-expanded={false}
+            aria-label="تواصل معنا"
+            title="تواصل معنا"
+            className="pointer-events-auto group relative flex items-center gap-2 rounded-full border px-4 py-2.5 text-white shadow-xl backdrop-blur-xl transition-all duration-300"
+            style={{
+              background: "linear-gradient(135deg, var(--brand-strong), var(--plum))",
+              borderColor: "color-mix(in srgb, var(--brand) 55%, transparent)",
+              boxShadow:
+                "0 10px 25px -4px rgba(112, 36, 89, 0.45), 0 0 16px -2px rgba(220, 100, 160, 0.35)",
+            }}
           >
-            <MessageCircle size={19} />
-          </motion.span>
-          <motion.span
-            animate={{ rotate: open ? 0 : -90, scale: open ? 1 : 0 }}
-            transition={{ duration: 0.2 }}
-            className="absolute"
-          >
-            <X size={19} />
-          </motion.span>
-        </span>
-        <span className="text-xs font-black tracking-tight select-none">
-          {open ? "إغلاق" : "تواصل معنا"}
-        </span>
-      </motion.button>
+            <span className="relative grid h-5 w-5 place-items-center">
+              <MessageCircle size={19} className="transition-transform duration-300 group-hover:scale-110" />
+            </span>
+            <span className="text-xs font-black tracking-tight select-none">
+              تواصل معنا
+            </span>
+          </motion.button>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -83,7 +83,13 @@ export async function POST(request: Request) {
     response.cookies.set(sessionCookie.name, session, sessionCookieOptions(result.remember));
     return response;
   } catch (error) {
-    console.error("OTP verification failed", error);
-    return NextResponse.json({ error: "تعذّر التحقق من الرمز حاليًا." }, { status: 500 });
+    console.error("OTP verification failed:", error);
+    const errorDetails = error instanceof Error ? error.message : "تعذّر التحقق من الرمز حاليًا.";
+    return NextResponse.json(
+      {
+        error: process.env.NODE_ENV === "development" ? `خطأ في التحقق: ${errorDetails}` : "تعذّر التحقق من الرمز حاليًا، يرجى إعادة المحاولة.",
+      },
+      { status: 500 },
+    );
   }
 }
