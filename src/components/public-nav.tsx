@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ChevronDown,
@@ -19,6 +20,7 @@ import {
   Phone,
   ShieldCheck,
   Sparkles,
+  SunMoon,
   X,
 } from "lucide-react";
 import {
@@ -594,12 +596,17 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         />
       </div>
 
-      <div className="flex min-w-0 shrink items-center gap-1.5 sm:gap-2">
+      {/* Desktop Action bar (visible only on lg+) */}
+      <div className="hidden min-w-0 shrink items-center gap-2 lg:flex">
         <HeaderSearch />
-        <Link href={ctaHref} className="btn btn-primary hidden px-3 py-2 text-[11px] sm:inline-flex">
+        <Link href={ctaHref} className="btn btn-primary px-3 py-2 text-[11px]">
           <ArrowLeft size={13} />{ctaLabel}
         </Link>
         <ThemeToggle showLabel={false} />
+      </div>
+
+      {/* Mobile Navbar Controls: Clean & uncluttered (Search and ThemeToggle moved into Drawer) */}
+      <div className="flex items-center gap-2 lg:hidden">
         <button
           type="button"
           onClick={() => {
@@ -609,235 +616,284 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
           }}
           aria-label="فتح قائمة التنقل"
           aria-expanded={drawerOpen}
-          className="group relative grid h-9 w-9 place-items-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-10 sm:w-10 lg:hidden"
+          className="group flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black shadow-sm transition active:scale-95"
           style={{
-            borderColor: "color-mix(in srgb, var(--brand) 30%, var(--line))",
-            background: "color-mix(in srgb, var(--surface) 90%, transparent)",
+            borderColor: "color-mix(in srgb, var(--brand) 32%, var(--line))",
+            background: "color-mix(in srgb, var(--surface) 92%, transparent)",
             color: "var(--ink)",
-            boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
           }}
         >
-          <Menu size={18} className="transition-transform group-hover:scale-110" />
+          <Menu size={18} className="text-[var(--brand-strong)] transition-transform group-hover:scale-110" />
+          <span>القائمة</span>
         </button>
       </div>
 
-      {mounted && drawerOpen && createPortal(
-        <div className="fixed inset-0 z-[70] lg:hidden" role="presentation">
-          <button
-            type="button"
-            aria-label="إغلاق القائمة"
-            onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-black/45 backdrop-blur-sm transition-opacity"
-          />
-          <aside
-            role="dialog"
-            aria-modal="true"
-            aria-label="قائمة التنقل"
-            dir="rtl"
-            className="absolute inset-y-0 right-0 flex max-h-screen w-full flex-col overflow-hidden border-l shadow-2xl transition-transform duration-300"
-            style={{
-              width: "min(92vw, 23rem)",
-              borderColor: "var(--line)",
-              background: "var(--surface)",
-            }}
-          >
-            {/* Drawer Header */}
-            <div
-              className="flex items-center justify-between gap-3 border-b px-4 py-3.5"
-              style={{
-                borderColor: "var(--line)",
-                background: "color-mix(in srgb, var(--surface-2) 65%, transparent)",
-              }}
-            >
-              <Link
-                href="/"
-                onClick={() => setDrawerOpen(false)}
-                className="flex min-w-0 items-center gap-2.5"
-                aria-label="الرئيسية"
-              >
-                <span
-                  className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white shadow-sm"
-                  style={{ border: "1px solid var(--line)" }}
-                >
-                  <Image
-                    src="/luniva-logo-v2.png"
-                    alt="شعار لونيفا"
-                    width={96}
-                    height={96}
-                    className="h-7 w-7 object-contain"
-                  />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-black" style={{ color: "var(--ink)" }}>
-                    لونيفا LUNIVA
-                  </p>
-                  <p className="truncate text-[10px] font-bold" style={{ color: "var(--brand-strong)" }}>
-                    أزياء نسائية مصرية
-                  </p>
-                </div>
-              </Link>
-              <button
+      {mounted && createPortal(
+        <AnimatePresence>
+          {drawerOpen && (
+            <div className="fixed inset-0 z-[70] lg:hidden" role="presentation">
+              {/* Animated Backdrop */}
+              <motion.button
                 type="button"
-                onClick={() => setDrawerOpen(false)}
                 aria-label="إغلاق القائمة"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border transition hover:bg-[var(--brand-soft)]"
-                style={{ borderColor: "var(--line)", color: "var(--ink)" }}
-              >
-                <X size={17} />
-              </button>
-            </div>
-
-            {/* Drawer Body */}
-            <div
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4"
-              data-lenis-prevent
-              data-lenis-prevent-wheel
-            >
-              {/* Quick Primary Grid */}
-              <p className="mb-2 px-1 text-[10px] font-black" style={{ color: "var(--muted-2)" }}>
-                الوصول السريع
-              </p>
-              <div className="mb-4 grid grid-cols-2 gap-2">
-                {[
-                  { href: "/", label: "الرئيسية", desc: "البداية", icon: Home, current: active === "home" },
-                  { href: "/catalog/products", label: "المنتجات", desc: "كل التشكيلة", icon: Package, current: active === "products" && navKey !== "shoes" },
-                  { href: "/catalog/packages", label: "البكدجات", desc: "توفير وعروض", icon: Gift, current: active === "packages" },
-                  { href: "/shoes", label: "الأحذية", desc: "سنيكرز راقية", icon: Footprints, current: navKey === "shoes" },
-                  { href: "/about", label: "من نحن", desc: "قصة لونيفا", icon: Sparkles, current: active === "about" },
-                  { href: "/contact", label: "تواصل معنا", desc: "دعم فوري", icon: Mail, current: active === "contact" },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={() => setDrawerOpen(false)}
-                      className="group flex flex-col justify-between rounded-xl border p-2.5 transition active:scale-[0.98]"
-                      style={{
-                        background: item.current ? "var(--brand-soft)" : "color-mix(in srgb, var(--surface-2) 60%, transparent)",
-                        borderColor: item.current ? "var(--brand)" : "var(--line)",
-                        color: item.current ? "var(--brand-strong)" : "var(--ink)",
-                      }}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span
-                          className="grid h-8 w-8 place-items-center rounded-lg"
-                          style={{
-                            background: item.current ? "var(--brand)" : "var(--surface)",
-                            color: item.current ? "#fff" : "var(--brand-strong)",
-                          }}
-                        >
-                          <Icon size={16} />
-                        </span>
-                        {item.current && (
-                          <span className="h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} />
-                        )}
-                      </div>
-                      <div className="mt-2.5">
-                        <p className="text-[12px] font-black">{item.label}</p>
-                        <p className="text-[9.5px] font-semibold" style={{ color: "var(--muted)" }}>
-                          {item.desc}
-                        </p>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-
-              {/* Action CTA */}
-              <Link
-                href={ctaHref}
                 onClick={() => setDrawerOpen(false)}
-                className="btn btn-primary mb-4 flex w-full items-center justify-center gap-2 py-2.5 text-xs font-black shadow-md"
-              >
-                <ArrowLeft size={14} />
-                {ctaLabel}
-              </Link>
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+                className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              />
 
-              {/* Accordion Group: Support & Policies */}
-              <DrawerGroup
-                label="المساعدة والسياسات"
-                icon={CircleHelp}
-                open={supportOpen}
-                onToggle={() => setSupportOpen((value) => !value)}
-                active={supportActive}
+              {/* Animated Drawer Panel */}
+              <motion.aside
+                role="dialog"
+                aria-modal="true"
+                aria-label="قائمة التنقل"
+                dir="rtl"
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-y-0 right-0 flex max-h-screen w-full flex-col overflow-hidden border-l shadow-2xl"
+                style={{
+                  width: "min(92vw, 23rem)",
+                  borderColor: "var(--line)",
+                  background: "var(--surface)",
+                }}
               >
-                {SUPPORT_LINKS.map((link) => (
-                  <DrawerLink
-                    key={link.section}
-                    link={link}
-                    active={active === link.section}
-                    onNavigate={() => setDrawerOpen(false)}
-                    nested
-                  />
-                ))}
-              </DrawerGroup>
-
-              {/* Direct Support Card */}
-              {(contactEmail || phone) && (
+                {/* Drawer Header */}
                 <div
-                  className="mt-4 rounded-2xl border p-3.5"
+                  className="flex items-center justify-between gap-3 border-b px-4 py-3.5"
                   style={{
-                    background: "color-mix(in srgb, var(--surface-2) 75%, transparent)",
                     borderColor: "var(--line)",
+                    background: "color-mix(in srgb, var(--surface-2) 65%, transparent)",
                   }}
                 >
-                  <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>
-                    تحتاج مساعدة مباشرة؟
-                  </p>
-                  <div className="mt-2.5 space-y-2 text-[11px] font-bold">
-                    {phone && (
-                      <a
-                        href={`https://wa.me/${phone.replace(/[^\d]/g, "")}`}
-                        dir="rtl"
-                        className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300"
-                      >
-                        <MessageCircle size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
-                        <span className="truncate">تواصل عبر واتساب</span>
-                      </a>
-                    )}
-                    {phone && (
-                      <a
-                        href={`tel:${phone.replace(/\s+/g, "")}`}
-                        dir="ltr"
-                        className="flex items-center gap-2 rounded-xl p-1.5 transition hover:underline"
-                        style={{ color: "var(--brand-strong)" }}
-                      >
-                        <Phone size={13} className="shrink-0" />
-                        <span>{phone}</span>
-                      </a>
-                    )}
-                    {contactEmail && (
-                      <a
-                        href={`mailto:${contactEmail}`}
-                        dir="ltr"
-                        className="flex items-center gap-2 rounded-xl p-1.5 transition hover:underline"
-                        style={{ color: "var(--brand-strong)" }}
-                      >
-                        <Mail size={13} className="shrink-0" />
-                        <span className="truncate">{contactEmail}</span>
-                      </a>
-                    )}
-                  </div>
+                  <Link
+                    href="/"
+                    onClick={() => setDrawerOpen(false)}
+                    className="flex min-w-0 items-center gap-2.5"
+                    aria-label="الرئيسية"
+                  >
+                    <span
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white shadow-sm"
+                      style={{ border: "1px solid var(--line)" }}
+                    >
+                      <Image
+                        src="/luniva-logo-v2.png"
+                        alt="شعار لونيفا"
+                        width={96}
+                        height={96}
+                        className="h-7 w-7 object-contain"
+                      />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black" style={{ color: "var(--ink)" }}>
+                        لونيفا LUNIVA
+                      </p>
+                      <p className="truncate text-[10px] font-bold" style={{ color: "var(--brand-strong)" }}>
+                        أزياء نسائية مصرية
+                      </p>
+                    </div>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setDrawerOpen(false)}
+                    aria-label="إغلاق القائمة"
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/20 bg-[var(--surface-2)] text-[var(--ink)] transition hover:bg-[var(--brand-soft)] active:scale-90"
+                    style={{ borderColor: "var(--line)" }}
+                  >
+                    <X size={16} />
+                  </button>
                 </div>
-              )}
-            </div>
 
-            {/* Drawer Footer */}
-            <div
-              className="flex items-center justify-between gap-3 border-t px-4 py-3"
-              style={{
-                borderColor: "var(--line)",
-                background: "color-mix(in srgb, var(--surface-2) 40%, transparent)",
-              }}
-            >
-              <span className="text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>
-                لونيفا · تأسست ٢٠٢٦
-              </span>
-              <ThemeToggle showLabel={false} />
+                {/* Drawer Body */}
+                <div
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3.5 py-4"
+                  data-lenis-prevent
+                  data-lenis-prevent-wheel
+                >
+                  {/* Search inside Drawer */}
+                  <div>
+                    <p className="mb-1.5 px-1 text-[10px] font-black" style={{ color: "var(--muted-2)" }}>
+                      البحث في الكتالوج
+                    </p>
+                    <HeaderSearch
+                      fullWidth
+                      placeholder="ابحثي عن فساتين، أطقم، بكدجات..."
+                      onSearch={() => setDrawerOpen(false)}
+                    />
+                  </div>
+
+                  {/* Light & Dark Mode inside Drawer */}
+                  <div
+                    className="mt-3.5 flex items-center justify-between rounded-2xl border p-2.5"
+                    style={{
+                      borderColor: "var(--line)",
+                      background: "color-mix(in srgb, var(--surface-2) 65%, transparent)",
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <span className="grid h-8 w-8 place-items-center rounded-xl bg-amber-500/10 text-amber-500 dark:text-amber-400">
+                        <SunMoon size={16} />
+                      </span>
+                      <div>
+                        <p className="text-[11.5px] font-black" style={{ color: "var(--ink)" }}>المظهر والسمة</p>
+                        <p className="text-[9.5px] font-bold" style={{ color: "var(--muted-2)" }}>الوضع الليلي والنهاري</p>
+                      </div>
+                    </div>
+                    <ThemeToggle showLabel={true} />
+                  </div>
+
+                  {/* Quick Primary Grid */}
+                  <p className="mb-2 mt-4 px-1 text-[10px] font-black" style={{ color: "var(--muted-2)" }}>
+                    أقسام الموقع
+                  </p>
+                  <div className="mb-4 grid grid-cols-2 gap-2">
+                    {[
+                      { href: "/", label: "الرئيسية", desc: "البداية", icon: Home, current: active === "home" },
+                      { href: "/catalog/products", label: "المنتجات", desc: "كل التشكيلة", icon: Package, current: active === "products" && navKey !== "shoes" },
+                      { href: "/catalog/packages", label: "البكدجات", desc: "توفير وعروض", icon: Gift, current: active === "packages" },
+                      { href: "/shoes", label: "الأحذية", desc: "سنيكرز راقية", icon: Footprints, current: navKey === "shoes" },
+                      { href: "/about", label: "من نحن", desc: "قصة لونيفا", icon: Sparkles, current: active === "about" },
+                      { href: "/contact", label: "تواصل معنا", desc: "دعم فوري", icon: Mail, current: active === "contact" },
+                    ].map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setDrawerOpen(false)}
+                          className="group flex flex-col justify-between rounded-xl border p-2.5 transition active:scale-[0.98]"
+                          style={{
+                            background: item.current ? "var(--brand-soft)" : "color-mix(in srgb, var(--surface-2) 60%, transparent)",
+                            borderColor: item.current ? "var(--brand)" : "var(--line)",
+                            color: item.current ? "var(--brand-strong)" : "var(--ink)",
+                          }}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span
+                              className="grid h-8 w-8 place-items-center rounded-lg"
+                              style={{
+                                background: item.current ? "var(--brand)" : "var(--surface)",
+                                color: item.current ? "#fff" : "var(--brand-strong)",
+                              }}
+                            >
+                              <Icon size={16} />
+                            </span>
+                            {item.current && (
+                              <span className="h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} />
+                            )}
+                          </div>
+                          <div className="mt-2.5">
+                            <p className="text-[12px] font-black">{item.label}</p>
+                            <p className="text-[9.5px] font-semibold" style={{ color: "var(--muted)" }}>
+                              {item.desc}
+                            </p>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+
+                  {/* Action CTA */}
+                  <Link
+                    href={ctaHref}
+                    onClick={() => setDrawerOpen(false)}
+                    className="btn btn-primary mb-4 flex w-full items-center justify-center gap-2 py-2.5 text-xs font-black shadow-md"
+                  >
+                    <ArrowLeft size={14} />
+                    {ctaLabel}
+                  </Link>
+
+                  {/* Accordion Group: Support & Policies */}
+                  <DrawerGroup
+                    label="المساعدة والسياسات"
+                    icon={CircleHelp}
+                    open={supportOpen}
+                    onToggle={() => setSupportOpen((value) => !value)}
+                    active={supportActive}
+                  >
+                    {SUPPORT_LINKS.map((link) => (
+                      <DrawerLink
+                        key={link.section}
+                        link={link}
+                        active={active === link.section}
+                        onNavigate={() => setDrawerOpen(false)}
+                        nested
+                      />
+                    ))}
+                  </DrawerGroup>
+
+                  {/* Direct Support Card */}
+                  {(contactEmail || phone) && (
+                    <div
+                      className="mt-4 rounded-2xl border p-3.5"
+                      style={{
+                        background: "color-mix(in srgb, var(--surface-2) 75%, transparent)",
+                        borderColor: "var(--line)",
+                      }}
+                    >
+                      <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>
+                        تحتاج مساعدة مباشرة؟
+                      </p>
+                      <div className="mt-2.5 space-y-2 text-[11px] font-bold">
+                        {phone && (
+                          <a
+                            href={`https://wa.me/${phone.replace(/[^\d]/g, "")}`}
+                            dir="rtl"
+                            className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300"
+                          >
+                            <MessageCircle size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                            <span className="truncate">تواصل عبر واتساب</span>
+                          </a>
+                        )}
+                        {phone && (
+                          <a
+                            href={`tel:${phone.replace(/\s+/g, "")}`}
+                            dir="ltr"
+                            className="flex items-center gap-2 rounded-xl p-1.5 transition hover:underline"
+                            style={{ color: "var(--brand-strong)" }}
+                          >
+                            <Phone size={13} className="shrink-0" />
+                            <span>{phone}</span>
+                          </a>
+                        )}
+                        {contactEmail && (
+                          <a
+                            href={`mailto:${contactEmail}`}
+                            dir="ltr"
+                            className="flex items-center gap-2 rounded-xl p-1.5 transition hover:underline"
+                            style={{ color: "var(--brand-strong)" }}
+                          >
+                            <Mail size={13} className="shrink-0" />
+                            <span className="truncate">{contactEmail}</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Drawer Footer */}
+                <div
+                  className="flex items-center justify-between gap-3 border-t px-4 py-3"
+                  style={{
+                    borderColor: "var(--line)",
+                    background: "color-mix(in srgb, var(--surface-2) 40%, transparent)",
+                  }}
+                >
+                  <span className="text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>
+                    لونيفا · شركة أزياء نسائية مصرية
+                  </span>
+                  <span className="text-[10px] font-bold" style={{ color: "var(--brand-strong)" }}>
+                    ٢٠٢٦
+                  </span>
+                </div>
+              </motion.aside>
             </div>
-          </aside>
-        </div>,
+          )}
+        </AnimatePresence>,
         document.body,
       )}
     </>

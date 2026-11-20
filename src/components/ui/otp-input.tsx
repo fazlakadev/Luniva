@@ -32,9 +32,9 @@ function sanitize(value: string, length: number) {
 }
 
 /**
- * OtpInput — adapted for Luniva. A dependency-free six-digit code field with
- * auto-advance, paste support, arrow/backspace navigation and reduced-motion
- * aware styling that follows the Luniva design tokens.
+ * OtpInput — Ultra-professional, animated 6-digit verification code input.
+ * Supports auto-advance, paste, arrow/backspace navigation, pulsing cursor,
+ * and 3-3 grouping with an elegant divider.
  */
 export default function OtpInput({
   length = 6,
@@ -46,7 +46,7 @@ export default function OtpInput({
   autoFocus = false,
   label = "رمز التحقق",
   hint,
-  className,
+  className = "",
 }: OtpInputProps) {
   const baseId = useId();
   const inputs = useRef<Array<HTMLInputElement | null>>([]);
@@ -63,7 +63,10 @@ export default function OtpInput({
   );
 
   useEffect(() => {
-    if (autoFocus) inputs.current[0]?.focus();
+    if (autoFocus) {
+      const timer = setTimeout(() => inputs.current[0]?.focus(), 150);
+      return () => clearTimeout(timer);
+    }
   }, [autoFocus]);
 
   const commit = useCallback(
@@ -84,7 +87,6 @@ export default function OtpInput({
       return;
     }
 
-    // Typing into a filled box, or pasting several digits into one box.
     const chars = digits.slice();
     for (let offset = 0; offset < typed.length && index + offset < length; offset += 1) {
       chars[index + offset] = typed[offset];
@@ -95,7 +97,12 @@ export default function OtpInput({
 
   const handleKeyDown = (index: number, event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Backspace") {
-      if (digits[index]) return;
+      if (digits[index]) {
+        const chars = digits.slice();
+        chars[index] = "";
+        commit(chars.join(""));
+        return;
+      }
       event.preventDefault();
       if (index > 0) {
         const chars = digits.slice();
@@ -142,49 +149,69 @@ export default function OtpInput({
       chars[index + offset] = pasted[offset];
     }
     commit(chars.join(""));
-    focusAt(index + pasted.length);
+    focusAt(Math.min(length - 1, index + pasted.length));
   };
 
   return (
     <div
-      className={["lv-otp", className].filter(Boolean).join(" ")}
-      data-invalid={invalid ? "true" : undefined}
+      className={`lv-otp-wrapper ${invalid ? "lv-otp--invalid" : ""} ${className}`.trim()}
       dir="ltr"
     >
-      <style href="luniva-otp-input" precedence="default">
+      <style href="luniva-pro-otp-input" precedence="default">
         {css}
       </style>
 
-      <div className="lv-otp__boxes" role="group" aria-label={label}>
-        {digits.map((digit, index) => (
-          <input
-            key={`${baseId}-${index}`}
-            ref={(node) => {
-              inputs.current[index] = node;
-            }}
-            id={`${baseId}-${index}`}
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete={index === 0 ? "one-time-code" : "off"}
-            maxLength={length}
-            value={digit}
-            disabled={disabled}
-            aria-label={`${label} — الخانة ${index + 1} من ${length}`}
-            aria-invalid={invalid || undefined}
-            className="lv-otp__box"
-            data-filled={digit ? "true" : undefined}
-            data-focus={focusIndex === index ? "true" : undefined}
-            onChange={(event) => handleChange(index, event.currentTarget.value)}
-            onKeyDown={(event) => handleKeyDown(index, event)}
-            onPaste={(event) => handlePaste(index, event)}
-            onFocus={(event) => {
-              setFocusIndex(index);
-              event.currentTarget.select();
-            }}
-            onBlur={() => setFocusIndex((current) => (current === index ? null : current))}
-          />
-        ))}
+      <div className="lv-otp__container" role="group" aria-label={label}>
+        {digits.map((digit, index) => {
+          const isFocused = focusIndex === index;
+          const isFilled = Boolean(digit);
+          const showSeparator = length === 6 && index === 2;
+
+          return (
+            <div key={`${baseId}-${index}`} className="flex items-center gap-2">
+              <div
+                className="lv-otp__box-wrap"
+                data-filled={isFilled ? "true" : undefined}
+                data-focused={isFocused ? "true" : undefined}
+                data-invalid={invalid ? "true" : undefined}
+              >
+                <input
+                  ref={(node) => {
+                    inputs.current[index] = node;
+                  }}
+                  id={`${baseId}-${index}`}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete={index === 0 ? "one-time-code" : "off"}
+                  maxLength={length}
+                  value={digit}
+                  disabled={disabled}
+                  aria-label={`${label} — الخانة ${index + 1} من ${length}`}
+                  aria-invalid={invalid || undefined}
+                  className="lv-otp__input"
+                  onChange={(event) => handleChange(index, event.currentTarget.value)}
+                  onKeyDown={(event) => handleKeyDown(index, event)}
+                  onPaste={(event) => handlePaste(index, event)}
+                  onFocus={(event) => {
+                    setFocusIndex(index);
+                    event.currentTarget.select();
+                  }}
+                  onBlur={() => setFocusIndex((current) => (current === index ? null : current))}
+                />
+                {/* Custom animated blinking caret for focused empty box */}
+                {isFocused && !digit && (
+                  <span className="lv-otp__caret" aria-hidden="true" />
+                )}
+              </div>
+
+              {/* Elegant Middle Divider between 3rd and 4th digit */}
+              {showSeparator && (
+                <span className="lv-otp__divider" aria-hidden="true" />
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {hint && <p className="lv-otp__hint">{hint}</p>}
@@ -193,81 +220,137 @@ export default function OtpInput({
 }
 
 const css = /* css */ `
-.lv-otp {
+.lv-otp-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
   width: 100%;
-  min-width: 0;
-  font-family: inherit;
 }
-.lv-otp *,
-.lv-otp *::before,
-.lv-otp *::after { box-sizing: border-box; }
 
-.lv-otp__boxes {
+.lv-otp__container {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-width: 0;
   direction: ltr;
 }
 
-.lv-otp__box {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 56px;
-  height: 56px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
-  color: var(--ink);
-  font-family: inherit;
-  font-size: 22px;
-  font-weight: 800;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  outline: none;
-  caret-color: var(--brand);
-  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease, transform 150ms ease;
+.lv-otp__box-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 58px;
+  border-radius: 16px;
+  border: 1.5px solid color-mix(in srgb, var(--line) 90%, transparent);
+  background: color-mix(in srgb, var(--surface-2) 75%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.lv-otp__box::selection { background: var(--brand-soft); color: var(--brand-strong); }
-.lv-otp__box:hover:not(:disabled) { border-color: var(--line-strong); }
-.lv-otp__box[data-filled="true"] { border-color: var(--line-strong); background: var(--surface); }
-.lv-otp__box[data-focus="true"] {
-  border-color: var(--brand);
-  background: var(--surface);
-  box-shadow: 0 0 0 4px var(--brand-ring);
+@media (min-width: 440px) {
+  .lv-otp__box-wrap {
+    width: 54px;
+    height: 64px;
+  }
+}
+
+.lv-otp__box-wrap:hover:not([data-disabled="true"]) {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
   transform: translateY(-1px);
 }
-.lv-otp__box:disabled { opacity: 0.55; cursor: not-allowed; }
 
-.lv-otp[data-invalid="true"] .lv-otp__box {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent);
+.lv-otp__box-wrap[data-filled="true"] {
+  border-color: color-mix(in srgb, var(--brand) 65%, var(--line));
+  background: var(--surface);
+  box-shadow: 0 6px 16px -2px rgba(112, 36, 89, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  animation: lv-otp-pop 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.lv-otp__box-wrap[data-focused="true"] {
+  border-color: var(--brand);
+  background: var(--surface);
+  box-shadow: 0 0 0 4px var(--brand-ring), 0 8px 24px -4px rgba(112, 36, 89, 0.25);
+  transform: translateY(-2px) scale(1.04);
+}
+
+.lv-otp--invalid .lv-otp__box-wrap,
+.lv-otp__box-wrap[data-invalid="true"] {
+  border-color: var(--danger) !important;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger) 18%, transparent) !important;
+  animation: lv-otp-shake 360ms ease-in-out;
+}
+
+.lv-otp__input {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 24px;
+  font-weight: 900;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  caret-color: transparent; /* custom caret used */
+  cursor: text;
+}
+
+.lv-otp__caret {
+  position: absolute;
+  width: 2px;
+  height: 24px;
+  border-radius: 2px;
+  background: var(--brand);
+  animation: lv-otp-blink 950ms ease-in-out infinite;
+  pointer-events: none;
+}
+
+.lv-otp__divider {
+  display: block;
+  width: 8px;
+  height: 3px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--brand) 40%, var(--line));
+  margin-inline: 2px;
 }
 
 .lv-otp__hint {
   margin: 0;
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--muted-2);
   direction: rtl;
 }
 
-@media (max-width: 400px) {
-  .lv-otp__boxes { gap: 5px; }
-  .lv-otp__box { height: 48px; border-radius: 11px; font-size: 19px; }
+@keyframes lv-otp-pop {
+  0% { transform: scale(0.92); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .lv-otp *,
-  .lv-otp *::before,
-  .lv-otp *::after { transition: none !important; animation: none !important; }
-  .lv-otp__box[data-focus="true"] { transform: none; }
+@keyframes lv-otp-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes lv-otp-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
+}
+
+@media (max-width: 380px) {
+  .lv-otp__container { gap: 5px; }
+  .lv-otp__box-wrap { width: 42px; height: 52px; border-radius: 12px; }
+  .lv-otp__input { font-size: 20px; }
 }
 `;
