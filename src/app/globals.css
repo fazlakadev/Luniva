@@ -1167,129 +1167,135 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
 .luniva-mail:hover .luniva-mail__shadow { width: 190px; opacity: .65; }
 
 /* Gooey left social rail */
+/* Floating bottom contact widget (replaces middle screen placement) */
 .luniva-social {
   position: fixed;
-  top: 50%;
-  left: 0;
+  bottom: calc(1.5rem + env(safe-area-inset-bottom));
+  left: 1.25rem;
   z-index: 45;
   display: flex;
-  flex-direction: row-reverse;
-  align-items: center;
-  transform: translateY(-50%);
+  flex-direction: column-reverse;
+  align-items: flex-start;
+  gap: 0.6rem;
   pointer-events: none;
 }
 
 .luniva-social__toggle {
   pointer-events: auto;
-  display: grid;
-  width: 2.15rem;
-  height: 3.4rem;
-  place-items: center;
-  margin-left: .2rem;
-  border: 1px solid color-mix(in srgb, var(--brand) 48%, transparent);
-  border-right: 0;
-  border-radius: 0 999px 999px 0;
-  background: linear-gradient(180deg, var(--brand-strong), var(--plum));
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem 0.65rem 0.75rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 45%, transparent);
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--brand-strong), var(--plum));
   color: #fff;
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 10px 25px -5px rgba(112, 36, 89, 0.45), 0 8px 10px -6px rgba(112, 36, 89, 0.3);
   cursor: pointer;
-  transition: transform .45s cubic-bezier(.22, 1, .36, 1);
+  transition: transform .3s cubic-bezier(.22, 1, .36, 1), box-shadow .3s ease, background .3s ease;
 }
 
-.luniva-social__toggle:hover { transform: translateX(4px); }
+.luniva-social__toggle:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 14px 28px -4px rgba(112, 36, 89, 0.55), 0 10px 12px -5px rgba(112, 36, 89, 0.35);
+}
+
+.luniva-social__toggle-icon {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.luniva-social__toggle-label {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
 
 .luniva-social__panel {
   width: 0;
+  height: 0;
   overflow: hidden;
   opacity: 0;
   filter: blur(5px);
-  transform: translateX(-14px) scale(.88);
-  border-radius: 45% 1.25rem 1.25rem 45%;
+  transform: translateY(12px) scale(.92);
+  border-radius: 1.25rem;
   pointer-events: none;
-  transition: width .55s cubic-bezier(.22, 1, .36, 1), opacity .35s ease, transform .55s cubic-bezier(.22, 1, .36, 1), filter .35s ease, border-radius .55s ease;
+  transition: width .4s cubic-bezier(.22, 1, .36, 1), height .4s cubic-bezier(.22, 1, .36, 1), opacity .3s ease, transform .4s cubic-bezier(.22, 1, .36, 1), filter .3s ease;
 }
 
 .luniva-social.is-open .luniva-social__panel {
-  width: 9.25rem;
+  width: 16rem;
+  height: auto;
   opacity: 1;
   filter: none;
   transform: none;
-  border-radius: 1.25rem;
   pointer-events: auto;
 }
 
 .luniva-social__card {
   position: relative;
-  width: 9.25rem;
-  min-height: 13.5rem;
+  width: 16rem;
   overflow: hidden;
-  padding: 1rem .65rem .85rem;
-  border: 1px solid color-mix(in srgb, var(--brand) 35%, transparent);
-  background: var(--plum);
+  padding: 1.1rem 1rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--brand) 38%, transparent);
+  border-radius: 1.25rem;
+  background: linear-gradient(170deg, var(--plum), #23121d);
   color: #fff;
-  text-align: center;
-  clip-path: polygon(0 0, 82% 0, 100% 12%, 100% 62%, 92% 67%, 93% 78%, 99% 82%, 99% 91%, 88% 100%, 0 100%);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.55);
 }
 
 .luniva-social__aura {
   position: absolute;
   top: -30%;
-  left: -60%;
-  width: 250%;
+  left: -40%;
+  width: 180%;
   aspect-ratio: 1;
-  opacity: .5;
+  opacity: .35;
   background: conic-gradient(from 90deg, transparent, color-mix(in srgb, var(--brand) 75%, transparent), color-mix(in srgb, var(--lav) 75%, transparent), transparent);
-  animation: luniva-social-spin 9s linear infinite;
+  animation: luniva-social-spin 12s linear infinite;
 }
-
-.luniva-social__card::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(to bottom, transparent 0 3px, color-mix(in srgb, var(--brand) 10%, transparent) 3px 4px);
-}
-
-.luniva-social__title,
-.luniva-social__links,
-.luniva-social__footer { position: relative; z-index: 1; }
 
 .luniva-social__title {
-  font-size: .66rem;
+  font-size: .82rem;
   font-weight: 900;
-  letter-spacing: .02em;
-  color: color-mix(in srgb, var(--brand) 55%, #fff);
+  letter-spacing: .01em;
+  color: #fff;
 }
 
 .luniva-social__links {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: flex;
+  flex-direction: column;
   gap: .45rem;
-  margin-top: .9rem;
+  margin-top: .85rem;
 }
 
 .luniva-social__link {
-  display: grid;
-  height: 2.15rem;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, .16);
-  border-radius: .7rem;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand) 30%, transparent), transparent);
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: .75rem;
   color: #fff;
-  transition: transform .25s, background .25s;
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
 }
 
 .luniva-social__link:hover,
 .luniva-social__link:focus-visible {
-  transform: translateY(-3px);
-  background: color-mix(in srgb, var(--brand) 58%, transparent);
+  transform: translateX(-3px);
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.18) !important;
 }
 
 .luniva-social__footer {
-  margin-top: .9rem;
-  font-size: .54rem;
-  font-weight: 800;
-  color: rgba(255, 255, 255, .62);
+  margin-top: .75rem;
+  font-size: .62rem;
+  font-weight: 700;
+  text-align: center;
+  color: rgba(255, 255, 255, .55);
 }
 
 @keyframes luniva-social-spin { to { transform: rotate(360deg); } }
@@ -1767,9 +1773,13 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
 @media (max-width: 480px) {
   .txn-cta--header .txn-cta__label { display: none; }
   .txn-cta--header { padding: .3rem; }
-  .luniva-social.is-open .luniva-social__panel { width: 8rem; }
+  .luniva-social {
+    bottom: calc(1rem + env(safe-area-inset-bottom));
+    left: 0.75rem;
+  }
+  .luniva-social.is-open .luniva-social__panel { width: 14.5rem; }
   .luniva-social__card,
-  .luniva-social__panel { width: 8rem; min-height: 12rem; }
+  .luniva-social__panel { width: 14.5rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -13,6 +14,7 @@ import {
   Layers3,
   Mail,
   Menu,
+  MessageCircle,
   Package,
   Phone,
   ShieldCheck,
@@ -597,7 +599,7 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         <Link href={ctaHref} className="btn btn-primary hidden px-3 py-2 text-[11px] sm:inline-flex">
           <ArrowLeft size={13} />{ctaLabel}
         </Link>
-        <span className="hidden sm:inline-flex"><ThemeToggle showLabel={false} /></span>
+        <ThemeToggle showLabel={false} />
         <button
           type="button"
           onClick={() => {
@@ -607,10 +609,15 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
           }}
           aria-label="فتح قائمة التنقل"
           aria-expanded={drawerOpen}
-          className="grid h-10 w-10 place-items-center rounded-xl border lg:hidden"
-          style={{ borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}
+          className="group relative grid h-9 w-9 place-items-center rounded-xl border transition-all duration-200 active:scale-95 sm:h-10 sm:w-10 lg:hidden"
+          style={{
+            borderColor: "color-mix(in srgb, var(--brand) 30%, var(--line))",
+            background: "color-mix(in srgb, var(--surface) 90%, transparent)",
+            color: "var(--ink)",
+            boxShadow: "0 2px 8px -2px rgba(0,0,0,0.06)",
+          }}
         >
-          <Menu size={19} />
+          <Menu size={18} className="transition-transform group-hover:scale-110" />
         </button>
       </div>
 
@@ -620,66 +627,134 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
             type="button"
             aria-label="إغلاق القائمة"
             onClick={() => setDrawerOpen(false)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/45 backdrop-blur-sm transition-opacity"
           />
           <aside
             role="dialog"
             aria-modal="true"
             aria-label="قائمة التنقل"
             dir="rtl"
-            className="absolute inset-y-0 right-0 flex max-h-screen w-full flex-col overflow-hidden border-l shadow-2xl"
-            style={{ width: "min(88vw, 22rem)", borderColor: "var(--line)", background: "var(--surface)" }}
+            className="absolute inset-y-0 right-0 flex max-h-screen w-full flex-col overflow-hidden border-l shadow-2xl transition-transform duration-300"
+            style={{
+              width: "min(92vw, 23rem)",
+              borderColor: "var(--line)",
+              background: "var(--surface)",
+            }}
           >
-            <div className="flex items-center justify-between gap-3 border-b px-4 py-4" style={{ borderColor: "var(--line)" }}>
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>
-                  <Sparkles size={19} />
+            {/* Drawer Header */}
+            <div
+              className="flex items-center justify-between gap-3 border-b px-4 py-3.5"
+              style={{
+                borderColor: "var(--line)",
+                background: "color-mix(in srgb, var(--surface-2) 65%, transparent)",
+              }}
+            >
+              <Link
+                href="/"
+                onClick={() => setDrawerOpen(false)}
+                className="flex min-w-0 items-center gap-2.5"
+                aria-label="الرئيسية"
+              >
+                <span
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white shadow-sm"
+                  style={{ border: "1px solid var(--line)" }}
+                >
+                  <Image
+                    src="/luniva-logo-v2.png"
+                    alt="شعار لونيفا"
+                    width={96}
+                    height={96}
+                    className="h-7 w-7 object-contain"
+                  />
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black" style={{ color: "var(--ink)" }}>قائمة لونيفا</p>
-                  <p className="truncate text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>كل الصفحات في مكان واحد</p>
+                  <p className="truncate text-sm font-black" style={{ color: "var(--ink)" }}>
+                    لونيفا LUNIVA
+                  </p>
+                  <p className="truncate text-[10px] font-bold" style={{ color: "var(--brand-strong)" }}>
+                    أزياء نسائية مصرية
+                  </p>
                 </div>
-              </div>
+              </Link>
               <button
                 type="button"
                 onClick={() => setDrawerOpen(false)}
                 aria-label="إغلاق القائمة"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border transition hover:bg-[var(--brand-soft)]"
                 style={{ borderColor: "var(--line)", color: "var(--ink)" }}
               >
                 <X size={17} />
               </button>
             </div>
 
+            {/* Drawer Body */}
             <div
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4"
               data-lenis-prevent
               data-lenis-prevent-wheel
             >
-              <DrawerLink link={HOME_LINK} active={active === "home"} onNavigate={() => setDrawerOpen(false)} />
+              {/* Quick Primary Grid */}
+              <p className="mb-2 px-1 text-[10px] font-black" style={{ color: "var(--muted-2)" }}>
+                الوصول السريع
+              </p>
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                {[
+                  { href: "/", label: "الرئيسية", desc: "البداية", icon: Home, current: active === "home" },
+                  { href: "/catalog/products", label: "المنتجات", desc: "كل التشكيلة", icon: Package, current: active === "products" && navKey !== "shoes" },
+                  { href: "/catalog/packages", label: "البكدجات", desc: "توفير وعروض", icon: Gift, current: active === "packages" },
+                  { href: "/shoes", label: "الأحذية", desc: "سنيكرز راقية", icon: Footprints, current: navKey === "shoes" },
+                  { href: "/about", label: "من نحن", desc: "قصة لونيفا", icon: Sparkles, current: active === "about" },
+                  { href: "/contact", label: "تواصل معنا", desc: "دعم فوري", icon: Mail, current: active === "contact" },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setDrawerOpen(false)}
+                      className="group flex flex-col justify-between rounded-xl border p-2.5 transition active:scale-[0.98]"
+                      style={{
+                        background: item.current ? "var(--brand-soft)" : "color-mix(in srgb, var(--surface-2) 60%, transparent)",
+                        borderColor: item.current ? "var(--brand)" : "var(--line)",
+                        color: item.current ? "var(--brand-strong)" : "var(--ink)",
+                      }}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="grid h-8 w-8 place-items-center rounded-lg"
+                          style={{
+                            background: item.current ? "var(--brand)" : "var(--surface)",
+                            color: item.current ? "#fff" : "var(--brand-strong)",
+                          }}
+                        >
+                          <Icon size={16} />
+                        </span>
+                        {item.current && (
+                          <span className="h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} />
+                        )}
+                      </div>
+                      <div className="mt-2.5">
+                        <p className="text-[12px] font-black">{item.label}</p>
+                        <p className="text-[9.5px] font-semibold" style={{ color: "var(--muted)" }}>
+                          {item.desc}
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
 
-              <DrawerGroup
-                label="الكتالوج"
-                icon={Layers3}
-                open={catalogOpen}
-                onToggle={() => setCatalogOpen((value) => !value)}
-                active={catalogActive}
+              {/* Action CTA */}
+              <Link
+                href={ctaHref}
+                onClick={() => setDrawerOpen(false)}
+                className="btn btn-primary mb-4 flex w-full items-center justify-center gap-2 py-2.5 text-xs font-black shadow-md"
               >
-                {CATALOG_LINKS.slice(1).map((link) => (
-                  <DrawerLink
-                    key={link.section}
-                    link={link}
-                    active={active === link.section && navKey !== "shoes"}
-                    onNavigate={() => setDrawerOpen(false)}
-                    nested
-                  />
-                ))}
-                <DrawerLink link={SHOES_LINK} active={navKey === "shoes"} onNavigate={() => setDrawerOpen(false)} nested />
-              </DrawerGroup>
+                <ArrowLeft size={14} />
+                {ctaLabel}
+              </Link>
 
-              <DrawerLink link={ABOUT_LINK} active={active === "about"} onNavigate={() => setDrawerOpen(false)} />
-              <DrawerLink link={CONTACT_LINK} active={active === "contact"} onNavigate={() => setDrawerOpen(false)} />
-
+              {/* Accordion Group: Support & Policies */}
               <DrawerGroup
                 label="المساعدة والسياسات"
                 icon={CircleHelp}
@@ -688,22 +763,59 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
                 active={supportActive}
               >
                 {SUPPORT_LINKS.map((link) => (
-                  <DrawerLink key={link.section} link={link} active={active === link.section} onNavigate={() => setDrawerOpen(false)} nested />
+                  <DrawerLink
+                    key={link.section}
+                    link={link}
+                    active={active === link.section}
+                    onNavigate={() => setDrawerOpen(false)}
+                    nested
+                  />
                 ))}
               </DrawerGroup>
 
+              {/* Direct Support Card */}
               {(contactEmail || phone) && (
-                <div className="mt-4 rounded-2xl p-4" style={{ background: "var(--surface-2)", border: "1px solid var(--line)" }}>
-                  <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>تحتاج مساعدة؟</p>
-                  <div className="mt-2 space-y-1.5 text-[11px] font-bold" style={{ color: "var(--muted)" }}>
-                    {contactEmail && (
-                      <a href={`mailto:${contactEmail}`} dir="ltr" className="flex items-center gap-2 hover:underline" style={{ color: "var(--brand-strong)" }}>
-                        <Mail size={13} className="shrink-0" />{contactEmail}
+                <div
+                  className="mt-4 rounded-2xl border p-3.5"
+                  style={{
+                    background: "color-mix(in srgb, var(--surface-2) 75%, transparent)",
+                    borderColor: "var(--line)",
+                  }}
+                >
+                  <p className="text-[11px] font-black" style={{ color: "var(--ink)" }}>
+                    تحتاج مساعدة مباشرة؟
+                  </p>
+                  <div className="mt-2.5 space-y-2 text-[11px] font-bold">
+                    {phone && (
+                      <a
+                        href={`https://wa.me/${phone.replace(/[^\d]/g, "")}`}
+                        dir="rtl"
+                        className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2 text-emerald-700 transition hover:bg-emerald-500/20 dark:text-emerald-300"
+                      >
+                        <MessageCircle size={15} className="shrink-0 text-emerald-600 dark:text-emerald-400" />
+                        <span className="truncate">تواصل عبر واتساب</span>
                       </a>
                     )}
                     {phone && (
-                      <a href={`tel:${phone.replace(/\s+/g, "")}`} dir="ltr" className="flex items-center gap-2 hover:underline" style={{ color: "var(--brand-strong)" }}>
-                        <Phone size={13} className="shrink-0" />{phone}
+                      <a
+                        href={`tel:${phone.replace(/\s+/g, "")}`}
+                        dir="ltr"
+                        className="flex items-center gap-2 rounded-xl p-1.5 transition hover:underline"
+                        style={{ color: "var(--brand-strong)" }}
+                      >
+                        <Phone size={13} className="shrink-0" />
+                        <span>{phone}</span>
+                      </a>
+                    )}
+                    {contactEmail && (
+                      <a
+                        href={`mailto:${contactEmail}`}
+                        dir="ltr"
+                        className="flex items-center gap-2 rounded-xl p-1.5 transition hover:underline"
+                        style={{ color: "var(--brand-strong)" }}
+                      >
+                        <Mail size={13} className="shrink-0" />
+                        <span className="truncate">{contactEmail}</span>
                       </a>
                     )}
                   </div>
@@ -711,8 +823,17 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
               )}
             </div>
 
-            <div className="flex items-center justify-between gap-3 border-t px-4 py-3" style={{ borderColor: "var(--line)" }}>
-              <span className="text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>لونيفا · شركة ملابس نسائية مصرية</span>
+            {/* Drawer Footer */}
+            <div
+              className="flex items-center justify-between gap-3 border-t px-4 py-3"
+              style={{
+                borderColor: "var(--line)",
+                background: "color-mix(in srgb, var(--surface-2) 40%, transparent)",
+              }}
+            >
+              <span className="text-[10px] font-bold" style={{ color: "var(--muted-2)" }}>
+                لونيفا · تأسست ٢٠٢٦
+              </span>
               <ThemeToggle showLabel={false} />
             </div>
           </aside>
