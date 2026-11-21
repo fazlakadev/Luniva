@@ -632,6 +632,7 @@ export function ensureWhatsAppTables() {
         last_message_at TIMESTAMPTZ DEFAULT NOW(),
         is_archived BOOLEAN DEFAULT FALSE,
         is_pinned BOOLEAN DEFAULT FALSE,
+        image_url TEXT,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
@@ -655,11 +656,23 @@ export function ensureWhatsAppTables() {
         id VARCHAR(32) PRIMARY KEY DEFAULT 'default',
         is_auto_reply_enabled BOOLEAN DEFAULT FALSE,
         welcome_message TEXT DEFAULT 'أهلاً بكِ في لونيفا (Luniva) للأزياء ✨ نسعد بخدمتك دائماً. سيتواصل معكِ أحد ممثلينا في أقرب وقت 💕',
+        is_night_mode_enabled BOOLEAN DEFAULT TRUE,
+        night_start_time VARCHAR(10) DEFAULT '22:00',
+        night_end_time VARCHAR(10) DEFAULT '09:00',
+        night_message TEXT DEFAULT 'أهلاً بكِ في لونيفا (Luniva) ✨ نشكر تواصلكِ معنا 💕 فريقنا حالياً خارج ساعات العمل وسنقوم بالرد عليكِ والتواصل معكِ فور بدء ساعات العمل صباحاً بإذن الله 🌸',
+        always_reply_night BOOLEAN DEFAULT TRUE,
         order_notification_enabled BOOLEAN DEFAULT TRUE,
         invoice_auto_send BOOLEAN DEFAULT TRUE,
         updated_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    await db.query("ALTER TABLE whatsapp_chats ADD COLUMN IF NOT EXISTS image_url TEXT");
+    await db.query("ALTER TABLE whatsapp_bot_settings ADD COLUMN IF NOT EXISTS is_night_mode_enabled BOOLEAN DEFAULT TRUE");
+    await db.query("ALTER TABLE whatsapp_bot_settings ADD COLUMN IF NOT EXISTS night_start_time VARCHAR(10) DEFAULT '22:00'");
+    await db.query("ALTER TABLE whatsapp_bot_settings ADD COLUMN IF NOT EXISTS night_end_time VARCHAR(10) DEFAULT '09:00'");
+    await db.query("ALTER TABLE whatsapp_bot_settings ADD COLUMN IF NOT EXISTS night_message TEXT DEFAULT 'أهلاً بكِ في لونيفا (Luniva) ✨ نشكر تواصلكِ معنا 💕 فريقنا حالياً خارج ساعات العمل وسنقوم بالرد عليكِ والتواصل معكِ فور بدء ساعات العمل صباحاً بإذن الله 🌸'");
+    await db.query("ALTER TABLE whatsapp_bot_settings ADD COLUMN IF NOT EXISTS always_reply_night BOOLEAN DEFAULT TRUE");
 
     await Promise.all([
       db.query("CREATE INDEX IF NOT EXISTS whatsapp_logs_customer_idx ON whatsapp_logs (customer_id)"),

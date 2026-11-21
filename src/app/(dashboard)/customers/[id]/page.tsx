@@ -22,6 +22,7 @@ import InvoiceCta from "@/components/invoice-cta";
 import ZoomableImage from "@/components/zoomable-image";
 import CustomerAppointmentScheduler from "@/components/customer-appointment-scheduler";
 import CustomerWhatsAppBox from "@/components/customer-whatsapp-box";
+import CustomerLiveChat from "@/components/customer-live-chat";
 import { getCustomerAppointments } from "@/lib/appointments";
 import {
   appointmentKindLabels,
@@ -284,15 +285,17 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       </section>
 
       {/* WHATSAPP AUTOMATION & MESSAGING SECTION */}
-      <CustomerWhatsAppBox
-        customerId={id}
-        customerName={customer.full_name}
-        phones={phones}
-        openBalance={Number(balance.balance || 0)}
-        totalSpent={Number(balance.billed || 0)}
-        nextAppointment={nextApp}
-        initialLogs={logsResult.rows}
-      />
+      {/* REAL-TIME WHATSAPP LIVE CONVERSATION (BAILEYS ENGINE) */}
+      {customer.phone && (
+        <CustomerLiveChat
+          customerId={customer.id}
+          customerName={customer.full_name}
+          customerPhone={customer.phone}
+          customerCode={customer.customer_code}
+          customerBalance={Number(balance.balance || 0)}
+          customerImageUrl={customer.image_url}
+        />
+      )}
 
       {/* APPOINTMENTS & SCHEDULING (UNIFIED & DEVELOPED) */}
       <section className="app-card p-5">

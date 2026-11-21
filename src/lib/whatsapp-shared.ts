@@ -127,6 +127,7 @@ export type WhatsAppChat = {
   customer_name?: string | null;
   customer_code?: string | null;
   customer_balance?: number;
+  image_url?: string | null;
   unread_count: number;
   last_message: string | null;
   last_message_at: string;
@@ -143,7 +144,7 @@ export type WhatsAppMessage = {
   sender_name: string | null;
   content: string;
   media_url: string | null;
-  media_type: string | null;
+  media_type: "image" | "video" | "audio" | "document" | null;
   status: "pending" | "sent" | "delivered" | "read" | "failed" | "received";
   customer_id: string | null;
   created_at: string;
@@ -152,6 +153,11 @@ export type WhatsAppMessage = {
 export type WhatsAppBotSettings = {
   is_auto_reply_enabled: boolean;
   welcome_message: string;
+  is_night_mode_enabled: boolean;
+  night_start_time: string;
+  night_end_time: string;
+  night_message: string;
+  always_reply_night: boolean;
   order_notification_enabled: boolean;
   invoice_auto_send: boolean;
 };

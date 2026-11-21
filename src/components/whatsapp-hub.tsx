@@ -34,6 +34,10 @@ import {
   ShieldCheck,
   ArrowRight,
   TrendingUp,
+  Paperclip,
+  Image as ImageIcon,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { useToast } from "@/components/toast";
 import {
@@ -89,7 +93,6 @@ export default function WhatsAppHub({
   });
   const [isSessionLoading, setIsSessionLoading] = useState(false);
 
-  // Poll Baileys status
   const fetchStatus = async () => {
     try {
       const res = await fetch("/api/whatsapp/baileys/status");
@@ -104,7 +107,6 @@ export default function WhatsAppHub({
 
   useEffect(() => {
     fetchStatus();
-    // Poll every 4 seconds if in connecting or qr_ready status
     const interval = setInterval(() => {
       if (session.status === "connecting" || session.status === "qr_ready" || activeTab === "qr") {
         fetchStatus();
@@ -151,7 +153,7 @@ export default function WhatsAppHub({
   };
 
   // ==========================================
-  // 2. LIVE CHATS & MESSAGES STATE
+  // 2. LIVE CHATS & MESSAGES STATE (REAL-TIME SSE)
   // ==========================================
   const [chats, setChats] = useState<WhatsAppChat[]>(initialChats);
   const [selectedChatJid, setSelectedChatJid] = useState<string | null>(initialChats[0]?.jid || null);
@@ -161,7 +163,10 @@ export default function WhatsAppHub({
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [messageInput, setMessageInput] = useState("");
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Fetch chats list
   const fetchChats = async () => {
@@ -179,16 +184,60 @@ export default function WhatsAppHub({
     }
   };
 
-  // Poll chats periodically
+  // REAL-TIME SSE STREAM SUBSCRIPTION
   useEffect(() => {
-    if (activeTab === "chats") {
-      fetchChats();
-      const interval = setInterval(fetchChats, 6000);
-      return () => clearInterval(interval);
-    }
-  }, [activeTab, chatFilter]);
+    const es = new EventSource("/api/whatsapp/baileys/stream");
 
-  // Fetch messages for selected chat
+    es.onmessage = (e) => {
+      try {
+        const event = JSON.parse(e.data);
+        if (event.type === "new_message") {
+          const newMsg: WhatsAppMessage = event.data;
+
+          // 1. If currently viewing this chat, immediately append to message thread
+          setSelectedChatJid((currentJid) => {
+            if (currentJid && (newMsg.chat_jid === currentJid || newMsg.chat_jid.replace(/\D/g, "") === currentJid.replace(/\D/g, ""))) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.message_id === newMsg.message_id || m.id === newMsg.id)) {
+                  return prev;
+                }
+                return [...prev, newMsg];
+              });
+            }
+            return currentJid;
+          });
+
+          // 2. Update chats list in real time
+          setChats((prevChats) => {
+            const exists = prevChats.some((c) => c.jid === newMsg.chat_jid);
+            if (exists) {
+              return prevChats.map((c) =>
+                c.jid === newMsg.chat_jid
+                  ? {
+                      ...c,
+                      last_message: newMsg.content,
+                      last_message_at: newMsg.created_at,
+                      unread_count: newMsg.from_me ? c.unread_count : (c.unread_count || 0) + 1,
+                    }
+                  : c,
+              );
+            } else if (event.chat) {
+              return [event.chat as WhatsAppChat, ...prevChats];
+            }
+            return prevChats;
+          });
+        } else if (event.type === "status_update") {
+          setSession(event.data);
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    return () => es.close();
+  }, []);
+
+  // Fetch messages when selected chat changes
   useEffect(() => {
     if (!selectedChatJid) return;
     let isMounted = true;
@@ -211,7 +260,6 @@ export default function WhatsAppHub({
     };
   }, [selectedChatJid]);
 
-  // Scroll to bottom when messages update
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
@@ -233,47 +281,81 @@ export default function WhatsAppHub({
     });
   }, [chats, chatSearch]);
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFile(file);
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = () => setFilePreview(reader.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setFilePreview(null);
+    }
+  };
+
   const handleSendMessage = async () => {
-    if (!messageInput.trim() || !selectedChatJid || isSendingMessage) return;
+    if ((!messageInput.trim() && !selectedFile) || !selectedChatJid || isSendingMessage) return;
     const textToSend = messageInput.trim();
     setIsSendingMessage(true);
 
-    // Optimistic UI update
+    const tempId = `temp_${Date.now()}`;
     const optimisticMsg: WhatsAppMessage = {
-      id: `temp_${Date.now()}`,
+      id: tempId,
       chat_jid: selectedChatJid,
-      message_id: `temp_${Date.now()}`,
+      message_id: tempId,
       from_me: true,
       sender_jid: "luniva",
       sender_name: "لونيفا للأزياء",
-      content: textToSend,
-      media_url: null,
-      media_type: null,
+      content: textToSend || (selectedFile ? `[${selectedFile.name}]` : ""),
+      media_url: filePreview || null,
+      media_type: selectedFile?.type.startsWith("image/")
+        ? "image"
+        : selectedFile?.type.startsWith("audio/")
+        ? "audio"
+        : selectedFile?.type.startsWith("video/")
+        ? "video"
+        : null,
       status: "pending",
       customer_id: activeChat?.customer_id || null,
       created_at: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimisticMsg]);
     setMessageInput("");
+    setSelectedFile(null);
+    setFilePreview(null);
 
     try {
-      const res = await fetch("/api/whatsapp/baileys/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ to: selectedChatJid, text: textToSend }),
-      });
+      let res;
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("to", selectedChatJid);
+        formData.append("text", textToSend);
+        formData.append("file", selectedFile);
+
+        res = await fetch("/api/whatsapp/baileys/send", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        res = await fetch("/api/whatsapp/baileys/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to: selectedChatJid, text: textToSend }),
+        });
+      }
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "فشل إرسال الرسالة");
 
-      // Mark message as sent
       setMessages((prev) =>
-        prev.map((m) => (m.id === optimisticMsg.id ? { ...m, status: "sent", message_id: data.messageId } : m)),
+        prev.map((m) => (m.id === tempId ? { ...m, status: "sent", message_id: data.messageId } : m)),
       );
       fetchChats();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "تعذر إرسال الرسالة");
       setMessages((prev) =>
-        prev.map((m) => (m.id === optimisticMsg.id ? { ...m, status: "failed" } : m)),
+        prev.map((m) => (m.id === tempId ? { ...m, status: "failed" } : m)),
       );
     } finally {
       setIsSendingMessage(false);
@@ -281,11 +363,16 @@ export default function WhatsAppHub({
   };
 
   // ==========================================
-  // 3. BOT & AUTO-REPLY SETTINGS STATE
+  // 3. BOT & NIGHT MODE AUTO-REPLY SETTINGS
   // ==========================================
   const [botSettings, setBotSettings] = useState<WhatsAppBotSettings>({
-    is_auto_reply_enabled: false,
+    is_auto_reply_enabled: true,
     welcome_message: "أهلاً بكِ في لونيفا (Luniva) للأزياء ✨ نسعد بخدمتك دائماً. سيتواصل معكِ أحد ممثلينا في أقرب وقت 💕",
+    is_night_mode_enabled: true,
+    night_start_time: "22:00",
+    night_end_time: "09:00",
+    night_message: "أهلاً بكِ في لونيفا (Luniva) ✨ نشكر تواصلكِ معنا 💕 فريقنا حالياً خارج ساعات العمل وسنقوم بالرد عليكِ فور بدء ساعات العمل صباحاً بإذن الله 🌸",
+    always_reply_night: true,
     order_notification_enabled: true,
     invoice_auto_send: true,
   });
@@ -311,7 +398,7 @@ export default function WhatsAppHub({
         body: JSON.stringify(botSettings),
       });
       if (!res.ok) throw new Error("فشل حفظ إعدادات البوت");
-      toast.success("تم حفظ إعدادات الرد التلقائي والبوت بنجاح.");
+      toast.success("تم حفظ إعدادات الرد التلقائي، وضع الليل، والبوت بنجاح.");
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء الحفظ");
     } finally {
@@ -453,7 +540,6 @@ export default function WhatsAppHub({
     }
   };
 
-  // Total unread count across all chats
   const totalUnreadCount = useMemo(() => {
     return chats.reduce((acc, c) => acc + (c.unread_count || 0), 0);
   }, [chats]);
@@ -473,7 +559,7 @@ export default function WhatsAppHub({
                   منظومة واتساب لونيفا المتطورة (Baileys Engine)
                 </h1>
                 <p className="mt-0.5 text-sm text-muted-foreground">
-                  محادثات حية مباشرة، ربط تلقائي بملفات العميلات، رمز QR دائم، وحملات مؤتمتة
+                  محادثات حية متزامنة لحظياً، دعم الوسائط (صور، صوت، فيديو)، وضع الرد الليلي الذكي، وربط تلقائي بالعميلات
                 </p>
               </div>
             </div>
@@ -496,7 +582,7 @@ export default function WhatsAppHub({
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
                   </span>
-                  <span>واتساب متصل ({session.user?.phone || session.user?.name || "جاهز"})</span>
+                  <span>واتساب متصل ومُزامن لحظياً ({session.user?.phone || session.user?.name || "جاهز"})</span>
                 </>
               ) : session.status === "qr_ready" ? (
                 <>
@@ -544,7 +630,7 @@ export default function WhatsAppHub({
             }`}
           >
             <MessageSquare className="h-4 w-4" />
-            المحادثات الحية
+            المحادثات الحية (مزامنة فورية)
             {totalUnreadCount > 0 && (
               <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-bold text-white">
                 {totalUnreadCount}
@@ -576,7 +662,10 @@ export default function WhatsAppHub({
             }`}
           >
             <Bot className="h-4 w-4" />
-            البوت والرد التلقائي
+            البوت والرد الليلي
+            {botSettings.is_night_mode_enabled && (
+              <span className="flex h-2 w-2 rounded-full bg-indigo-500" title="الوضع الليلي مفعل"></span>
+            )}
           </button>
 
           <button
@@ -618,7 +707,7 @@ export default function WhatsAppHub({
       </div>
 
       {/* ========================================================================= */}
-      {/* TAB 1: LIVE CHATS HUB (WHATSAPP WEB STYLE) */}
+      {/* TAB 1: LIVE CHATS HUB (REAL-TIME SSE & MEDIA) */}
       {/* ========================================================================= */}
       {activeTab === "chats" && (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
@@ -672,7 +761,7 @@ export default function WhatsAppHub({
                   <MessageSquare className="h-10 w-10 stroke-[1.5] text-muted-foreground/40 mb-2" />
                   <p className="text-sm font-medium">لا توجد محادثات مطابقة</p>
                   <p className="text-xs text-muted-foreground/70 mt-1">
-                    ستظهر المحادثات هنا تلقائياً عند استلام أو إرسال أي رسالة عبر واتساب
+                    ستظهر المحادثات هنا فورياً عند وصول أو إرسال أي رسالة عبر واتساب
                   </p>
                 </div>
               ) : (
@@ -686,10 +775,15 @@ export default function WhatsAppHub({
                         isSelected ? "bg-primary/10 border-r-4 border-r-primary" : ""
                       }`}
                     >
-                      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-700 font-bold text-sm">
-                        {c.name ? c.name.charAt(0) : "W"}
+                      {/* Avatar with Contact Image or Initials */}
+                      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full overflow-hidden bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-700 font-bold text-sm ring-1 ring-border/50">
+                        {c.image_url ? (
+                          <img src={c.image_url} alt={c.name || "avatar"} className="h-full w-full object-cover" />
+                        ) : (
+                          <span>{c.name ? c.name.charAt(0) : "W"}</span>
+                        )}
                         {c.unread_count > 0 && (
-                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white shadow-xs">
                             {c.unread_count}
                           </span>
                         )}
@@ -735,9 +829,15 @@ export default function WhatsAppHub({
                 {/* Active Chat Header */}
                 <div className="flex items-center justify-between border-b border-border p-4 bg-muted/20">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-700 font-bold">
-                      {activeChat.name ? activeChat.name.charAt(0) : "W"}
+                    <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full overflow-hidden bg-emerald-500/20 text-emerald-700 font-bold ring-1 ring-emerald-500/30">
+                      {activeChat.image_url ? (
+                        <img src={activeChat.image_url} alt="Contact avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <span>{activeChat.name ? activeChat.name.charAt(0) : "W"}</span>
+                      )}
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-background bg-emerald-500"></span>
                     </div>
+
                     <div>
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-base text-foreground">
@@ -767,7 +867,7 @@ export default function WhatsAppHub({
                   )}
                 </div>
 
-                {/* Messages Body */}
+                {/* Messages Body with Media Rendering */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/5">
                   {isLoadingMessages ? (
                     <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -779,7 +879,7 @@ export default function WhatsAppHub({
                       <Sparkles className="h-8 w-8 text-primary/40 mb-2" />
                       <p className="text-sm font-medium">لا توجد رسائل سابقة في هذه المحادثة</p>
                       <p className="text-xs text-muted-foreground/70 mt-1">
-                        اكتبي رسالتكِ بالأسفل لبدء التواصل المباشر مع العميلة عبر واتساب
+                        اكتبي رسالتكِ أو أرفقي وسائط (صور، صوت، فيديو) بالأسفل لبدء التواصل المباشر
                       </p>
                     </div>
                   ) : (
@@ -797,7 +897,48 @@ export default function WhatsAppHub({
                                 : "bg-card border border-border text-foreground rounded-tl-xs"
                             }`}
                           >
-                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                            {/* Image Media */}
+                            {msg.media_type === "image" && msg.media_url && (
+                              <div className="mb-2 overflow-hidden rounded-xl">
+                                <a href={msg.media_url} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={msg.media_url}
+                                    alt="صورة مرسلة"
+                                    className="max-h-72 w-auto rounded-xl object-contain hover:opacity-95 transition"
+                                  />
+                                </a>
+                              </div>
+                            )}
+
+                            {/* Video Media */}
+                            {msg.media_type === "video" && msg.media_url && (
+                              <div className="mb-2 overflow-hidden rounded-xl">
+                                <video src={msg.media_url} controls className="max-h-64 w-full rounded-xl" />
+                              </div>
+                            )}
+
+                            {/* Audio Media */}
+                            {msg.media_type === "audio" && msg.media_url && (
+                              <div className="mb-2">
+                                <audio src={msg.media_url} controls className="w-full h-9" />
+                              </div>
+                            )}
+
+                            {/* Document Media */}
+                            {msg.media_type === "document" && msg.media_url && (
+                              <a
+                                href={msg.media_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mb-2 flex items-center gap-2 rounded-xl bg-black/10 p-2 text-xs font-semibold hover:bg-black/15 transition"
+                              >
+                                <FileText className="h-5 w-5 shrink-0" />
+                                <span className="truncate">فتح المستند / الملف المرفق</span>
+                              </a>
+                            )}
+
+                            {msg.content && <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>}
+
                             <div
                               className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
                                 isMe ? "text-primary-foreground/75" : "text-muted-foreground"
@@ -809,9 +950,7 @@ export default function WhatsAppHub({
                                   minute: "2-digit",
                                 })}
                               </span>
-                              {isMe && (
-                                <CheckCheck className="h-3.5 w-3.5" />
-                              )}
+                              {isMe && <CheckCheck className="h-3.5 w-3.5" />}
                             </div>
                           </div>
                         </div>
@@ -820,6 +959,29 @@ export default function WhatsAppHub({
                   )}
                   <div ref={messagesEndRef} />
                 </div>
+
+                {/* File Preview before send */}
+                {selectedFile && (
+                  <div className="flex items-center justify-between border-t border-border bg-muted/40 p-2.5 text-xs">
+                    <div className="flex items-center gap-2">
+                      {filePreview ? (
+                        <img src={filePreview} alt="Preview" className="h-10 w-10 rounded-lg object-cover" />
+                      ) : (
+                        <FileText className="h-6 w-6 text-primary" />
+                      )}
+                      <span className="font-semibold text-foreground truncate max-w-xs">{selectedFile.name}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedFile(null);
+                        setFilePreview(null);
+                      }}
+                      className="text-rose-500 hover:text-rose-600 font-bold"
+                    >
+                      إلغاء المرفق ✕
+                    </button>
+                  </div>
+                )}
 
                 {/* Message Input & Quick Templates Bar */}
                 <div className="border-t border-border p-3 bg-card space-y-2">
@@ -845,7 +1007,7 @@ export default function WhatsAppHub({
                     ))}
                   </div>
 
-                  {/* Textarea and Send Button */}
+                  {/* Textarea, Media Attach, and Send Button */}
                   <form
                     onSubmit={(e) => {
                       e.preventDefault();
@@ -853,6 +1015,23 @@ export default function WhatsAppHub({
                     }}
                     className="flex items-end gap-2"
                   >
+                    {/* Media File Input */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileSelect}
+                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                      className="hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                      title="إرفاق صورة، فيديو، أو تسجيل صوتي"
+                    >
+                      <Paperclip className="h-5 w-5" />
+                    </button>
+
                     <textarea
                       value={messageInput}
                       onChange={(e) => setMessageInput(e.target.value)}
@@ -869,7 +1048,7 @@ export default function WhatsAppHub({
 
                     <button
                       type="submit"
-                      disabled={!messageInput.trim() || isSendingMessage}
+                      disabled={(!messageInput.trim() && !selectedFile) || isSendingMessage}
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
                     >
                       {isSendingMessage ? (
@@ -912,7 +1091,7 @@ export default function WhatsAppHub({
                 <div>
                   <h3 className="font-bold text-lg text-foreground">ربط واتساب عبر رمز QR</h3>
                   <p className="text-xs text-muted-foreground">
-                    تقنية Baileys Multi-Device الأصلية — يعمل الاتصال بشكل دائم في السيرفر
+                    تقنية Baileys Multi-Device الأصلية — اتصال دائم ومزامنة فورية على مدار الساعة
                   </p>
                 </div>
               </div>
@@ -938,7 +1117,7 @@ export default function WhatsAppHub({
                     واتساب متصل ويعمل بنجاح!
                   </h4>
                   <p className="text-xs text-muted-foreground mt-1">
-                    جميع الرسائل الواردة والصادرة يتم مزامنتها تلقائياً وحفظها في قاعدة البيانات.
+                    المحادثات متزامنة في الوقت الفعلي ومربوطة تلقائياً بملفات العميلات وقاعدة البيانات.
                   </p>
                 </div>
 
@@ -1008,7 +1187,7 @@ export default function WhatsAppHub({
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:col-span-5 space-y-6">
             <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              كيف يعمل النظام؟
+              كيف يعمل الاتصال؟
             </h3>
 
             <div className="space-y-4">
@@ -1053,9 +1232,9 @@ export default function WhatsAppHub({
                   ✓
                 </div>
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground">ارتباط دائم وآمن</h4>
+                  <h4 className="text-sm font-semibold text-foreground">ارتباط دائم ومزامنة فورية</h4>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    يتم حفظ مفاتيح الجلسة في قاعدة البيانات (Neon PostgreSQL) لضمان استمرار الاتصال حتى بعد إعادة تشغيل السيرفر
+                    مفاتيح الجلسة تُحفظ في قاعدة البيانات لتظل الجلسة متصلة دائماً
                   </p>
                 </div>
               </div>
@@ -1065,7 +1244,7 @@ export default function WhatsAppHub({
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 3: SMART AUTO-REPLY BOT & AUTOMATIONS */}
+      {/* TAB 3: SMART AUTO-REPLY BOT & NIGHT MODE */}
       {/* ========================================================================= */}
       {activeTab === "bot" && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -1073,90 +1252,170 @@ export default function WhatsAppHub({
             <div className="border-b border-border pb-4">
               <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
                 <Bot className="h-5 w-5 text-primary" />
-                إعدادات البوت والرد التلقائي الذكي
+                إعدادات البوت والردود التلقائية والوضع الليلي
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                تكوين الردود التلقائية ورسائل الترحيب للعميلات عبر واتساب
+                تكوين الردود التلقائية أثناء أوقات العمل وفي فترة الليل / الإغلاق
               </p>
             </div>
 
-            {/* Toggle 1: Auto-reply */}
-            <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
-              <div>
-                <h4 className="text-sm font-bold text-foreground">تفعيل الرد التلقائي على الرسائل الجديدة</h4>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  يرد البوت فوراً على أي عميلة تراسل المتجر لأول مرة اليوم
-                </p>
+            {/* Section A: Daytime Auto-Reply */}
+            <div className="rounded-2xl border border-border/80 p-5 bg-muted/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Sun className="h-5 w-5 text-amber-500" />
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">الرد التلقائي أثناء ساعات العمل</h4>
+                    <p className="text-xs text-muted-foreground">
+                      يرد البوت فوراً بالترحيب على أي عميلة تراسل المتجر خلال اليوم
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={botSettings.is_auto_reply_enabled}
+                    onChange={(e) =>
+                      setBotSettings((prev) => ({ ...prev, is_auto_reply_enabled: e.target.checked }))
+                    }
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+                </label>
               </div>
-              <label className="relative inline-flex cursor-pointer items-center">
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">نص رسالة الترحيب الصباحية:</label>
+                <textarea
+                  rows={3}
+                  value={botSettings.welcome_message}
+                  onChange={(e) =>
+                    setBotSettings((prev) => ({ ...prev, welcome_message: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-input bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            {/* Section B: Night Mode / Outside Working Hours */}
+            <div className="rounded-2xl border-2 border-indigo-500/20 p-5 bg-indigo-500/5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Moon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  <div>
+                    <h4 className="text-sm font-bold text-foreground">وضع الرد الليلي (خارج أوقات العمل)</h4>
+                    <p className="text-xs text-muted-foreground">
+                      يرد البوت فورياً بالرسالة الليلية عند مراسلتكِ في فترات المساء والليل
+                    </p>
+                  </div>
+                </div>
+                <label className="relative inline-flex cursor-pointer items-center">
+                  <input
+                    type="checkbox"
+                    checked={botSettings.is_night_mode_enabled}
+                    onChange={(e) =>
+                      setBotSettings((prev) => ({ ...prev, is_night_mode_enabled: e.target.checked }))
+                    }
+                    className="peer sr-only"
+                  />
+                  <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-indigo-600 peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+                </label>
+              </div>
+
+              {/* Working Hours range */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-foreground">تبدأ فترة الليل من الساعة:</label>
+                  <input
+                    type="time"
+                    value={botSettings.night_start_time || "22:00"}
+                    onChange={(e) =>
+                      setBotSettings((prev) => ({ ...prev, night_start_time: e.target.value }))
+                    }
+                    className="w-full rounded-xl border border-input bg-background p-2.5 text-sm font-mono focus:border-primary focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-foreground">تنتهي فترة الليل عند الساعة:</label>
+                  <input
+                    type="time"
+                    value={botSettings.night_end_time || "09:00"}
+                    onChange={(e) =>
+                      setBotSettings((prev) => ({ ...prev, night_end_time: e.target.value }))
+                    }
+                    className="w-full rounded-xl border border-input bg-background p-2.5 text-sm font-mono focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Night message text */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">نص رسالة الرد الليلي:</label>
+                <textarea
+                  rows={3}
+                  value={botSettings.night_message}
+                  onChange={(e) =>
+                    setBotSettings((prev) => ({ ...prev, night_message: e.target.value }))
+                  }
+                  className="w-full rounded-xl border border-input bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              {/* Always reply at night toggle */}
+              <div className="flex items-center justify-between rounded-xl border border-border/80 bg-background/80 p-3">
+                <div>
+                  <h5 className="text-xs font-bold text-foreground">الرد دائماً أثناء الليل حتى لو كلمني العميل سابقاً</h5>
+                  <p className="text-[11px] text-muted-foreground">
+                    تأكيد إرسال رسالة خارج أوقات العمل في كل مرة يراسلنا فيها العميل ليلاً
+                  </p>
+                </div>
                 <input
                   type="checkbox"
-                  checked={botSettings.is_auto_reply_enabled}
+                  checked={botSettings.always_reply_night}
                   onChange={(e) =>
-                    setBotSettings((prev) => ({ ...prev, is_auto_reply_enabled: e.target.checked }))
+                    setBotSettings((prev) => ({ ...prev, always_reply_night: e.target.checked }))
                   }
-                  className="peer sr-only"
+                  className="h-4 w-4 rounded text-primary focus:ring-primary"
                 />
-                <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
-              </label>
-            </div>
-
-            {/* Welcome message text */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-foreground">نص رسالة الترحيب التلقائية:</label>
-              <textarea
-                rows={4}
-                value={botSettings.welcome_message}
-                onChange={(e) =>
-                  setBotSettings((prev) => ({ ...prev, welcome_message: e.target.value }))
-                }
-                className="w-full rounded-xl border border-input bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-              <p className="text-xs text-muted-foreground">
-                يمكنكِ استخدام الوسم <code className="bg-muted px-1.5 py-0.5 rounded text-primary">{"{اسم_العميلة}"}</code> ليتم استبداله تلقائياً باسم العميلة.
-              </p>
-            </div>
-
-            {/* Toggle 2: Order Notification */}
-            <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
-              <div>
-                <h4 className="text-sm font-bold text-foreground">إشعار العميلة تلقائياً عند إنشاء طلب شراء جديد</h4>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  إرسال رسالة واتساب للعميلة تؤكد استلام طلبها من المتجر
-                </p>
               </div>
-              <label className="relative inline-flex cursor-pointer items-center">
+            </div>
+
+            {/* Section C: E-Commerce Triggers */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">إشعار العميلة تلقائياً عند إنشاء طلب شراء جديد</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    إرسال رسالة واتساب للعميلة تؤكد استلام طلبها من المتجر
+                  </p>
+                </div>
                 <input
                   type="checkbox"
                   checked={botSettings.order_notification_enabled}
                   onChange={(e) =>
                     setBotSettings((prev) => ({ ...prev, order_notification_enabled: e.target.checked }))
                   }
-                  className="peer sr-only"
+                  className="h-4 w-4 rounded text-primary focus:ring-primary"
                 />
-                <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
-              </label>
-            </div>
-
-            {/* Toggle 3: Invoice auto-send */}
-            <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
-              <div>
-                <h4 className="text-sm font-bold text-foreground">إرسال رابط الفاتورة الإلكترونية عبر واتساب</h4>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  إرسال الفاتورة مع رابط الاستعراض والتحميل فور إنشائها في النظام
-                </p>
               </div>
-              <label className="relative inline-flex cursor-pointer items-center">
+
+              <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">إرسال رابط الفاتورة الإلكترونية عبر واتساب</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    إرسال الفاتورة مع رابط الاستعراض والتحميل فور إنشائها في النظام
+                  </p>
+                </div>
                 <input
                   type="checkbox"
                   checked={botSettings.invoice_auto_send}
                   onChange={(e) =>
                     setBotSettings((prev) => ({ ...prev, invoice_auto_send: e.target.checked }))
                   }
-                  className="peer sr-only"
+                  className="h-4 w-4 rounded text-primary focus:ring-primary"
                 />
-                <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
-              </label>
+              </div>
             </div>
 
             <div className="pt-2">
@@ -1166,24 +1425,40 @@ export default function WhatsAppHub({
                 className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
               >
                 {isSavingBot ? <RefreshCw className="h-4 w-4 animate-spin" /> : <SaveIcon className="h-4 w-4" />}
-                حفظ الإعدادات
+                حفظ كافة إعدادات البوت والرد الليلي
               </button>
             </div>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:col-span-4 space-y-4">
-            <h3 className="font-bold text-base text-foreground">معاينة رد البوت</h3>
-            <div className="rounded-2xl border border-border bg-muted/10 p-4 text-xs space-y-2">
-              <div className="flex justify-start">
-                <div className="rounded-2xl rounded-tr-xs bg-primary px-3.5 py-2 text-primary-foreground max-w-[85%]">
+            <h3 className="font-bold text-base text-foreground">معاينة ردود البوت</h3>
+            
+            <div className="space-y-3">
+              <div>
+                <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1 mb-1">
+                  <Sun className="h-3 w-3 text-amber-500" /> رد النهار:
+                </span>
+                <div className="rounded-2xl rounded-tr-xs bg-primary p-3 text-primary-foreground text-xs">
                   <p className="whitespace-pre-wrap">
                     {botSettings.welcome_message.replace(/\{اسم_العميلة\}/g, "سارة أحمد")}
                   </p>
                 </div>
               </div>
+
+              <div>
+                <span className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1 mb-1">
+                  <Moon className="h-3 w-3 text-indigo-500" /> رد الليل ({botSettings.night_start_time} - {botSettings.night_end_time}):
+                </span>
+                <div className="rounded-2xl rounded-tr-xs bg-indigo-600 p-3 text-white text-xs">
+                  <p className="whitespace-pre-wrap">
+                    {botSettings.night_message.replace(/\{اسم_العميلة\}/g, "سارة أحمد")}
+                  </p>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              يقوم البوت بالتحقق من هوية العميلة تلقائياً بناءً على رقم هاتفها، وإذا كانت مسجلة في المتجر يحييها باسمها الحقيقي.
+
+            <p className="text-xs text-muted-foreground leading-relaxed pt-2">
+              يتم تطبيق توقيت مصر تلقائياً لمعرفة ما إذا كانت الساعة الحالية تقع في فترة الليل للرد فورياً على العميلة دون تأخير.
             </p>
           </div>
         </div>
@@ -1203,7 +1478,6 @@ export default function WhatsAppHub({
                 </p>
               </div>
 
-              {/* Segment filter pills */}
               <div className="flex flex-wrap gap-1.5">
                 {[
                   { key: "all", label: "جميع العميلات" },
@@ -1361,7 +1635,6 @@ export default function WhatsAppHub({
             </button>
           </div>
 
-          {/* Create or Edit Form */}
           {(isCreatingTemplate || editingTemplate) && (
             <div className="rounded-2xl border border-primary/30 bg-card p-6 shadow-md space-y-4">
               <h4 className="font-bold text-base text-foreground">
@@ -1429,7 +1702,6 @@ export default function WhatsAppHub({
             </div>
           )}
 
-          {/* Templates Grid */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {templates.map((tpl) => (
               <div
@@ -1488,7 +1760,6 @@ export default function WhatsAppHub({
       {/* ========================================================================= */}
       {activeTab === "logs" && (
         <div className="space-y-6">
-          {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
               <p className="text-xs text-muted-foreground">إجمالي الرسائل المرسلة</p>
@@ -1516,7 +1787,6 @@ export default function WhatsAppHub({
             </div>
           </div>
 
-          {/* Logs Table */}
           <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
             <div className="border-b border-border p-4 bg-muted/20">
               <h3 className="font-bold text-base text-foreground">سجل إرسال رسائل الواتساب</h3>

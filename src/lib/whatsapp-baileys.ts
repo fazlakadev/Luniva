@@ -4,15 +4,49 @@ import makeWASocket, {
   useMultiFileAuthState,
   DisconnectReason,
   WASocket,
+  downloadMediaMessage,
 } from "@whiskeysockets/baileys";
 import pino from "pino";
 import QRCode from "qrcode";
 import { db, ensureWhatsAppTables } from "@/lib/db";
-import { formatWhatsAppPhone, WhatsAppSessionInfo, WhatsAppChat, WhatsAppMessage } from "./whatsapp-shared";
+import { formatWhatsAppPhone, WhatsAppSessionInfo, WhatsAppChat, WhatsAppMessage, WhatsAppBotSettings } from "./whatsapp-shared";
 
 export type BaileysStatus = "disconnected" | "connecting" | "qr_ready" | "connected";
 
+export type BaileysStreamEvent =
+  | { type: "new_message"; data: WhatsAppMessage; chat?: Partial<WhatsAppChat> }
+  | { type: "chat_updated"; data: Partial<WhatsAppChat> }
+  | { type: "status_update"; data: WhatsAppSessionInfo };
+
+type EventSubscriber = (event: BaileysStreamEvent) => void;
+
 const AUTH_FOLDER = path.join(process.cwd(), "data", "whatsapp_auth");
+const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "whatsapp");
+
+// Helper to check if current time is within night hours (Cairo / local time)
+function isCurrentlyNight(startTime = "22:00", endTime = "09:00"): boolean {
+  try {
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString("en-GB", { timeZone: "Africa/Cairo", hour: "2-digit", minute: "2-digit", hour12: false });
+    const [curH, curM] = timeStr.split(":").map(Number);
+    const currentMinutes = curH * 60 + curM;
+
+    const [startH, startM] = startTime.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+
+    const [endH, endM] = endTime.split(":").map(Number);
+    const endMinutes = endH * 60 + endM;
+
+    if (startMinutes > endMinutes) {
+      // Overnight span (e.g. 22:00 to 09:00)
+      return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    } else {
+      return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+    }
+  } catch {
+    return false;
+  }
+}
 
 class WhatsAppBaileysManager {
   private sock: WASocket | null = null;
@@ -23,9 +57,35 @@ class WhatsAppBaileysManager {
   private lastError: string | null = null;
   private isInitializing = false;
   private reconnectTimeout: NodeJS.Timeout | null = null;
+  private subscribers = new Set<EventSubscriber>();
+  private silentLogger = pino({ level: "silent" });
 
   constructor() {
-    // Empty constructor
+    if (!fs.existsSync(UPLOAD_DIR)) {
+      try {
+        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  public subscribe(cb: EventSubscriber): void {
+    this.subscribers.add(cb);
+  }
+
+  public unsubscribe(cb: EventSubscriber): void {
+    this.subscribers.delete(cb);
+  }
+
+  public emitEvent(event: BaileysStreamEvent): void {
+    for (const sub of this.subscribers) {
+      try {
+        sub(event);
+      } catch (err) {
+        console.warn("Error notifying event subscriber:", err);
+      }
+    }
   }
 
   public getStatus(): WhatsAppSessionInfo {
@@ -38,9 +98,6 @@ class WhatsAppBaileysManager {
     };
   }
 
-  /**
-   * Restores session credentials from PostgreSQL database if local files were purged.
-   */
   private async restoreAuthFromDb(): Promise<void> {
     try {
       await ensureWhatsAppTables();
@@ -66,16 +123,12 @@ class WhatsAppBaileysManager {
     }
   }
 
-  /**
-   * Backs up session credentials to PostgreSQL so they survive restarts / deployments.
-   */
   private async backupAuthToDb(): Promise<void> {
     try {
       if (!fs.existsSync(AUTH_FOLDER)) return;
       const files = fs.readdirSync(AUTH_FOLDER);
       const sessionData: Record<string, string> = {};
       for (const file of files) {
-        // Backup creds.json and app-state keys
         if (file.endsWith(".json")) {
           const filePath = path.join(AUTH_FOLDER, file);
           sessionData[file] = fs.readFileSync(filePath, "utf8");
@@ -104,9 +157,6 @@ class WhatsAppBaileysManager {
     }
   }
 
-  /**
-   * Match incoming or outgoing WhatsApp phone/JID to a registered customer.
-   */
   public async matchCustomer(phoneOrJid: string): Promise<{ id: string; full_name: string; customer_code: string | null } | null> {
     try {
       await ensureWhatsAppTables();
@@ -130,9 +180,6 @@ class WhatsAppBaileysManager {
     }
   }
 
-  /**
-   * Initializes and starts Baileys Multi-Device connection.
-   */
   public async init(): Promise<WhatsAppSessionInfo> {
     if (this.sock && (this.status === "connected" || this.status === "connecting" || this.status === "qr_ready")) {
       return this.getStatus();
@@ -145,6 +192,7 @@ class WhatsAppBaileysManager {
     this.isInitializing = true;
     this.status = "connecting";
     this.lastError = null;
+    this.emitEvent({ type: "status_update", data: this.getStatus() });
 
     try {
       if (!fs.existsSync(AUTH_FOLDER)) {
@@ -154,30 +202,28 @@ class WhatsAppBaileysManager {
 
       const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
 
-      const silentLogger = pino({ level: "silent" });
-
       const sock = makeWASocket({
         auth: state,
         printQRInTerminal: false,
-        logger: silentLogger,
+        logger: this.silentLogger,
         syncFullHistory: false,
         browser: ["Luniva Enterprise", "Chrome", "1.0.0"],
       });
 
       this.sock = sock;
 
-      // Handle connection updates (QR code, connected, disconnected)
       sock.ev.on("connection.update", async (update) => {
         const { connection, lastDisconnect, qr } = update;
 
         if (qr) {
           try {
             this.qrCodeDataUrl = await QRCode.toDataURL(qr, {
-              width: 320,
+              width: 340,
               margin: 2,
               color: { dark: "#0f172a", light: "#ffffff" },
             });
             this.status = "qr_ready";
+            this.emitEvent({ type: "status_update", data: this.getStatus() });
           } catch (qrErr) {
             console.error("QR generation error:", qrErr);
           }
@@ -195,6 +241,7 @@ class WhatsAppBaileysManager {
             phone,
           };
           this.lastError = null;
+          this.emitEvent({ type: "status_update", data: this.getStatus() });
           await this.backupAuthToDb();
         }
 
@@ -205,12 +252,12 @@ class WhatsAppBaileysManager {
           this.status = "disconnected";
           this.qrCodeDataUrl = null;
           this.sock = null;
+          this.emitEvent({ type: "status_update", data: this.getStatus() });
 
           if (isLoggedOut) {
             this.user = null;
             this.connectedAt = null;
             this.lastError = "تم تسجيل الخروج من الجهاز.";
-            // Purge local files and DB backup
             try {
               if (fs.existsSync(AUTH_FOLDER)) {
                 fs.rmSync(AUTH_FOLDER, { recursive: true, force: true });
@@ -221,22 +268,20 @@ class WhatsAppBaileysManager {
             }
           } else {
             this.lastError = "تم قطع الاتصال مؤقتاً، جاري المحاولة...";
-            // Automatically attempt reconnect after 5 seconds
             if (this.reconnectTimeout) clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = setTimeout(() => {
               this.init().catch(console.error);
-            }, 5000);
+            }, 4000);
           }
         }
       });
 
-      // Handle credentials update
       sock.ev.on("creds.update", async () => {
         await saveCreds();
         await this.backupAuthToDb();
       });
 
-      // Handle incoming & outgoing messages
+      // Handle incoming messages
       sock.ev.on("messages.upsert", async ({ messages, type }) => {
         if (type !== "notify") return;
 
@@ -250,36 +295,100 @@ class WhatsAppBaileysManager {
           const messageId = msg.key.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
           const senderName = msg.pushName || (fromMe ? "لونيفا" : "عميلة لونيفا");
 
-          // Extract text content
+          // Download media if attached
+          let mediaUrl: string | null = null;
+          let mediaType: "image" | "video" | "audio" | "document" | null = null;
+
+          if (msg.message.imageMessage) {
+            mediaType = "image";
+            try {
+              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
+              const fileName = `img_${messageId}_${Date.now()}.jpg`;
+              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+              fs.writeFileSync(path.join(UPLOAD_DIR, fileName), buffer);
+              mediaUrl = `/uploads/whatsapp/${fileName}`;
+            } catch (err) {
+              console.warn("Could not download image attachment:", err);
+            }
+          } else if (msg.message.audioMessage) {
+            mediaType = "audio";
+            try {
+              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
+              const fileName = `audio_${messageId}_${Date.now()}.mp3`;
+              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+              fs.writeFileSync(path.join(UPLOAD_DIR, fileName), buffer);
+              mediaUrl = `/uploads/whatsapp/${fileName}`;
+            } catch (err) {
+              console.warn("Could not download audio attachment:", err);
+            }
+          } else if (msg.message.videoMessage) {
+            mediaType = "video";
+            try {
+              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
+              const fileName = `video_${messageId}_${Date.now()}.mp4`;
+              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+              fs.writeFileSync(path.join(UPLOAD_DIR, fileName), buffer);
+              mediaUrl = `/uploads/whatsapp/${fileName}`;
+            } catch (err) {
+              console.warn("Could not download video attachment:", err);
+            }
+          } else if (msg.message.documentMessage) {
+            mediaType = "document";
+            try {
+              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
+              const origName = msg.message.documentMessage.fileName || `file_${Date.now()}.pdf`;
+              const safeName = `${Date.now()}_${origName.replace(/[^a-zA-Z0-9._-]/g, "")}`;
+              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+              fs.writeFileSync(path.join(UPLOAD_DIR, safeName), buffer);
+              mediaUrl = `/uploads/whatsapp/${safeName}`;
+            } catch (err) {
+              console.warn("Could not download doc attachment:", err);
+            }
+          }
+
+          // Text content
           const text =
             msg.message.conversation ||
             msg.message.extendedTextMessage?.text ||
             msg.message.imageMessage?.caption ||
+            msg.message.videoMessage?.caption ||
             msg.message.documentMessage?.caption ||
-            (msg.message.imageMessage ? "[صورة]" : "") ||
-            (msg.message.documentMessage ? "[مستند]" : "") ||
-            (msg.message.audioMessage ? "[تسجيل صوتي]" : "") ||
+            (mediaType === "image" ? "[صورة]" : "") ||
+            (mediaType === "audio" ? "[تسجيل صوتي]" : "") ||
+            (mediaType === "video" ? "[فيديو]" : "") ||
+            (mediaType === "document" ? "[مستند]" : "") ||
             "";
 
-          if (!text && !msg.message.imageMessage && !msg.message.documentMessage) continue;
+          if (!text && !mediaUrl) continue;
 
           const rawPhone = jid.split("@")[0].replace(/\D/g, "");
           const matchedCust = await this.matchCustomer(jid);
+
+          // Attempt to fetch profile picture in background
+          let profilePic: string | null = null;
+          try {
+            const pic = await sock.profilePictureUrl(jid, "image");
+            profilePic = pic || null;
+          } catch {
+            // Profile picture may not be public
+          }
 
           try {
             await ensureWhatsAppTables();
 
             // 1. Upsert or update chat
-            await db.query(
-              `INSERT INTO whatsapp_chats (jid, name, phone, customer_id, unread_count, last_message, last_message_at, updated_at)
-               VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            const chatRes = await db.query(
+              `INSERT INTO whatsapp_chats (jid, name, phone, customer_id, unread_count, last_message, last_message_at, image_url, updated_at)
+               VALUES ($1, $2, $3, $4, $5, $6, NOW(), $7, NOW())
                ON CONFLICT (jid) DO UPDATE SET
                  name = COALESCE(EXCLUDED.name, whatsapp_chats.name),
                  customer_id = COALESCE(EXCLUDED.customer_id, whatsapp_chats.customer_id),
-                 unread_count = CASE WHEN $7 = true THEN 0 ELSE whatsapp_chats.unread_count + 1 END,
+                 unread_count = CASE WHEN $8 = true THEN 0 ELSE whatsapp_chats.unread_count + 1 END,
                  last_message = EXCLUDED.last_message,
                  last_message_at = NOW(),
-                 updated_at = NOW()`,
+                 image_url = COALESCE(EXCLUDED.image_url, whatsapp_chats.image_url),
+                 updated_at = NOW()
+               RETURNING *`,
               [
                 jid,
                 matchedCust?.full_name || senderName,
@@ -287,15 +396,17 @@ class WhatsAppBaileysManager {
                 matchedCust?.id || null,
                 fromMe ? 0 : 1,
                 text || "[وسائط]",
+                profilePic,
                 fromMe,
               ],
             );
 
             // 2. Insert message
-            await db.query(
-              `INSERT INTO whatsapp_messages (chat_jid, message_id, from_me, sender_jid, sender_name, content, status, customer_id, created_at)
-               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-               ON CONFLICT (message_id) DO NOTHING`,
+            const msgRes = await db.query(
+              `INSERT INTO whatsapp_messages (chat_jid, message_id, from_me, sender_jid, sender_name, content, media_url, media_type, status, customer_id, created_at)
+               VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+               ON CONFLICT (message_id) DO NOTHING
+               RETURNING *`,
               [
                 jid,
                 messageId,
@@ -303,13 +414,37 @@ class WhatsAppBaileysManager {
                 msg.key.participant || jid,
                 senderName,
                 text || "[وسائط]",
+                mediaUrl,
+                mediaType,
                 fromMe ? "sent" : "received",
                 matchedCust?.id || null,
               ],
             );
 
-            // 3. Handle Auto-Reply Bot for incoming customer messages
-            if (!fromMe && text) {
+            const savedMsg: WhatsAppMessage = msgRes.rows[0] || {
+              id: messageId,
+              chat_jid: jid,
+              message_id: messageId,
+              from_me: fromMe,
+              sender_jid: msg.key.participant || jid,
+              sender_name: senderName,
+              content: text || "[وسائط]",
+              media_url: mediaUrl,
+              media_type: mediaType,
+              status: fromMe ? "sent" : "received",
+              customer_id: matchedCust?.id || null,
+              created_at: new Date().toISOString(),
+            };
+
+            // 3. BROADCAST REAL-TIME EVENT TO ALL ACTIVE SSE CLIENTS
+            this.emitEvent({
+              type: "new_message",
+              data: savedMsg,
+              chat: chatRes.rows[0],
+            });
+
+            // 4. Handle Smart Auto-Reply (Night Mode & Daytime Bot)
+            if (!fromMe && (text || mediaUrl)) {
               await this.handleAutoReply(jid, matchedCust);
             }
           } catch (dbErr) {
@@ -330,74 +465,142 @@ class WhatsAppBaileysManager {
   }
 
   /**
-   * Handle Smart Auto-Reply when enabled
+   * Handle Smart Auto-Reply with Night Mode & Working Hours support
    */
   private async handleAutoReply(jid: string, customer: { id: string; full_name: string } | null): Promise<void> {
     try {
       await ensureWhatsAppTables();
       const settingsRes = await db.query(
-        "SELECT is_auto_reply_enabled, welcome_message FROM whatsapp_bot_settings WHERE id = 'default'",
+        `SELECT is_auto_reply_enabled, welcome_message, is_night_mode_enabled,
+                night_start_time, night_end_time, night_message, always_reply_night
+         FROM whatsapp_bot_settings WHERE id = 'default'`,
       );
-      const settings = settingsRes.rows[0];
-      if (!settings?.is_auto_reply_enabled || !settings?.welcome_message) return;
+      const settings: WhatsAppBotSettings = settingsRes.rows[0];
+      if (!settings) return;
 
-      // Only reply if this is the first incoming message from customer in the last 6 hours
-      const recentRes = await db.query(
-        `SELECT id FROM whatsapp_messages
-         WHERE chat_jid = $1 AND from_me = true AND created_at >= NOW() - INTERVAL '6 hours'
-         LIMIT 1`,
-        [jid],
-      );
+      const isNight = isCurrentlyNight(settings.night_start_time || "22:00", settings.night_end_time || "09:00");
 
-      if (recentRes.rowCount === 0) {
-        let replyText = settings.welcome_message;
-        if (customer) {
-          replyText = replyText.replace(/\{اسم_العميلة\}/g, customer.full_name);
+      let shouldReply = false;
+      let replyMessageTemplate = "";
+
+      if (isNight && settings.is_night_mode_enabled && settings.night_message) {
+        // NIGHT MODE ACTIVE: Always reply, or reply if no bot response in the last 15 minutes
+        replyMessageTemplate = settings.night_message;
+
+        if (settings.always_reply_night) {
+          // Check if we already sent a message in the last 15 minutes to avoid rapid-fire loops
+          const recentNight = await db.query(
+            `SELECT id FROM whatsapp_messages
+             WHERE chat_jid = $1 AND from_me = true AND created_at >= NOW() - INTERVAL '15 minutes'
+             LIMIT 1`,
+            [jid],
+          );
+          if (recentNight.rowCount === 0) {
+            shouldReply = true;
+          }
         } else {
-          replyText = replyText.replace(/\{اسم_العميلة\}/g, "عزيزتي");
+          const recentNight = await db.query(
+            `SELECT id FROM whatsapp_messages
+             WHERE chat_jid = $1 AND from_me = true AND created_at >= NOW() - INTERVAL '6 hours'
+             LIMIT 1`,
+            [jid],
+          );
+          if (recentNight.rowCount === 0) {
+            shouldReply = true;
+          }
         }
+      } else if (!isNight && settings.is_auto_reply_enabled && settings.welcome_message) {
+        // DAYTIME AUTO-REPLY ACTIVE
+        replyMessageTemplate = settings.welcome_message;
 
-        // Send auto-reply with a short realistic delay (1.5s)
+        // Check if customer contacted us in the last 6 hours
+        const recentDay = await db.query(
+          `SELECT id FROM whatsapp_messages
+           WHERE chat_jid = $1 AND from_me = true AND created_at >= NOW() - INTERVAL '6 hours'
+           LIMIT 1`,
+          [jid],
+        );
+        if (recentDay.rowCount === 0) {
+          shouldReply = true;
+        }
+      }
+
+      if (shouldReply && replyMessageTemplate) {
+        const custName = customer?.full_name || "عزيزتي";
+        const finalMessage = replyMessageTemplate.replace(/\{اسم_العميلة\}/g, custName);
+
+        // Realistic delay (1.5 seconds)
         setTimeout(async () => {
-          await this.sendMessage(jid, replyText);
+          await this.sendMessage(jid, finalMessage);
         }, 1500);
       }
     } catch (err) {
-      console.warn("Auto reply error:", err);
+      console.warn("Auto-reply processing error:", err);
     }
   }
 
   /**
-   * Send a WhatsApp message to a specific phone or JID.
+   * Send text or media message via Baileys socket.
    */
   public async sendMessage(
     to: string,
     text: string,
-    mediaUrl?: string,
+    mediaFile?: {
+      buffer: Buffer;
+      mimetype: string;
+      type: "image" | "video" | "audio" | "document";
+      fileName?: string;
+    },
   ): Promise<{ success: boolean; messageId?: string; error?: string }> {
     if (!this.sock || this.status !== "connected") {
       return { success: false, error: "واتساب غير متصل. يرجى مسح رمز الاستجابة السريعة (QR) أولاً." };
     }
 
     try {
-      // Normalize recipient JID
       let jid = to.trim();
       if (!jid.includes("@")) {
         const cleanPhone = formatWhatsAppPhone(jid);
         jid = `${cleanPhone}@s.whatsapp.net`;
       }
 
-      // Send via Baileys socket
-      const sentMsg = await this.sock.sendMessage(jid, { text: text.trim() });
-      const messageId = sentMsg?.key?.id || `out_${Date.now()}`;
+      let sentMsg;
+      let mediaUrl: string | null = null;
+      let mediaType: "image" | "video" | "audio" | "document" | null = null;
 
+      if (mediaFile) {
+        mediaType = mediaFile.type;
+        const safeExt = mediaFile.type === "image" ? ".jpg" : mediaFile.type === "audio" ? ".mp3" : mediaFile.type === "video" ? ".mp4" : ".pdf";
+        const savedFileName = `out_${Date.now()}_${Math.random().toString(36).substring(2, 6)}${safeExt}`;
+        if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+        fs.writeFileSync(path.join(UPLOAD_DIR, savedFileName), mediaFile.buffer);
+        mediaUrl = `/uploads/whatsapp/${savedFileName}`;
+
+        if (mediaFile.type === "image") {
+          sentMsg = await this.sock.sendMessage(jid, { image: mediaFile.buffer, caption: text.trim() || undefined });
+        } else if (mediaFile.type === "video") {
+          sentMsg = await this.sock.sendMessage(jid, { video: mediaFile.buffer, caption: text.trim() || undefined });
+        } else if (mediaFile.type === "audio") {
+          sentMsg = await this.sock.sendMessage(jid, { audio: mediaFile.buffer, ptt: true, mimetype: "audio/mp4" });
+        } else {
+          sentMsg = await this.sock.sendMessage(jid, {
+            document: mediaFile.buffer,
+            mimetype: mediaFile.mimetype || "application/octet-stream",
+            fileName: mediaFile.fileName || "document.pdf",
+            caption: text.trim() || undefined,
+          });
+        }
+      } else {
+        sentMsg = await this.sock.sendMessage(jid, { text: text.trim() });
+      }
+
+      const messageId = sentMsg?.key?.id || `out_${Date.now()}`;
       const matchedCust = await this.matchCustomer(jid);
       const rawPhone = jid.split("@")[0].replace(/\D/g, "");
 
       await ensureWhatsAppTables();
 
       // Upsert into chats
-      await db.query(
+      const chatRes = await db.query(
         `INSERT INTO whatsapp_chats (jid, name, phone, customer_id, unread_count, last_message, last_message_at, updated_at)
          VALUES ($1, $2, $3, $4, 0, $5, NOW(), NOW())
          ON CONFLICT (jid) DO UPDATE SET
@@ -405,23 +608,47 @@ class WhatsAppBaileysManager {
            unread_count = 0,
            last_message = EXCLUDED.last_message,
            last_message_at = NOW(),
-           updated_at = NOW()`,
-        [jid, matchedCust?.full_name || rawPhone, rawPhone, matchedCust?.id || null, text.trim()],
+           updated_at = NOW()
+         RETURNING *`,
+        [jid, matchedCust?.full_name || rawPhone, rawPhone, matchedCust?.id || null, text.trim() || `[${mediaType}]`],
       );
 
       // Record message
-      await db.query(
-        `INSERT INTO whatsapp_messages (chat_jid, message_id, from_me, sender_jid, sender_name, content, status, customer_id, created_at)
-         VALUES ($1, $2, true, $3, 'لونيفا للأزياء', $4, 'sent', $5, NOW())
-         ON CONFLICT (message_id) DO NOTHING`,
-        [jid, messageId, this.user?.id || "luniva@s.whatsapp.net", text.trim(), matchedCust?.id || null],
+      const msgRes = await db.query(
+        `INSERT INTO whatsapp_messages (chat_jid, message_id, from_me, sender_jid, sender_name, content, media_url, media_type, status, customer_id, created_at)
+         VALUES ($1, $2, true, $3, 'لونيفا للأزياء', $4, $5, $6, 'sent', $7, NOW())
+         ON CONFLICT (message_id) DO NOTHING
+         RETURNING *`,
+        [jid, messageId, this.user?.id || "luniva@s.whatsapp.net", text.trim() || `[${mediaType}]`, mediaUrl, mediaType, matchedCust?.id || null],
       );
+
+      const savedMsg: WhatsAppMessage = msgRes.rows[0] || {
+        id: messageId,
+        chat_jid: jid,
+        message_id: messageId,
+        from_me: true,
+        sender_jid: this.user?.id || "luniva",
+        sender_name: "لونيفا للأزياء",
+        content: text.trim() || `[${mediaType}]`,
+        media_url: mediaUrl,
+        media_type: mediaType,
+        status: "sent",
+        customer_id: matchedCust?.id || null,
+        created_at: new Date().toISOString(),
+      };
+
+      // Broadcast to real-time clients
+      this.emitEvent({
+        type: "new_message",
+        data: savedMsg,
+        chat: chatRes.rows[0],
+      });
 
       // Audit log
       await db.query(
         `INSERT INTO whatsapp_logs (customer_id, customer_name, phone, template_category, message, status, sent_by)
          VALUES ($1, $2, $3, 'direct', $4, 'sent', 'admin')`,
-        [matchedCust?.id || null, matchedCust?.full_name || null, rawPhone, text.trim()],
+        [matchedCust?.id || null, matchedCust?.full_name || null, rawPhone, text.trim() || `[${mediaType}]`],
       );
 
       return { success: true, messageId };
@@ -432,9 +659,6 @@ class WhatsAppBaileysManager {
     }
   }
 
-  /**
-   * Disconnects and logs out the WhatsApp session.
-   */
   public async logout(): Promise<void> {
     try {
       if (this.sock) {
@@ -448,6 +672,7 @@ class WhatsAppBaileysManager {
       this.qrCodeDataUrl = null;
       this.user = null;
       this.connectedAt = null;
+      this.emitEvent({ type: "status_update", data: this.getStatus() });
 
       try {
         if (fs.existsSync(AUTH_FOLDER)) {
@@ -462,7 +687,6 @@ class WhatsAppBaileysManager {
   }
 }
 
-// Global singleton instance
 declare global {
   var __whatsappBaileysManager: WhatsAppBaileysManager | undefined;
 }
@@ -472,9 +696,6 @@ if (process.env.NODE_ENV !== "production") {
   globalThis.__whatsappBaileysManager = baileysManager;
 }
 
-/**
- * Retrieve chats list with customer info and unread counters.
- */
 export async function getBaileysChats(filter = "all"): Promise<WhatsAppChat[]> {
   await ensureWhatsAppTables();
   let where = "";
@@ -496,6 +717,7 @@ export async function getBaileysChats(filter = "all"): Promise<WhatsAppChat[]> {
       c.unread_count,
       c.last_message,
       c.last_message_at::text,
+      c.image_url,
       c.is_pinned,
       c.is_archived
     FROM whatsapp_chats c
@@ -508,10 +730,7 @@ export async function getBaileysChats(filter = "all"): Promise<WhatsAppChat[]> {
   return res.rows;
 }
 
-/**
- * Retrieve messages for a specific chat.
- */
-export async function getBaileysMessages(chatJid: string, limit = 80): Promise<WhatsAppMessage[]> {
+export async function getBaileysMessages(chatJid: string, limit = 100): Promise<WhatsAppMessage[]> {
   await ensureWhatsAppTables();
   const res = await db.query(
     `SELECT
@@ -537,9 +756,6 @@ export async function getBaileysMessages(chatJid: string, limit = 80): Promise<W
   return res.rows;
 }
 
-/**
- * Mark a chat as read.
- */
 export async function markChatAsRead(chatJid: string): Promise<void> {
   await ensureWhatsAppTables();
   await db.query("UPDATE whatsapp_chats SET unread_count = 0 WHERE jid = $1", [chatJid]);
