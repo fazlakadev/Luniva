@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     }
 
     const taken = await db.query(
-      "SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2",
+      "SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2::uuid",
       [nextEmail, session.userId],
     );
     if (taken.rowCount) {

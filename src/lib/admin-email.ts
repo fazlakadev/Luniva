@@ -36,7 +36,7 @@ export async function setAdminEmail(email: string, userId?: string): Promise<str
     await client.query("BEGIN");
     if (userId) {
       const taken = await client.query(
-        "SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2",
+        "SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2::uuid",
         [normalized, userId],
       );
       if (taken.rowCount) {
@@ -44,7 +44,7 @@ export async function setAdminEmail(email: string, userId?: string): Promise<str
         conflict.name = "EmailTaken";
         throw conflict;
       }
-      await client.query("UPDATE users SET email = $1 WHERE id = $2", [normalized, userId]);
+      await client.query("UPDATE users SET email = $1 WHERE id = $2::uuid", [normalized, userId]);
     }
     await client.query(
       `INSERT INTO app_settings (key, value, updated_at) VALUES ('admin_email', $1::jsonb, NOW())

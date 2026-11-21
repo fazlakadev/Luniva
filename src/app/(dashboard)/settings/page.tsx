@@ -1,6 +1,4 @@
-import AccountSettingsForm from "@/components/account-settings-form";
-import AdminEmailForm from "@/components/admin-email-form";
-import SettingsForm from "@/components/settings-form";
+import SettingsHub from "@/components/settings-hub";
 import { getAdminEmail } from "@/lib/admin-email";
 import { getSession } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
@@ -17,17 +15,18 @@ export default async function SettingsPage() {
   return (
     <div className="page-enter">
       <div className="mb-7">
-        <p className="eyebrow">إعدادات لونيفا</p>
-        <h1 className="page-title mt-1">الإعدادات</h1>
-        <p className="page-subtitle mt-2 max-w-xl">اضبطي بيانات الشركة وشروط التحصيل وبيانات الدخول مرة واحدة، لتظهر تلقائيًا في كل مستند.</p>
+        <p className="eyebrow">إدارة إعدادات لونيفا</p>
+        <h1 className="page-title mt-1">مركز الإعدادات والتحكم</h1>
+        <p className="page-subtitle mt-2 max-w-xl">
+          إدارة هوية الأتيليه والمستندات، إعدادات الأمان والتحقق الثنائي 2FA، منظومة أتمتة الواتساب، وحالة خوادم النظام.
+        </p>
       </div>
-      <SettingsForm initial={settings} />
-      <div className="mt-6">
-        <AccountSettingsForm username={session?.username ?? ""} />
-      </div>
-      <div className="mt-6">
-        <AdminEmailForm adminEmail={adminEmail} />
-      </div>
+
+      <SettingsHub
+        initialSettings={settings}
+        username={session?.username ?? ""}
+        adminEmail={adminEmail}
+      />
     </div>
   );
 }

@@ -17,6 +17,8 @@ import {
 import PublicSiteShell from "@/components/public-site-shell";
 import ZoomableImage from "@/components/zoomable-image";
 import AddToCartButton from "@/components/add-to-cart-button";
+import ProductPurchaseBox from "@/components/product-purchase-box";
+import PackagePurchaseBox from "@/components/package-purchase-box";
 import type {
   CatalogPackageDetail,
   CatalogProduct,
@@ -207,6 +209,9 @@ export function PublicProductDetail({ product }: { product: CatalogProduct }) {
                 <p className="text-[10px] muted">أعلى خصم</p>
               </div>
             </div>
+
+            {/* Interactive Hero Purchase & Inquiry Box */}
+            <ProductPurchaseBox product={product} />
           </div>
         </div>
       </section>
@@ -387,6 +392,9 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
                 يبدأ السعر من {formatMoney(after)}، ويختلف حسب التوليفة والمقاس.
               </p>
             </div>
+
+            {/* Interactive Package Purchase & Inquiry Box */}
+            <PackagePurchaseBox pkg={pkg} />
           </div>
         </div>
       </section>

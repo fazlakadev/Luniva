@@ -118,6 +118,7 @@ export function useCart() {
   return {
     items: mounted ? items : [],
     count: mounted ? count : 0,
+    totalCount: mounted ? count : 0,
     total: mounted ? total : 0,
     mounted,
     addItem: addToCart,

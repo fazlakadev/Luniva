@@ -17,6 +17,7 @@ interface AddToCartButtonProps {
   priceBeforeDiscount?: number;
   imageUrl?: string | null;
   sku?: string;
+  quantity?: number;
   className?: string;
   compact?: boolean;
 }
@@ -33,6 +34,7 @@ export default function AddToCartButton({
   priceBeforeDiscount,
   imageUrl,
   sku,
+  quantity = 1,
   className = "",
   compact = false,
 }: AddToCartButtonProps) {
@@ -54,12 +56,12 @@ export default function AddToCartButton({
       price: Number(price) || 0,
       priceBeforeDiscount: priceBeforeDiscount ? Number(priceBeforeDiscount) : undefined,
       imageUrl,
-      quantity: 1,
+      quantity: Math.max(1, quantity),
       sku,
     });
 
     setAdded(true);
-    toast.success("تمت الإضافة للسلة", `تمت إضافة "${title}" لسلة طلبات الاستفسار.`);
+    toast.success("تمت الإضافة للسلة", `تمت إضافة ${Math.max(1, quantity)} × "${title}" لسلة الاستفسارات والطلبات.`);
     setTimeout(() => setAdded(false), 2000);
   }
 

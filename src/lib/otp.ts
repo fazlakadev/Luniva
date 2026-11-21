@@ -107,7 +107,7 @@ export async function saveOtpChallenge(input: SaveOtpInput): Promise<{ id: strin
   await db.query(
     `UPDATE auth_otp SET consumed_at = NOW()
       WHERE purpose = $1 AND consumed_at IS NULL
-        AND (($2::uuid IS NOT NULL AND user_id = $2) OR ($2::uuid IS NULL AND email = $3))`,
+        AND (($2::text IS NOT NULL AND user_id = $2::uuid) OR ($2::text IS NULL AND email = $3))`,
     [purpose, userId, email],
   );
 
@@ -216,7 +216,7 @@ export async function refreshOtpChallenge(input: {
   const result = await db.query(
     `SELECT id, email, token, expires_at, resend_count, last_sent_at, consumed_at
        FROM auth_otp
-      WHERE id = $1 AND purpose = $2 AND ($3::uuid IS NULL OR user_id = $3)`,
+      WHERE id = $1 AND purpose = $2 AND ($3::text IS NULL OR user_id = $3::uuid)`,
     [input.id, input.purpose, input.userId ?? null],
   );
   const row = result.rows[0];
@@ -255,7 +255,7 @@ export async function refreshOtpChallenge(input: {
 export async function clearOtpChallenges(userId: string, purpose: OtpPurpose) {
   await ensureOtpTable();
   await db.query(
-    "UPDATE auth_otp SET consumed_at = NOW() WHERE user_id = $1 AND purpose = $2 AND consumed_at IS NULL",
+    "UPDATE auth_otp SET consumed_at = NOW() WHERE user_id = $1::uuid AND purpose = $2 AND consumed_at IS NULL",
     [userId, purpose],
   );
 }

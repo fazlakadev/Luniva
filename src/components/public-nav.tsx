@@ -19,8 +19,11 @@ import {
   Package,
   Phone,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   SunMoon,
+  User,
+  LogIn,
   X,
 } from "lucide-react";
 import {
@@ -46,6 +49,7 @@ import {
   isSupportSection,
   type PublicSection,
 } from "@/lib/public-sections";
+import { useCart } from "@/lib/cart-store";
 
 type NavLink = {
   href: string;
@@ -190,6 +194,8 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
   const router = useRouter();
   const navKey = resolveNavKey(pathname, section);
   const active = resolveActive(pathname, section);
+  const { totalCount } = useCart();
+  const [customer, setCustomer] = useState<{ fullName: string; imageUrl?: string | null } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
@@ -208,6 +214,23 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
   // only on the client keeps the server markup deterministic.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    let activeEffect = true;
+    fetch("/api/customer/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (activeEffect && data?.customer) {
+          setCustomer(data.customer);
+        } else if (activeEffect) {
+          setCustomer(null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      activeEffect = false;
+    };
+  }, [pathname]);
 
   // Follow the same document class / storage key used by ThemeToggle so the
   // water tint always matches the active light/dark theme.
@@ -599,14 +622,77 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
       {/* Desktop Action bar (visible only on lg+) */}
       <div className="hidden min-w-0 shrink items-center gap-2 lg:flex">
         <HeaderSearch />
+
+        {/* Cart Button with Counter */}
+        <Link
+          href="/cart"
+          className="relative flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2 text-xs font-black text-[var(--ink)] shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand-strong)] active:scale-95"
+          aria-label={`سلة الاستفسارات والطلبات (${totalCount} عناصر)`}
+        >
+          <ShoppingBag size={15} className="text-[var(--brand-strong)]" />
+          <span>السلة</span>
+          {mounted && totalCount > 0 && (
+            <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-black text-white shadow-sm">
+              {totalCount}
+            </span>
+          )}
+        </Link>
+
+        {/* Customer Account / Login Button */}
+        {mounted && customer ? (
+          <Link
+            href="/account"
+            className="flex items-center gap-1.5 rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-soft)] px-3 py-2 text-xs font-black text-[var(--brand-strong)] shadow-sm transition hover:bg-[var(--brand)] hover:text-white active:scale-95"
+          >
+            <User size={14} />
+            <span className="max-w-[100px] truncate">{customer.fullName}</span>
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2 text-xs font-black text-[var(--ink)] shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand-strong)] active:scale-95"
+          >
+            <LogIn size={14} className="text-[var(--brand-strong)]" />
+            <span>حسابي / دخول</span>
+          </Link>
+        )}
+
         <Link href={ctaHref} className="btn btn-primary px-3 py-2 text-[11px]">
           <ArrowLeft size={13} />{ctaLabel}
         </Link>
         <ThemeToggle showLabel={false} />
       </div>
 
-      {/* Mobile Navbar Controls: Clean & uncluttered (Search and ThemeToggle moved into Drawer) */}
-      <div className="flex items-center gap-2 lg:hidden">
+      {/* Mobile Navbar Controls: Cart + Account + Menu */}
+      <div className="flex items-center gap-1.5 lg:hidden">
+        {/* Mobile Cart Button */}
+        <Link
+          href="/cart"
+          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)] shadow-sm transition active:scale-95"
+          aria-label="سلة الاستفسارات"
+        >
+          <ShoppingBag size={17} className="text-[var(--brand-strong)]" />
+          {mounted && totalCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[9px] font-black text-white shadow-sm">
+              {totalCount}
+            </span>
+          )}
+        </Link>
+
+        {/* Mobile Customer Button */}
+        <Link
+          href={customer ? "/account" : "/login"}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)] shadow-sm transition active:scale-95"
+          aria-label={customer ? "حسابي الشخصي" : "تسجيل الدخول"}
+        >
+          {customer ? (
+            <User size={17} className="text-[var(--brand-strong)]" />
+          ) : (
+            <LogIn size={17} className="text-[var(--muted)]" />
+          )}
+        </Link>
+
+        {/* Menu Toggle */}
         <button
           type="button"
           onClick={() => {
@@ -616,14 +702,14 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
           }}
           aria-label="فتح قائمة التنقل"
           aria-expanded={drawerOpen}
-          className="group flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black shadow-sm transition active:scale-95"
+          className="group flex items-center gap-1.5 rounded-xl border px-2.5 py-2 text-xs font-black shadow-sm transition active:scale-95"
           style={{
             borderColor: "color-mix(in srgb, var(--brand) 32%, var(--line))",
             background: "color-mix(in srgb, var(--surface) 92%, transparent)",
             color: "var(--ink)",
           }}
         >
-          <Menu size={18} className="text-[var(--brand-strong)] transition-transform group-hover:scale-110" />
+          <Menu size={17} className="text-[var(--brand-strong)] transition-transform group-hover:scale-110" />
           <span>القائمة</span>
         </button>
       </div>
@@ -743,6 +829,74 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
                       </div>
                     </div>
                     <ThemeToggle showLabel={true} />
+                  </div>
+
+                  {/* Cart & Customer Drawer Quick Actions */}
+                  <div className="mt-3.5 grid grid-cols-2 gap-2">
+                    {/* Cart Quick Card */}
+                    <Link
+                      href="/cart"
+                      onClick={() => setDrawerOpen(false)}
+                      className="flex items-center justify-between rounded-2xl border p-2.5 transition active:scale-[0.98]"
+                      style={{
+                        borderColor: totalCount > 0 ? "var(--brand)" : "var(--line)",
+                        background: totalCount > 0 ? "var(--brand-soft)" : "color-mix(in srgb, var(--surface-2) 65%, transparent)",
+                        color: "var(--ink)",
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--brand)] text-white shadow-sm">
+                          <ShoppingBag size={16} />
+                        </span>
+                        <div>
+                          <p className="text-[11.5px] font-black">السلة</p>
+                          <p className="text-[9.5px] font-bold text-[var(--muted-2)]">
+                            {totalCount > 0 ? `${totalCount} عناصر` : "فارغة"}
+                          </p>
+                        </div>
+                      </div>
+                      {totalCount > 0 && (
+                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[10px] font-black text-white">
+                          {totalCount}
+                        </span>
+                      )}
+                    </Link>
+
+                    {/* Customer Account Quick Card */}
+                    {customer ? (
+                      <Link
+                        href="/account"
+                        onClick={() => setDrawerOpen(false)}
+                        className="flex items-center gap-2 rounded-2xl border border-[var(--brand)]/30 bg-[var(--brand-soft)] p-2.5 transition active:scale-[0.98]"
+                      >
+                        <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--brand)] text-white shadow-sm">
+                          <User size={16} />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[11.5px] font-black text-[var(--brand-strong)]">
+                            {customer.fullName}
+                          </p>
+                          <p className="text-[9.5px] font-bold text-[var(--muted-2)]">حسابي وطلباتي</p>
+                        </div>
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/login"
+                        onClick={() => setDrawerOpen(false)}
+                        className="flex items-center gap-2 rounded-2xl border border-[var(--line)] p-2.5 transition active:scale-[0.98]"
+                        style={{
+                          background: "color-mix(in srgb, var(--surface-2) 65%, transparent)",
+                        }}
+                      >
+                        <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--surface)] text-[var(--brand-strong)] shadow-sm">
+                          <LogIn size={16} />
+                        </span>
+                        <div>
+                          <p className="text-[11.5px] font-black text-[var(--ink)]">تسجيل الدخول</p>
+                          <p className="text-[9.5px] font-bold text-[var(--muted-2)]">حساب جديد</p>
+                        </div>
+                      </Link>
+                    )}
                   </div>
 
                   {/* Quick Primary Grid */}

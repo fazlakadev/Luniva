@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     if (!pendingEmail) return bad("البريد الجديد غير صالح. ابدئي من جديد.");
 
     const taken = await db.query(
-      "SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2",
+      "SELECT id FROM users WHERE LOWER(email) = LOWER($1) AND id <> $2::uuid",
       [pendingEmail, session.userId],
     );
     if (taken.rowCount) return bad("هذا البريد أصبح مستخدمًا بحساب آخر. اختاري بريدًا مختلفًا.");
@@ -62,7 +62,8 @@ export async function POST(request: Request) {
       await sendOtpEmail({ to: pendingEmail, code: otp.code, purpose: "email_new", expiryMinutes: 15 });
     } catch (error) {
       console.error("Unable to send new-email confirmation code", error);
-      return bad("تعذّر إرسال رمز التأكيد إلى البريد الجديد. لم يتم تغيير البريد.", 503);
+      const reason = error instanceof Error ? `: ${error.message}` : "";
+      return bad(`تعذّر إرسال رمز التأكيد إلى البريد الجديد (${pendingEmail})${reason}. لم يتم تغيير البريد.`, 503);
     }
 
     const challenge = await saveOtpChallenge({
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("Unable to verify current email", error);
-    return bad("تعذّر التحقق من البريد الحالي.", 500);
+    const detail = error instanceof Error ? ` (${error.message})` : "";
+    return bad(`تعذّر التحقق من البريد الحالي${detail}.`, 500);
   }
 }
