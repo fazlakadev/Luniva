@@ -22,7 +22,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
   if (!product) notFound();
 
   const variantsResult = await db.query(
-    `SELECT id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url
+    `SELECT id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, stock, min_stock_alert
      FROM product_variants WHERE product_id = $1 ORDER BY color, size`,
     [id],
   );

@@ -20,6 +20,7 @@ import { nextReceiptNumber } from "@/lib/payments";
 import { newViewNonce } from "@/lib/invoice-view";
 import { getSettings } from "@/lib/settings";
 import { logActivity } from "@/lib/activity";
+import { deductInvoiceInventory, restoreInvoiceInventory } from "@/lib/inventory";
 
 export {
   INVOICE_STATUSES,
@@ -390,6 +391,10 @@ export async function createInvoice(input: InvoiceInput, actor?: string) {
       );
     }
 
+    if (status !== "cancelled") {
+      await deductInvoiceInventory(client, invoiceId, invoiceNumber, items, actor);
+    }
+
     await logActivity(
       {
         entityType: "invoice",
@@ -538,6 +543,26 @@ export async function updateInvoice(id: string, patch: InvoicePatch, actor?: str
     );
 
     if (patch.status && patch.status !== existing.status) {
+      if (patch.status === "cancelled" && existing.status !== "cancelled") {
+        await restoreInvoiceInventory(client, id, existing.invoice_number, actor);
+      } else if (patch.status !== "cancelled" && existing.status === "cancelled") {
+        const existingItemsResult = await client.query(
+          `SELECT item_type, product_id, product_variant_id, package_id, package_variant_id, quantity, name
+           FROM invoice_items WHERE invoice_id = $1`,
+          [id],
+        );
+        const invoiceItems = existingItemsResult.rows.map((row) => ({
+          itemType: row.item_type,
+          productId: row.product_id,
+          productVariantId: row.product_variant_id,
+          packageId: row.package_id,
+          packageVariantId: row.package_variant_id,
+          quantity: Number(row.quantity || 1),
+          name: row.name,
+        })) as ResolvedInvoiceItem[];
+        await deductInvoiceInventory(client, id, existing.invoice_number, invoiceItems, actor);
+      }
+
       await logActivity(
         {
           entityType: "invoice",
@@ -658,6 +683,10 @@ export async function updateInvoiceWithItems(id: string, input: InvoiceInput, ac
       ],
     );
 
+    if (existing.status !== "cancelled") {
+      await restoreInvoiceInventory(client, id, existing.invoice_number, actor);
+    }
+
     await client.query("DELETE FROM invoice_items WHERE invoice_id = $1", [id]);
     for (const [index, item] of items.entries()) {
       await client.query(
@@ -687,6 +716,10 @@ export async function updateInvoiceWithItems(id: string, input: InvoiceInput, ac
           item.supplierId,
         ],
       );
+    }
+
+    if (status !== "cancelled") {
+      await deductInvoiceInventory(client, id, existing.invoice_number, items, actor);
     }
 
     await logActivity(

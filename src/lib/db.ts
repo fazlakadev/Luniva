@@ -223,9 +223,38 @@ export function ensureProductsTables() {
         ADD COLUMN IF NOT EXISTS discount_type VARCHAR(16) NOT NULL DEFAULT 'percent',
         ADD COLUMN IF NOT EXISTS discount_value NUMERIC(12,2) NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS supplier_id UUID REFERENCES suppliers(id) ON DELETE SET NULL,
-        ADD COLUMN IF NOT EXISTS supply_price NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (supply_price >= 0)
+        ADD COLUMN IF NOT EXISTS supply_price NUMERIC(12,2) NOT NULL DEFAULT 0 CHECK (supply_price >= 0),
+        ADD COLUMN IF NOT EXISTS stock INTEGER NOT NULL DEFAULT 0,
+        ADD COLUMN IF NOT EXISTS min_stock_alert INTEGER NOT NULL DEFAULT 3
     `);
     await db.query("CREATE INDEX IF NOT EXISTS product_variants_supplier_idx ON product_variants (supplier_id)");
+  });
+}
+
+export function ensureInventoryTables() {
+  return runOnce("inventory", async () => {
+    await ensureProductsTables();
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS inventory_transactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        product_id UUID REFERENCES products(id) ON DELETE CASCADE,
+        product_variant_id UUID NOT NULL REFERENCES product_variants(id) ON DELETE CASCADE,
+        change_qty INTEGER NOT NULL,
+        previous_stock INTEGER NOT NULL,
+        new_stock INTEGER NOT NULL,
+        type VARCHAR(32) NOT NULL,
+        reference_id VARCHAR(80),
+        notes TEXT,
+        created_by VARCHAR(120),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await Promise.all([
+      db.query("CREATE INDEX IF NOT EXISTS inventory_transactions_variant_idx ON inventory_transactions (product_variant_id)"),
+      db.query("CREATE INDEX IF NOT EXISTS inventory_transactions_product_idx ON inventory_transactions (product_id)"),
+      db.query("CREATE INDEX IF NOT EXISTS inventory_transactions_created_at_idx ON inventory_transactions (created_at DESC)"),
+      db.query("CREATE INDEX IF NOT EXISTS inventory_transactions_type_idx ON inventory_transactions (type)"),
+    ]);
   });
 }
 

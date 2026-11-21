@@ -96,6 +96,7 @@ export async function getInvoiceFormData() {
           SELECT json_agg(json_build_object(
             'id', v.id, 'color', v.color, 'size', v.size, 'sku', v.sku,
             'price', v.price, 'beforePrice', COALESCE(v.price_before_discount, v.price),
+            'stock', v.stock, 'minStockAlert', v.min_stock_alert,
             'imageUrl', v.image_url
           ) ORDER BY v.color, v.size)
           FROM product_variants v WHERE v.product_id = p.id
@@ -110,7 +111,13 @@ export async function getInvoiceFormData() {
             'id', v.id, 'name', v.name, 'sku', v.sku,
             'price', v.price_after_discount,
             'beforePrice', v.price_before_discount,
-            'stock', v.stock, 'imageUrl', v.image_url,
+            'stock', COALESCE((
+              SELECT MIN(TRUNC(pv.stock / GREATEST(pvi.quantity, 1)))::int
+              FROM package_variant_items pvi
+              JOIN product_variants pv ON pv.id = pvi.product_variant_id
+              WHERE pvi.package_variant_id = v.id
+            ), 0),
+            'imageUrl', v.image_url,
             'components', COALESCE((
               SELECT json_agg(json_build_object(
                 'productName', pr.name, 'color', pv.color, 'size', pv.size, 'quantity', s.quantity

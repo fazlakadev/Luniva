@@ -11,7 +11,7 @@ export async function GET(_request: Request, { params }: Context) {
   await ensureProductsTables(); const { id } = await params;
   const product = await db.query("SELECT id, name, primary_sku, description, image_url, created_at, updated_at FROM products WHERE id = $1", [id]);
   if (!product.rowCount) return NextResponse.json({ error: "المنتج غير موجود." }, { status: 404 });
-  const variants = await db.query("SELECT id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price, created_at FROM product_variants WHERE product_id = $1 ORDER BY color, size", [id]);
+  const variants = await db.query("SELECT id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price, stock, min_stock_alert, created_at FROM product_variants WHERE product_id = $1 ORDER BY color, size", [id]);
   return NextResponse.json({ product: { ...product.rows[0], variants: variants.rows } });
 }
 
@@ -24,13 +24,50 @@ export async function PATCH(request: Request, { params }: Context) {
     const updated = await client.query(`UPDATE products SET name = $1, primary_sku = $2, description = $3, image_url = COALESCE($4, image_url), updated_at = NOW()
       WHERE id = $5 RETURNING id, name, primary_sku, description, image_url, created_at, updated_at`, [product.name, product.primarySku, product.description, imageUrl, id]);
     if (!updated.rowCount) { await client.query("ROLLBACK"); return NextResponse.json({ error: "المنتج غير موجود." }, { status: 404 }); }
-    await client.query("DELETE FROM product_variants WHERE product_id = $1", [id]);
-    for (const variant of product.variants) await client.query(
-      `INSERT INTO product_variants
-        (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-      [id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice, variant.discountType, variant.discountValue, variant.imageUrl, variant.supplierId, variant.supplyPrice],
-    );
+
+    const existingRows = await client.query("SELECT id, color, size, sku, stock, min_stock_alert FROM product_variants WHERE product_id = $1", [id]);
+    const existingById = new Map(existingRows.rows.map((row) => [row.id, row]));
+    const existingByCombo = new Map(existingRows.rows.map((row) => [`${row.color.trim().toLowerCase()}|${row.size.trim().toLowerCase()}`, row]));
+    const retainedIds = new Set<string>();
+
+    for (const variant of product.variants) {
+      const match = (variant.id && existingById.get(variant.id)) ||
+        existingByCombo.get(`${variant.color.trim().toLowerCase()}|${variant.size.trim().toLowerCase()}`);
+
+      if (match) {
+        retainedIds.add(match.id);
+        await client.query(
+          `UPDATE product_variants SET
+            color = $1, size = $2, sku = $3, price = $4, price_before_discount = $5,
+            discount_type = $6, discount_value = $7, image_url = $8, supplier_id = $9,
+            supply_price = $10, stock = $11, min_stock_alert = $12
+           WHERE id = $13`,
+          [
+            variant.color, variant.size, variant.sku, variant.price, variant.beforePrice,
+            variant.discountType, variant.discountValue, variant.imageUrl, variant.supplierId,
+            variant.supplyPrice, variant.stock, variant.minStockAlert, match.id,
+          ],
+        );
+      } else {
+        const inserted = await client.query(
+          `INSERT INTO product_variants
+            (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price, stock, min_stock_alert)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+            RETURNING id`,
+          [
+            id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice,
+            variant.discountType, variant.discountValue, variant.imageUrl, variant.supplierId,
+            variant.supplyPrice, variant.stock, variant.minStockAlert,
+          ],
+        );
+        retainedIds.add(inserted.rows[0].id);
+      }
+    }
+
+    if (retainedIds.size > 0) {
+      const retainedArray = Array.from(retainedIds);
+      await client.query("DELETE FROM product_variants WHERE product_id = $1 AND NOT (id = ANY($2::uuid[]))", [id, retainedArray]);
+    }
     await client.query(
       `UPDATE products SET
         price_before_discount = (SELECT MIN(price_before_discount) FROM product_variants WHERE product_id = $1),

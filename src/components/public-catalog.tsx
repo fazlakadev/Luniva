@@ -341,6 +341,7 @@ export default async function PublicCatalog({ page = "home", query = "", filters
               {products.map((product, index) => {
                 const stats = priceStats(product.variants);
                 const hero = product.image_url || product.variants.find((variant) => variant.imageUrl)?.imageUrl || null;
+                const totalStock = product.variants.reduce((sum, v) => sum + (v.stock ?? 0), 0);
                 return (
                   <BlurFade key={product.id} inView delay={Math.min(index, 8) * 0.04} className="min-w-0">
                     <Link
@@ -353,9 +354,16 @@ export default async function PublicCatalog({ page = "home", query = "", filters
                         <CardImage src={hero} alt={product.name} icon={Package} />
                         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
                           <span className="badge badge-lav shadow-sm"><Sparkles size={12} />منتج</span>
-                          {stats.topDiscount > 0 && (
-                            <span className="badge badge-success shadow-sm"><BadgePercent size={12} />خصم {formatNumber(stats.topDiscount)}%</span>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {totalStock === 0 ? (
+                              <span className="badge badge-warning shadow-sm">نفد</span>
+                            ) : totalStock <= 3 ? (
+                              <span className="badge badge-warning shadow-sm">متبقي {totalStock}</span>
+                            ) : null}
+                            {stats.topDiscount > 0 && (
+                              <span className="badge badge-success shadow-sm"><BadgePercent size={12} />خصم {formatNumber(stats.topDiscount)}%</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <div className="min-w-0 p-4">
@@ -422,6 +430,7 @@ export default async function PublicCatalog({ page = "home", query = "", filters
               {packages.map((item, index) => {
                 const stats = priceStats(item.variants);
                 const hero = item.image_url || item.variants.find((variant) => variant.imageUrl)?.imageUrl || null;
+                const pkgStock = item.variants.reduce((sum, v) => sum + (v.stock ?? 0), 0);
                 return (
                   <BlurFade key={item.id} inView delay={Math.min(index, 8) * 0.04} className="min-w-0">
                     <Link
@@ -434,9 +443,12 @@ export default async function PublicCatalog({ page = "home", query = "", filters
                         <CardImage src={hero} alt={item.name} icon={Gift} />
                         <div className="absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-3">
                           <span className="badge badge-brand shadow-sm"><Gift size={12} />بكدج</span>
-                          {stats.topDiscount > 0 && (
-                            <span className="badge badge-success shadow-sm">خصم {formatNumber(stats.topDiscount)}%</span>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {pkgStock === 0 && <span className="badge badge-warning shadow-sm">نفد المخزون</span>}
+                            {stats.topDiscount > 0 && (
+                              <span className="badge badge-success shadow-sm">خصم {formatNumber(stats.topDiscount)}%</span>
+                            )}
+                          </div>
                         </div>
                         {item.badge && (
                           <span className="absolute bottom-3 right-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-extrabold text-[#7c4354] shadow-sm backdrop-blur">

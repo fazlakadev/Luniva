@@ -40,6 +40,7 @@ export type ProductDetail = {
   description: string | null;
   image_url?: string | null;
   variants: {
+    id?: string;
     color: string;
     size: string;
     sku: string;
@@ -50,12 +51,15 @@ export type ProductDetail = {
     image_url?: string | null;
     supplier_id?: string | null;
     supply_price?: string | number | null;
+    stock?: number;
+    min_stock_alert?: number;
   }[];
 };
 
 type SupplierOption = { id: string; name: string };
 
 type VariantState = {
+  id?: string;
   color: string;
   size: string;
   sku: string;
@@ -64,6 +68,8 @@ type VariantState = {
   discountValue: string;
   supplierId: string;
   supplyPrice: string;
+  stock: string;
+  minStockAlert: string;
   imageUrl: string | null;
   file: File | null;
   preview: string | null;
@@ -79,6 +85,8 @@ function blankVariant(): VariantState {
     discountValue: "0",
     supplierId: "",
     supplyPrice: "0",
+    stock: "10",
+    minStockAlert: "3",
     imageUrl: null,
     file: null,
     preview: null,
@@ -94,6 +102,7 @@ function initialVariant(item: NonNullable<ProductDetail["variants"]>[number]): V
     discountValue = discountType === "percent" ? discountPercent(before, after) : roundMoney(before - after);
   }
   return {
+    id: item.id,
     color: item.color,
     size: item.size,
     sku: item.sku,
@@ -102,6 +111,8 @@ function initialVariant(item: NonNullable<ProductDetail["variants"]>[number]): V
     discountValue: String(discountValue),
     supplierId: item.supplier_id ?? "",
     supplyPrice: String(Number(item.supply_price ?? 0)),
+    stock: String(Number(item.stock ?? 0)),
+    minStockAlert: String(Number(item.min_stock_alert ?? 3)),
     imageUrl: item.image_url ?? null,
     file: null,
     preview: item.image_url ?? null,
@@ -204,6 +215,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
       maxDiscount: priced.reduce((best, entry) => Math.max(best, discountPercent(entry.before, entry.after)), 0),
       totalSaving: priced.reduce((sum, entry) => sum + Math.max(0, entry.before - entry.after), 0),
       totalCost: roundMoney(variants.reduce((sum, item) => sum + Math.max(0, Number(item.supplyPrice) || 0), 0)),
+      totalStock: variants.reduce((sum, item) => sum + Math.max(0, Math.trunc(Number(item.stock) || 0)), 0),
       potentialProfit: roundMoney(
         variants.reduce((sum, item) => sum + afterPrice(item) - Math.max(0, Number(item.supplyPrice) || 0), 0),
       ),
@@ -249,6 +261,7 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
         primarySku,
         description,
         variants: variants.map((variant) => ({
+          id: variant.id,
           color: canonicalColorName(variant.color) || variant.color.trim(),
           size: variant.size.trim(),
           sku: variant.sku.trim().toUpperCase(),
@@ -258,6 +271,8 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
           discountValue: Math.max(0, Number(variant.discountValue) || 0),
           supplierId: variant.supplierId || null,
           supplyPrice: Math.max(0, Number(variant.supplyPrice) || 0),
+          stock: Math.max(0, Math.trunc(Number(variant.stock) || 0)),
+          minStockAlert: Math.max(0, Math.trunc(Number(variant.minStockAlert) || 3)),
           imageUrl: variant.imageUrl,
         })),
       };
@@ -553,6 +568,42 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
                         )}
                       </div>
                     </div>
+
+                    <div className="mt-3 grid gap-3 rounded-xl p-3 sm:grid-cols-2" style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
+                      <label>
+                        <span className="field-label flex items-center justify-between">
+                          <span>رصيد المخزون (قطع)</span>
+                          {Number(variant.stock) === 0 ? (
+                            <span className="text-[10px] text-[var(--warning)] font-bold">نفد المخزون</span>
+                          ) : Number(variant.stock) <= Number(variant.minStockAlert || 3) ? (
+                            <span className="text-[10px] text-[var(--warning)] font-bold">مخزون منخفض ({variant.stock})</span>
+                          ) : (
+                            <span className="text-[10px] text-[var(--success)] font-bold">متوفر بالمخزن ({variant.stock})</span>
+                          )}
+                        </span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={variant.stock}
+                          onChange={(event) => update(index, { stock: event.target.value })}
+                          placeholder="0"
+                          className="field py-2.5 text-center font-bold"
+                        />
+                      </label>
+                      <label>
+                        <span className="field-label">حد تنبيه نقص المخزون</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={variant.minStockAlert}
+                          onChange={(event) => update(index, { minStockAlert: event.target.value })}
+                          placeholder="3"
+                          className="field py-2.5 text-center"
+                        />
+                      </label>
+                    </div>
                   </article>
                 );
               })}
@@ -579,6 +630,10 @@ export default function ProductForm({ product }: { product?: ProductDetail }) {
               <div className="flex items-center justify-between text-xs">
                 <span className="muted">عدد المتغيرات</span>
                 <b style={{ color: "var(--ink)" }}>{formatNumber(summary.count)}</b>
+              </div>
+              <div className="flex items-center justify-between text-xs">
+                <span className="muted">إجمالي المخزون</span>
+                <b className="badge badge-lav">{formatNumber(summary.totalStock)} قطعة</b>
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="muted">نطاق السعر</span>

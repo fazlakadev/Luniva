@@ -13,12 +13,14 @@ export async function GET() {
     const result = await db.query(`SELECT p.id, p.name, p.primary_sku, p.description, p.image_url, p.created_at, p.updated_at,
       COUNT(v.id)::int AS variant_count, MIN(v.price) AS starting_price,
       MIN(v.price_before_discount) AS starting_before_price,
+      COALESCE(SUM(v.stock), 0)::int AS total_stock,
       COALESCE(MAX(CASE WHEN v.price_before_discount > v.price AND v.price_before_discount > 0
         THEN ROUND(((v.price_before_discount - v.price) / v.price_before_discount) * 100)::int ELSE 0 END), 0) AS top_discount,
       COALESCE(json_agg(json_build_object(
         'id', v.id, 'color', v.color, 'size', v.size, 'sku', v.sku,
         'price', v.price, 'price_before_discount', v.price_before_discount,
         'discount_type', v.discount_type, 'discount_value', v.discount_value, 'image_url', v.image_url,
+        'stock', v.stock, 'min_stock_alert', v.min_stock_alert,
         'supplier_id', v.supplier_id, 'supplier_name', s.name, 'supply_price', v.supply_price
       ) ORDER BY v.color, v.size) FILTER (WHERE v.id IS NOT NULL), '[]') AS variants
       FROM products p
@@ -43,9 +45,9 @@ export async function POST(request: Request) {
       RETURNING id, name, primary_sku, description, image_url, created_at, updated_at`, [product.name, product.primarySku, product.description, imageUrl]);
     for (const variant of product.variants) await client.query(
       `INSERT INTO product_variants
-        (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
-      [created.rows[0].id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice, variant.discountType, variant.discountValue, variant.imageUrl, variant.supplierId, variant.supplyPrice],
+        (product_id, color, size, sku, price, price_before_discount, discount_type, discount_value, image_url, supplier_id, supply_price, stock, min_stock_alert)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+      [created.rows[0].id, variant.color, variant.size, variant.sku, variant.price, variant.beforePrice, variant.discountType, variant.discountValue, variant.imageUrl, variant.supplierId, variant.supplyPrice, variant.stock, variant.minStockAlert],
     );
     await client.query(
       `UPDATE products SET

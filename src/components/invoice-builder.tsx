@@ -54,6 +54,8 @@ export type BuilderProduct = {
     sku: string;
     price: string | number;
     beforePrice: string | number;
+    stock?: number;
+    minStockAlert?: number;
     imageUrl: string | null;
   }>;
 };
@@ -87,6 +89,7 @@ export type CartItem = {
   unitPrice: number;
   unitBefore: number;
   quantity: number;
+  stock?: number;
 };
 
 function Thumb({ src, color, size = "h-11 w-11" }: { src: string | null; color?: string; size?: string }) {
@@ -143,6 +146,7 @@ function buildInitialCart({
           unitPrice: Number(variant.price),
           unitBefore: Math.max(Number(variant.price), Number(variant.beforePrice)),
           quantity: 1,
+          stock: variant.stock ?? 0,
         }];
       }
     }
@@ -167,6 +171,7 @@ function buildInitialCart({
           unitPrice: Number(variant.price),
           unitBefore: Math.max(Number(variant.price), Number(variant.beforePrice)),
           quantity: 1,
+          stock: variant.stock ?? 0,
         }];
       }
     }
@@ -290,6 +295,7 @@ export default function InvoiceBuilder({
         unitPrice: Number(variant.price),
         unitBefore: Math.max(Number(variant.price), Number(variant.beforePrice)),
         quantity: 1,
+        stock: variant.stock ?? 0,
       }];
     });
   }
@@ -313,6 +319,7 @@ export default function InvoiceBuilder({
         unitPrice: Number(variant.price),
         unitBefore: Math.max(Number(variant.price), Number(variant.beforePrice)),
         quantity: 1,
+        stock: variant.stock ?? 0,
       }];
     });
   }
@@ -352,6 +359,15 @@ export default function InvoiceBuilder({
     }
     if (!editing && Number(paidAmount) > total + 0.001) {
       toast.error("المبلغ المدفوع أكبر من الإجمالي", "قلّلي المبلغ المدفوع أو راجعي الخصم والتوصيل.");
+      return;
+    }
+
+    const oversold = cart.find((item) => item.stock !== undefined && item.quantity > item.stock);
+    if (!editing && oversold) {
+      toast.error(
+        "الكمية تتجاوز المخزون",
+        `الكمية المطلوبة لـ «${oversold.name}» (${oversold.quantity}) أكبر من الرصيد المتوفر بالمخزون (${oversold.stock}). يرجى تعديل الكمية أو تزويد المخزون أولاً.`,
+      );
       return;
     }
 
@@ -504,23 +520,36 @@ export default function InvoiceBuilder({
                   </button>
                   {isOpen && (
                     <div className="grid gap-1.5 border-t p-2.5 sm:grid-cols-2" style={{ borderColor: "var(--line)" }}>
-                      {product.variants.map((variant) => (
-                        <button
-                          key={variant.id}
-                          type="button"
-                          onClick={() => addProductVariant(product, variant)}
-                          className="flex items-center gap-2 rounded-lg p-2 text-right transition hover:-translate-y-0.5"
-                          style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
-                        >
-                          <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: colorSwatch(variant.color), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.15)" }} />
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-[11px] font-extrabold" style={{ color: "var(--ink-soft)" }}>{canonicalColorName(variant.color)} · {variant.size}</span>
-                            <span className="mono block text-[9px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{variant.sku}</span>
-                          </span>
-                          <span className="money shrink-0 text-[11px]" style={{ color: "var(--brand-strong)" }}>{formatMoney(variant.price)}</span>
-                          <Plus size={13} className="shrink-0" style={{ color: "var(--success)" }} />
-                        </button>
-                      ))}
+                      {product.variants.map((variant) => {
+                        const stock = variant.stock ?? 0;
+                        const minAlert = variant.minStockAlert ?? 3;
+                        return (
+                          <button
+                            key={variant.id}
+                            type="button"
+                            onClick={() => addProductVariant(product, variant)}
+                            className="flex items-center gap-2 rounded-lg p-2 text-right transition hover:-translate-y-0.5"
+                            style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+                          >
+                            <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: colorSwatch(variant.color), boxShadow: "inset 0 0 0 1px rgba(0,0,0,.15)" }} />
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-[11px] font-extrabold" style={{ color: "var(--ink-soft)" }}>{canonicalColorName(variant.color)} · {variant.size}</span>
+                              <span className="flex items-center gap-1.5 mono text-[9px]" dir="ltr" style={{ color: "var(--muted-2)" }}>
+                                <span>{variant.sku}</span>
+                                {stock === 0 ? (
+                                  <span className="rounded bg-rose-500/10 px-1 py-0.2 text-[8px] font-bold text-rose-600">نفد</span>
+                                ) : stock <= minAlert ? (
+                                  <span className="rounded bg-amber-500/10 px-1 py-0.2 text-[8px] font-bold text-amber-600">{stock} متبقي</span>
+                                ) : (
+                                  <span className="rounded bg-emerald-500/10 px-1 py-0.2 text-[8px] font-bold text-emerald-600">{stock} متاح</span>
+                                )}
+                              </span>
+                            </span>
+                            <span className="money shrink-0 text-[11px]" style={{ color: "var(--brand-strong)" }}>{formatMoney(variant.price)}</span>
+                            <Plus size={13} className="shrink-0" style={{ color: "var(--success)" }} />
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -549,7 +578,12 @@ export default function InvoiceBuilder({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[11px] font-extrabold" style={{ color: "var(--ink-soft)" }}>{packageVariantLabel(variant.name)}</span>
                         <span className="block truncate text-[9px]" style={{ color: "var(--muted-2)" }}>
-                          {formatNumber(variant.components.length)} قطع · مخزون {formatNumber(variant.stock)}
+                          {formatNumber(variant.components.length)} قطع ·{" "}
+                          {variant.stock > 0 ? (
+                            <span className="font-bold text-emerald-600">متاح {formatNumber(variant.stock)} بكدج</span>
+                          ) : (
+                            <span className="font-bold text-rose-600">نفد مخزون القطع</span>
+                          )}
                         </span>
                       </span>
                       <span className="money shrink-0 text-[11px]" style={{ color: "var(--brand-strong)" }}>{formatMoney(variant.price)}</span>
@@ -588,7 +622,14 @@ export default function InvoiceBuilder({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[11px] font-extrabold" style={{ color: "var(--ink)" }}>{item.name}</p>
                       <p className="truncate text-[9px]" style={{ color: "var(--muted-2)" }}>{item.subtitle}</p>
-                      <p className="mono max-w-full truncate text-[9px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{item.sku}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="mono truncate text-[9px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{item.sku}</p>
+                        {item.stock !== undefined && item.quantity > item.stock && (
+                          <span className="rounded bg-rose-500/10 px-1 py-0.2 text-[8px] font-bold text-rose-600">
+                            يتجاوز المخزون ({item.stock})
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex shrink-0 items-center rounded-lg" style={{ background: "var(--surface)", border: "1px solid var(--line)" }}>
                       <button type="button" onClick={() => changeQuantity(item.key, -1)} className="grid h-7 w-7 place-items-center" style={{ color: "var(--muted)" }} aria-label="تقليل الكمية"><Minus size={12} /></button>

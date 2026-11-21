@@ -9,7 +9,18 @@ export async function getPackagesList() {
       COALESCE((SELECT MIN(v.price_after_discount) FROM package_variants v WHERE v.package_id = p.id), p.price_after_discount) AS starting_price,
       COALESCE((SELECT MAX(v.price_after_discount) FROM package_variants v WHERE v.package_id = p.id), p.price_after_discount) AS top_price,
       COALESCE((SELECT MIN(v.price_before_discount) FROM package_variants v WHERE v.package_id = p.id), p.price_before_discount) AS starting_before_price,
-      COALESCE((SELECT SUM(v.stock)::int FROM package_variants v WHERE v.package_id = p.id), 0) AS stock_total,
+      COALESCE((
+        SELECT SUM(calc_stock) FROM (
+          SELECT COALESCE((
+            SELECT MIN(TRUNC(pv.stock / GREATEST(psi.quantity, 1)))::int
+            FROM package_variant_items psi
+            JOIN product_variants pv ON pv.id = psi.product_variant_id
+            WHERE psi.package_variant_id = v.id
+          ), 0) AS calc_stock
+          FROM package_variants v
+          WHERE v.package_id = p.id
+        ) sub
+      ), 0)::int AS stock_total,
       COALESCE((SELECT array_agg(DISTINCT fv.color) FILTER (WHERE fv.color IS NOT NULL)
         FROM package_variants pv
         JOIN package_variant_items psi ON psi.package_variant_id = pv.id
@@ -43,7 +54,14 @@ export async function getPackageDetail(id: string) {
   );
 
   const variants = await db.query(
-    `SELECT v.*, COALESCE((
+    `SELECT v.*,
+       COALESCE((
+         SELECT MIN(TRUNC(pv.stock / GREATEST(s.quantity, 1)))::int
+         FROM package_variant_items s
+         JOIN product_variants pv ON pv.id = s.product_variant_id
+         WHERE s.package_variant_id = v.id
+       ), 0) AS stock,
+       COALESCE((
         SELECT json_agg(json_build_object(
           'id', s.id,
           'productId', s.product_id,
@@ -54,7 +72,8 @@ export async function getPackageDetail(id: string) {
           'sku', pv.sku,
           'quantity', s.quantity,
           'unitPrice', s.unit_price,
-          'imageUrl', pv.image_url
+          'imageUrl', pv.image_url,
+          'variantStock', pv.stock
         ) ORDER BY s.created_at)
         FROM package_variant_items s
         JOIN products p ON p.id = s.product_id

@@ -29,6 +29,7 @@ export type PackageSelection = {
   quantity: number;
   unitPrice: string | number;
   imageUrl: string | null;
+  variantStock?: number;
 };
 
 export type PackageVariantView = {
@@ -117,7 +118,20 @@ function CompositionRow({ selection, compact = false }: { selection: PackageSele
           <span className="mono truncate" dir="ltr">· {selection.sku}</span>
         </p>
       </div>
-      <span className={`badge badge-lav shrink-0 ${compact ? "text-[9px]" : ""}`}>× {formatNumber(selection.quantity)}</span>
+      <div className="flex flex-col items-end gap-1 shrink-0">
+        <span className={`badge badge-lav ${compact ? "text-[9px]" : ""}`}>× {formatNumber(selection.quantity)}</span>
+        {selection.variantStock !== undefined && (
+          selection.variantStock >= selection.quantity ? (
+            <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.2 rounded">
+              مخزون: {selection.variantStock}
+            </span>
+          ) : (
+            <span className="text-[9px] font-bold text-rose-600 bg-rose-500/10 px-1.5 py-0.2 rounded">
+              غير كافٍ ({selection.variantStock})
+            </span>
+          )
+        )}
+      </div>
     </div>
   );
 }
@@ -375,8 +389,8 @@ export default function PackageVariants({
                   {variant.is_default ? <span className="badge badge-dark">الافتراضي</span> : <span />}
                   <div className="flex flex-col items-end gap-1">
                     {numbers.hasDiscount && <span className="badge badge-success">-{formatNumber(numbers.percent)}%</span>}
-                    <span className={`badge ${variant.stock > 0 ? "badge-dark" : "badge-warning"}`}>
-                      <Warehouse size={11} />{variant.stock > 0 ? formatNumber(variant.stock) : "نفد المخزون"}
+                    <span className={`badge ${variant.stock > 0 ? "badge-success" : "badge-warning"}`}>
+                      <Warehouse size={11} />{variant.stock > 0 ? `${formatNumber(variant.stock)} متاح` : "نفد مخزون القطع"}
                     </span>
                   </div>
                 </div>

@@ -2,11 +2,15 @@
 
 import {
   BadgePercent,
+  Boxes,
   CalendarDays,
   ChevronLeft,
   Expand,
   Layers3,
+  LoaderCircle,
+  Minus,
   Package,
+  Plus,
   Sparkles,
   Tag,
   Wallet,
@@ -18,6 +22,8 @@ import ZoomableImage from "@/components/zoomable-image";
 import { colorInk, colorSwatch, canonicalColorName } from "@/lib/colors";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 import { discountPercent } from "@/lib/packages";
+import { useToast } from "@/components/toast";
+
 export type ShowcaseVariant = {
   id: string;
   color: string;
@@ -28,6 +34,8 @@ export type ShowcaseVariant = {
   discount_type: string | null;
   discount_value: string | number | null;
   image_url: string | null;
+  stock?: number;
+  min_stock_alert?: number;
 };
 
 export type ShowcaseProduct = {
@@ -59,17 +67,42 @@ export default function ProductShowcase({
   product: ShowcaseProduct;
   variants: ShowcaseVariant[];
 }) {
+  const toast = useToast();
+  const [items, setItems] = useState<ShowcaseVariant[]>(variants);
+  const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string>(variants[0]?.id ?? "");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
 
-  const selected = variants.find((variant) => variant.id === selectedId) ?? variants[0];
+  const selected = items.find((variant) => variant.id === selectedId) ?? items[0];
+
+  async function adjustStock(variantId: string, delta: number) {
+    if (adjustingId) return;
+    setAdjustingId(variantId);
+    try {
+      const res = await fetch("/api/inventory/adjust", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ variantId, delta, type: delta > 0 ? "restock" : "damage_or_loss" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "تعذر تعديل المخزون.");
+      setItems((prev) =>
+        prev.map((v) => (v.id === variantId ? { ...v, stock: data.result.newStock } : v)),
+      );
+      toast.success("تم تحديث المخزون", `الرصيد الجديد: ${data.result.newStock} قطعة`);
+    } catch (err) {
+      toast.error("خطأ بالمخزون", err instanceof Error ? err.message : "تعذر تعديل المخزون.");
+    } finally {
+      setAdjustingId(null);
+    }
+  }
 
   const colorGroups = useMemo(() => {
     const map = new Map<
       string,
       { name: string; sizes: Set<string>; min: number; max: number; count: number }
     >();
-    for (const variant of variants) {
+    for (const variant of items) {
       const name = canonicalColorName(variant.color) || variant.color;
       const numbers = variantNumbers(variant);
       const entry =
@@ -81,37 +114,37 @@ export default function ProductShowcase({
       map.set(name, entry);
     }
     return Array.from(map.values());
-  }, [variants]);
+  }, [items]);
 
   const colors = useMemo(() => colorGroups.map((group) => group.name), [colorGroups]);
-  const sizes = useMemo(() => Array.from(new Set(variants.map((variant) => variant.size))), [variants]);
+  const sizes = useMemo(() => Array.from(new Set(items.map((variant) => variant.size))), [items]);
 
   const stats = useMemo(() => {
-    const priced = variants.map(variantNumbers);
+    const priced = items.map(variantNumbers);
     const min = priced.length ? Math.min(...priced.map((item) => item.after)) : 0;
     const max = priced.length ? Math.max(...priced.map((item) => item.after)) : 0;
     const topDiscount = priced.reduce((best, item) => Math.max(best, item.percent), 0);
     const totalSaving = priced.reduce((sum, item) => sum + item.saving, 0);
     return { min, max, topDiscount, totalSaving };
-  }, [variants]);
+  }, [items]);
 
   const selectedNumbers = selected ? variantNumbers(selected) : null;
 
   const gallery = useMemo(() => {
     const seen = new Set<string>();
-    const items: { url: string; variant: ShowcaseVariant | null }[] = [];
+    const galleryList: { url: string; variant: ShowcaseVariant | null }[] = [];
     if (product.image_url) {
       seen.add(product.image_url);
-      items.push({ url: product.image_url, variant: null });
+      galleryList.push({ url: product.image_url, variant: null });
     }
-    for (const variant of variants) {
+    for (const variant of items) {
       if (variant.image_url && !seen.has(variant.image_url)) {
         seen.add(variant.image_url);
-        items.push({ url: variant.image_url, variant });
+        galleryList.push({ url: variant.image_url, variant });
       }
     }
-    return items;
-  }, [product.image_url, variants]);
+    return galleryList;
+  }, [product.image_url, items]);
 
   const galleryUrls = gallery.map((item) => item.url);
   const heroImage = gallery[activeImageIndex]?.url ?? product.image_url ?? selected?.image_url ?? null;
@@ -128,15 +161,15 @@ export default function ProductShowcase({
   function pickColor(color: string) {
     const isSameColor = (variant: ShowcaseVariant) =>
       (canonicalColorName(variant.color) || variant.color) === color;
-    const sameSize = variants.find((variant) => isSameColor(variant) && variant.size === selected?.size);
-    const fallback = variants.find(isSameColor);
+    const sameSize = items.find((variant) => isSameColor(variant) && variant.size === selected?.size);
+    const fallback = items.find(isSameColor);
     const target = sameSize ?? fallback;
     if (target) focusVariant(target);
   }
 
   function pickSize(size: string) {
-    const sameColor = variants.find((variant) => matchesSelectedColor(variant) && variant.size === size);
-    const fallback = variants.find((variant) => variant.size === size);
+    const sameColor = items.find((variant) => matchesSelectedColor(variant) && variant.size === size);
+    const fallback = items.find((variant) => variant.size === size);
     const target = sameColor ?? fallback;
     if (target) focusVariant(target);
   }
@@ -145,9 +178,9 @@ export default function ProductShowcase({
     return (canonicalColorName(variant.color) || variant.color) === selectedColorName;
   }
 
-  const sizesForColor = new Set(variants.filter(matchesSelectedColor).map((variant) => variant.size));
+  const sizesForColor = new Set(items.filter(matchesSelectedColor).map((variant) => variant.size));
   const colorsForSize = new Set(
-    variants
+    items
       .filter((variant) => variant.size === selected?.size)
       .map((variant) => canonicalColorName(variant.color) || variant.color),
   );
@@ -393,6 +426,15 @@ export default function ProductShowcase({
                 </span>
                 <span className="badge badge-muted">مقاس {selected.size}</span>
                 <span className="mono badge badge-muted" dir="ltr">{selected.sku}</span>
+                {selected.stock !== undefined && (
+                  selected.stock === 0 ? (
+                    <span className="badge badge-warning">نفد المخزون</span>
+                  ) : selected.stock <= (selected.min_stock_alert ?? 3) ? (
+                    <span className="badge badge-warning">مخزون منخفض ({selected.stock} قطعة)</span>
+                  ) : (
+                    <span className="badge badge-success">المخزون المتوفر: {selected.stock} قطعة</span>
+                  )
+                )}
               </div>
             )}
 
@@ -431,65 +473,111 @@ export default function ProductShowcase({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {variants.map((variant) => {
+          {items.map((variant) => {
             const numbers = variantNumbers(variant);
             const active = variant.id === selected?.id;
             const colorName = canonicalColorName(variant.color) || variant.color;
+            const stock = variant.stock ?? 0;
+            const minAlert = variant.min_stock_alert ?? 3;
+            const isAdjusting = adjustingId === variant.id;
+
             return (
               <article
                 key={variant.id}
-                className="app-card flex items-center gap-3 p-3 transition hover:-translate-y-0.5 motion-reduce:transition-none"
+                className="app-card flex flex-col justify-between p-3.5 transition hover:-translate-y-0.5 motion-reduce:transition-none"
                 style={{
                   borderColor: active ? "var(--lav-strong)" : "var(--line)",
                   boxShadow: active ? "0 12px 30px var(--lav-ring)" : "var(--shadow-sm)",
                 }}
               >
-                <div
-                  className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl"
-                  style={{ background: "linear-gradient(135deg, var(--lav-soft), var(--surface-3))", border: "1px solid var(--line)" }}
-                >
-                  <ZoomableImage
-                    src={variant.image_url}
-                    alt={`${product.name} ${colorName} ${variant.size}`}
-                    images={galleryUrls}
-                    initialIndex={variant.image_url ? Math.max(0, galleryUrls.indexOf(variant.image_url)) : 0}
-                    className="h-full w-full"
-                    placeholder={
-                      <span className="grid h-full w-full place-items-center">
-                        <span className="h-7 w-7 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
+                <div className="flex items-center gap-3">
+                  <div
+                    className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl"
+                    style={{ background: "linear-gradient(135deg, var(--lav-soft), var(--surface-3))", border: "1px solid var(--line)" }}
+                  >
+                    <ZoomableImage
+                      src={variant.image_url}
+                      alt={`${product.name} ${colorName} ${variant.size}`}
+                      images={galleryUrls}
+                      initialIndex={variant.image_url ? Math.max(0, galleryUrls.indexOf(variant.image_url)) : 0}
+                      className="h-full w-full"
+                      placeholder={
+                        <span className="grid h-full w-full place-items-center">
+                          <span className="h-7 w-7 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
+                        </span>
+                      }
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => focusVariant(variant)}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-right"
+                    aria-pressed={active}
+                    aria-label={`اختيار ${colorName} مقاس ${variant.size}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-center gap-1.5">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
+                        <span className="truncate text-sm font-extrabold" style={{ color: "var(--ink)" }}>
+                          {colorName} · {variant.size}
+                        </span>
+                        {active && <span className="badge badge-lav shrink-0">محدد</span>}
                       </span>
-                    }
-                  />
+                      <span className="mono mt-0.5 block truncate text-[10px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{variant.sku}</span>
+                      <span className="mt-1 flex flex-wrap items-baseline gap-1.5">
+                        <span className="money text-base" style={{ color: "var(--lav-strong)" }}>{formatMoney(numbers.after)}</span>
+                        {numbers.hasDiscount && (
+                          <span className="text-[11px] line-through" style={{ color: "var(--muted-2)" }}>{formatMoney(numbers.before)}</span>
+                        )}
+                        {numbers.hasDiscount && (
+                          <span className="badge badge-success">-{formatNumber(numbers.percent)}%</span>
+                        )}
+                      </span>
+                    </span>
+                    <ChevronLeft size={17} className="shrink-0" style={{ color: active ? "var(--lav-strong)" : "var(--muted-2)" }} />
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => focusVariant(variant)}
-                  className="flex min-w-0 flex-1 items-center gap-2 text-right"
-                  aria-pressed={active}
-                  aria-label={`اختيار ${colorName} مقاس ${variant.size}`}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: colorSwatch(variant.color), border: "1px solid rgba(0,0,0,.12)" }} />
-                      <span className="truncate text-sm font-extrabold" style={{ color: "var(--ink)" }}>
-                        {colorName} · {variant.size}
-                      </span>
-                      {active && <span className="badge badge-lav shrink-0">محدد</span>}
+                {/* Stock Controls */}
+                <div className="mt-3 flex items-center justify-between gap-2 border-t pt-2.5" style={{ borderColor: "var(--line)" }}>
+                  <div className="flex items-center gap-1.5">
+                    <Boxes size={13} style={{ color: "var(--muted-2)" }} />
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      stock === 0 ? "bg-rose-500/10 text-rose-600" :
+                      stock <= minAlert ? "bg-amber-500/10 text-amber-600" :
+                      "bg-emerald-500/10 text-emerald-600"
+                    }`}>
+                      {stock === 0 ? "نفد المخزون (0)" : stock <= minAlert ? `نقص (${stock} ق)` : `${stock} قطعة بالمخزن`}
                     </span>
-                    <span className="mono mt-0.5 block truncate text-[10px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{variant.sku}</span>
-                    <span className="mt-1.5 flex flex-wrap items-baseline gap-1.5">
-                      <span className="money text-base" style={{ color: "var(--lav-strong)" }}>{formatMoney(numbers.after)}</span>
-                      {numbers.hasDiscount && (
-                        <span className="text-[11px] line-through" style={{ color: "var(--muted-2)" }}>{formatMoney(numbers.before)}</span>
-                      )}
-                      {numbers.hasDiscount && (
-                        <span className="badge badge-success">-{formatNumber(numbers.percent)}%</span>
-                      )}
-                    </span>
-                  </span>
-                  <ChevronLeft size={17} className="shrink-0" style={{ color: active ? "var(--lav-strong)" : "var(--muted-2)" }} />
-                </button>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold muted-2 me-1">تعديل:</span>
+                    <button
+                      type="button"
+                      disabled={isAdjusting || stock <= 0}
+                      onClick={() => adjustStock(variant.id, -1)}
+                      className="grid h-7 w-7 place-items-center rounded-lg border text-xs font-bold transition hover:bg-[var(--surface-3)] disabled:opacity-30"
+                      style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+                      title="خصم قطعة"
+                      aria-label="خصم قطعة"
+                    >
+                      <Minus size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isAdjusting}
+                      onClick={() => adjustStock(variant.id, 1)}
+                      className="grid h-7 w-7 place-items-center rounded-lg border text-xs font-bold transition hover:bg-[var(--surface-3)] disabled:opacity-30"
+                      style={{ borderColor: "var(--line)", background: "var(--surface)" }}
+                      title="إضافة قطعة"
+                      aria-label="إضافة قطعة"
+                    >
+                      {isAdjusting ? <LoaderCircle size={12} className="animate-spin" /> : <Plus size={12} />}
+                    </button>
+                  </div>
+                </div>
               </article>
             );
           })}

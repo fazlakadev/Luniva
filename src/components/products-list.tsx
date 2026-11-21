@@ -32,6 +32,9 @@ type Product = {
   top_price?: string | number | null;
   starting_before_price?: string | number | null;
   top_discount?: string | number | null;
+  total_stock?: number;
+  low_stock_count?: number;
+  out_of_stock_count?: number;
   created_at: string;
   colors?: string[] | null;
   sizes?: string[] | null;
@@ -73,6 +76,8 @@ export default function ProductsList({ products }: { products: Product[] }) {
   }, [filters, products]);
 
   const totalVariants = products.reduce((sum, product) => sum + Number(product.variant_count || 0), 0);
+  const totalStock = products.reduce((sum, product) => sum + Number(product.total_stock || 0), 0);
+  const lowStockProducts = products.filter((product) => Number(product.low_stock_count || 0) > 0 || Number(product.out_of_stock_count || 0) > 0).length;
   const withVariants = products.filter((product) => Number(product.variant_count) > 0).length;
   const startingPrice = products.reduce((min, product) => {
     const price = Number(product.starting_price || 0);
@@ -83,9 +88,9 @@ export default function ProductsList({ products }: { products: Product[] }) {
 
   const stats = [
     { label: "إجمالي المنتجات", value: formatNumber(products.length), hint: `${formatNumber(withVariants)} جاهز للبيع`, icon: Package, tone: "lav" },
-    { label: "المتغيرات", value: formatNumber(totalVariants), hint: "لون ومقاس لكل منتج", icon: Layers3, tone: "brand" },
-    { label: "أقل سعر", value: startingPrice ? formatMoney(startingPrice) : "—", hint: "بين جميع المتغيرات", icon: Tag, tone: "success" },
-    { label: "أعلى خصم", value: topDiscount ? `${formatNumber(topDiscount)}%` : "—", hint: "على مستوى المتغيرات", icon: BadgePercent, tone: "warning" },
+    { label: "رصيد المخزون", value: `${formatNumber(totalStock)} ق`, hint: `${formatNumber(totalVariants)} متغير بالمخزن`, icon: Boxes, tone: "brand" },
+    { label: "تنبيهات النقص", value: formatNumber(lowStockProducts), hint: lowStockProducts > 0 ? "منتجات تحتاج تزويد" : "المخزون كافٍ ومستقر", icon: Tag, tone: lowStockProducts > 0 ? "warning" : "success" },
+    { label: "أعلى خصم", value: topDiscount ? `${formatNumber(topDiscount)}%` : "—", hint: "على مستوى المتغيرات", icon: BadgePercent, tone: "lav" },
   ];
 
   const toneStyles: Record<string, { background: string; color: string }> = {
@@ -205,7 +210,18 @@ export default function ProductsList({ products }: { products: Product[] }) {
                       {before > 0 && <span className="text-[10px] line-through muted-2">{formatMoney(before)}</span>}
                     </div>
                   </div>
-                  <span className="badge badge-lav shrink-0"><Layers3 size={11} />{formatNumber(product.variant_count)}</span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="badge badge-lav"><Layers3 size={11} />{formatNumber(product.variant_count)}</span>
+                    {product.total_stock !== undefined && (
+                      product.total_stock === 0 ? (
+                        <span className="badge badge-warning text-[10px] py-0.5 px-2">نفد المخزون</span>
+                      ) : Number(product.low_stock_count || 0) > 0 ? (
+                        <span className="badge badge-warning text-[10px] py-0.5 px-2">{formatNumber(product.total_stock)} ق (نقص)</span>
+                      ) : (
+                        <span className="badge badge-success text-[10px] py-0.5 px-2">{formatNumber(product.total_stock)} قطعة</span>
+                      )
+                    )}
+                  </div>
                   <span className="hidden w-28 text-xs muted md:block">{formatDate(product.created_at)}</span>
                   <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl transition group-hover:bg-[var(--lav-soft)]" style={{ color: "var(--muted-2)" }}>
                     <ArrowLeft size={17} />

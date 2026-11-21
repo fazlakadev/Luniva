@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth";
 import { db, ensureInvoiceTables } from "@/lib/db";
 import { getInvoiceDetail } from "@/lib/invoice-queries";
 import { normalizeInvoicePayload, updateInvoice, updateInvoiceWithItems, type InvoicePatch } from "@/lib/invoices";
+import { restoreInvoiceInventory } from "@/lib/inventory";
 
 export const runtime = "nodejs";
 
@@ -80,16 +81,35 @@ export async function DELETE(_request: Request, { params }: Context) {
   try {
     await ensureInvoiceTables();
     const { id } = await params;
-    const invoice = await db.query("SELECT invoice_number FROM invoices WHERE id = $1", [id]);
-    const result = await db.query("DELETE FROM invoices WHERE id = $1", [id]);
-    if (!result.rowCount) return NextResponse.json({ error: "الفاتورة غير موجودة." }, { status: 404 });
-    await logActivity({
-      entityType: "invoice",
-      entityId: id,
-      action: "invoice.deleted",
-      summary: `حذف الفاتورة ${invoice.rows[0]?.invoice_number ?? id}`,
-      actor: session.name,
-    });
+    const invoice = await db.query("SELECT invoice_number, status FROM invoices WHERE id = $1", [id]);
+    if (!invoice.rowCount) return NextResponse.json({ error: "الفاتورة غير موجودة." }, { status: 404 });
+
+    const invoiceRow = invoice.rows[0];
+    const client = await db.connect();
+    try {
+      await client.query("BEGIN");
+      if (invoiceRow.status !== "cancelled") {
+        await restoreInvoiceInventory(client, id, invoiceRow.invoice_number, session.name);
+      }
+      await client.query("DELETE FROM invoices WHERE id = $1", [id]);
+      await logActivity(
+        {
+          entityType: "invoice",
+          entityId: id,
+          action: "invoice.deleted",
+          summary: `حذف الفاتورة ${invoiceRow.invoice_number ?? id}`,
+          actor: session.name,
+        },
+        client,
+      );
+      await client.query("COMMIT");
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("Unable to delete invoice", error);

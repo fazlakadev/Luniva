@@ -9,6 +9,7 @@ import { canonicalColorName, normalizeColorName } from "@/lib/colors";
 import { supplierRef, supplyPrice } from "@/lib/suppliers";
 
 export type ProductVariantInput = {
+  id?: string;
   color: string;
   size: string;
   sku: string;
@@ -19,6 +20,8 @@ export type ProductVariantInput = {
   supplierId: string | null;
   supplyPrice: number;
   imageUrl: string | null;
+  stock: number;
+  minStockAlert: number;
 };
 
 export function validateProduct(data: unknown) {
@@ -36,6 +39,7 @@ export function validateProduct(data: unknown) {
 
   const variants = body.variants.map((item): ProductVariantInput => {
     const variant = item as {
+      id?: unknown;
       color?: unknown;
       size?: unknown;
       sku?: unknown;
@@ -46,6 +50,8 @@ export function validateProduct(data: unknown) {
       supplierId?: unknown;
       supplyPrice?: unknown;
       imageUrl?: unknown;
+      stock?: unknown;
+      minStockAlert?: unknown;
     };
     const color = typeof variant.color === "string" ? canonicalColorName(variant.color) : "";
     const size = typeof variant.size === "string" ? variant.size.trim() : "";
@@ -82,8 +88,15 @@ export function validateProduct(data: unknown) {
       throw new Error("تحققي من بيانات كل متغير وأسعاره.");
     }
 
+    const rawStock = typeof variant.stock === "number" ? variant.stock : Number(variant.stock);
+    const stock = Number.isFinite(rawStock) && rawStock >= 0 ? Math.trunc(rawStock) : 0;
+    const rawMinAlert = typeof variant.minStockAlert === "number" ? variant.minStockAlert : Number(variant.minStockAlert);
+    const minStockAlert = Number.isFinite(rawMinAlert) && rawMinAlert >= 0 ? Math.trunc(rawMinAlert) : 3;
+    const variantId = typeof variant.id === "string" && variant.id.trim() ? variant.id.trim() : undefined;
+
     const imageUrl = typeof variant.imageUrl === "string" && variant.imageUrl.length ? variant.imageUrl : null;
     return {
+      id: variantId,
       color,
       size,
       sku,
@@ -94,6 +107,8 @@ export function validateProduct(data: unknown) {
       supplierId: supplierRef(variant.supplierId),
       supplyPrice: supplyPrice(variant.supplyPrice),
       imageUrl,
+      stock,
+      minStockAlert,
     };
   });
 

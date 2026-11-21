@@ -220,7 +220,11 @@ export default function PackagesList({ packages }: { packages: PackageRow[] }) {
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     <span className="badge badge-muted"><Boxes size={12} />{formatNumber(item.items_count)} منتجات</span>
                     <span className="badge badge-brand"><Layers3 size={12} />{formatNumber(item.variants_count)} بكدج فرعي</span>
-                    <span className="badge badge-lav"><Tag size={12} />{formatNumber(item.stock_total)} بالمخزون</span>
+                    {item.stock_total > 0 ? (
+                      <span className="badge badge-success"><Tag size={12} />متاح {formatNumber(item.stock_total)} بكدج</span>
+                    ) : (
+                      <span className="badge badge-warning"><Tag size={12} />نفد مخزون القطع</span>
+                    )}
                   </div>
 
                   <div className="mt-4 flex items-end justify-between gap-3 border-t pt-4" style={{ borderColor: "var(--line)" }}>

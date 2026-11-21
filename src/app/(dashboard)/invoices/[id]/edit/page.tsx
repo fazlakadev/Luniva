@@ -21,6 +21,13 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
   const cart: CartItem[] = invoice.items.map((item: Record<string, unknown>) => {
     const productVariantId = item.product_variant_id ? String(item.product_variant_id) : null;
     const packageVariantId = item.package_variant_id ? String(item.package_variant_id) : null;
+    const product = (data.products as BuilderProduct[]).find((p) => p.variants?.some((v) => v.id === productVariantId));
+    const variant = product?.variants?.find((v) => v.id === productVariantId);
+    const pkg = (data.packages as BuilderPackage[]).find((p) => p.variants?.some((v) => v.id === packageVariantId));
+    const pkgVariant = pkg?.variants?.find((v) => v.id === packageVariantId);
+    const currentQty = Number(item.quantity ?? 1);
+    const availableStock = (variant?.stock ?? pkgVariant?.stock ?? 0) + (invoice.status !== "cancelled" ? currentQty : 0);
+
     return {
       key: productVariantId ? `p:${productVariantId}` : `pk:${packageVariantId}`,
       type: item.item_type === "package" ? "package" : "product",
@@ -32,7 +39,8 @@ export default async function EditInvoicePage({ params }: { params: Promise<{ id
       imageUrl: item.image_url ? String(item.image_url) : null,
       unitPrice: Number(item.unit_price ?? 0),
       unitBefore: Number(item.unit_before ?? 0),
-      quantity: Number(item.quantity ?? 1),
+      quantity: currentQty,
+      stock: availableStock,
     };
   });
 

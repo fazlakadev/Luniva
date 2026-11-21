@@ -11,6 +11,9 @@ export default async function ProductsPage() {
       MIN(v.price) AS starting_price,
       MAX(v.price) AS top_price,
       MIN(v.price_before_discount) AS starting_before_price,
+      COALESCE(SUM(v.stock), 0)::int AS total_stock,
+      COUNT(CASE WHEN v.stock = 0 THEN 1 END)::int AS out_of_stock_count,
+      COUNT(CASE WHEN v.stock > 0 AND v.stock <= v.min_stock_alert THEN 1 END)::int AS low_stock_count,
       COALESCE(MAX(CASE WHEN v.price_before_discount > v.price AND v.price_before_discount > 0
         THEN ROUND(((v.price_before_discount - v.price) / v.price_before_discount) * 100)::int ELSE 0 END), 0) AS top_discount
     FROM products p

@@ -75,6 +75,7 @@ export async function getPublicCatalog(): Promise<{
             'sku', v.sku,
             'price', v.price,
             'priceBeforeDiscount', COALESCE(v.price_before_discount, v.price),
+            'stock', v.stock,
             'imageUrl', v.image_url
           ) ORDER BY v.color, v.size)
           FROM product_variants v WHERE v.product_id = p.id
@@ -97,7 +98,12 @@ export async function getPublicCatalog(): Promise<{
             'sku', v.sku,
             'price', v.price_after_discount,
             'priceBeforeDiscount', v.price_before_discount,
-            'stock', v.stock,
+            'stock', COALESCE((
+              SELECT MIN(TRUNC(pv.stock / GREATEST(pvi.quantity, 1)))::int
+              FROM package_variant_items pvi
+              JOIN product_variants pv ON pv.id = pvi.product_variant_id
+              WHERE pvi.package_variant_id = v.id
+            ), 0),
             'imageUrl', v.image_url
           ) ORDER BY v.sort_order, v.created_at)
           FROM package_variants v WHERE v.package_id = p.id
@@ -148,6 +154,7 @@ export async function getPublicProduct(id: string): Promise<CatalogProduct | nul
            'sku', v.sku,
            'price', v.price,
            'priceBeforeDiscount', COALESCE(v.price_before_discount, v.price),
+           'stock', v.stock,
            'discountType', v.discount_type,
            'discountValue', v.discount_value,
            'imageUrl', v.image_url
@@ -181,7 +188,12 @@ export async function getPublicPackage(id: string): Promise<CatalogPackageDetail
            'sku', v.sku,
            'price', v.price_after_discount,
            'priceBeforeDiscount', v.price_before_discount,
-           'stock', v.stock,
+           'stock', COALESCE((
+             SELECT MIN(TRUNC(pv.stock / GREATEST(pvi.quantity, 1)))::int
+             FROM package_variant_items pvi
+             JOIN product_variants pv ON pv.id = pvi.product_variant_id
+             WHERE pvi.package_variant_id = v.id
+           ), 0),
            'imageUrl', v.image_url
          ) ORDER BY v.sort_order, v.created_at)
          FROM package_variants v WHERE v.package_id = p.id

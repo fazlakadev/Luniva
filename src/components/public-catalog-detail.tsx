@@ -255,6 +255,15 @@ export function PublicProductDetail({ product }: { product: CatalogProduct }) {
                     </span>
                     <span className="badge badge-muted">مقاس {variant.size}</span>
                     {percent > 0 && <span className="badge badge-success">خصم {formatNumber(percent)}%</span>}
+                    {variant.stock !== undefined && (
+                      variant.stock === 0 ? (
+                        <span className="badge badge-warning">نفد من المخزون</span>
+                      ) : variant.stock <= 3 ? (
+                        <span className="badge badge-warning">متبقي {variant.stock} قطع فقط!</span>
+                      ) : (
+                        <span className="badge badge-success">متوفر بالمخزون</span>
+                      )
+                    )}
                   </div>
                   <p className="mono mt-2 truncate text-[10px]" dir="ltr" style={{ color: "var(--muted-2)" }}>{variant.sku}</p>
                   <div className="mt-2 flex flex-wrap items-baseline gap-2">
@@ -440,6 +449,13 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
                       <span className="money text-sm font-black" style={{ color: "var(--brand-strong)" }}>{formatMoney(variantPrice)}</span>
                       {percent > 0 && <span className="money text-[10px] line-through muted-2">{formatMoney(variantBefore)}</span>}
                       {percent > 0 && <span className="badge badge-success">خصم {formatNumber(percent)}%</span>}
+                      {variant.stock !== undefined && (
+                        variant.stock > 0 ? (
+                          <span className="badge badge-success">متاح {formatNumber(variant.stock)} بكدج</span>
+                        ) : (
+                          <span className="badge badge-warning">نفد من المخزون</span>
+                        )
+                      )}
                     </div>
                   </div>
                 </article>
