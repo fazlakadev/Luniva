@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function AccountPage() {
   return (
-    <PublicSiteShell section="about">
-      <div className="container-page py-10 sm:py-14">
+    <PublicSiteShell section="contact">
+      <div className="container-page pt-28 pb-16 sm:pt-36 sm:pb-24">
         <CustomerAccountView />
       </div>
     </PublicSiteShell>

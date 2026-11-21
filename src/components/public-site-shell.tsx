@@ -5,7 +5,6 @@ import HomeAtmosphere from "@/components/motion/home-atmosphere";
 import NewsletterForm from "@/components/newsletter-form";
 import PublicNav from "@/components/public-nav";
 import SocialRail from "@/components/social-rail";
-import FloatingCartBar from "@/components/floating-cart-bar";
 import { getSettings } from "@/lib/settings";
 import type { PublicSection } from "@/lib/public-sections";
 
@@ -75,7 +74,7 @@ export default async function PublicSiteShell({
             boxShadow: "var(--shadow-md)",
           }}
         >
-          <Link href="/" className="flex min-w-0 items-center transition hover:opacity-90 active:scale-95" aria-label="لونيفا - الرئيسية">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-2.5 transition hover:opacity-90 active:scale-95" aria-label="لونيفا - الرئيسية">
             <span
               className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white shadow-sm sm:h-11 sm:w-11"
               style={{ border: "1px solid var(--line)" }}
@@ -88,6 +87,14 @@ export default async function PublicSiteShell({
                 preload
                 className="h-8 w-8 object-contain sm:h-9 sm:w-9"
               />
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-black tracking-tight sm:text-base" style={{ color: "var(--ink)" }}>
+                لونيفا
+              </span>
+              <span className="hidden truncate text-[9px] font-bold sm:block" style={{ color: "var(--muted-2)" }}>
+                LUNIVA
+              </span>
             </span>
           </Link>
 
@@ -313,7 +320,6 @@ export default async function PublicSiteShell({
           </div>
         </div>
       </footer>
-      <FloatingCartBar />
     </main>
   );
 }

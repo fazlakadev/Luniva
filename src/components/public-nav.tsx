@@ -653,21 +653,10 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
             href="/login"
             className="flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2 text-xs font-black text-[var(--ink)] shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand-strong)] active:scale-95"
           >
-            <LogIn size={14} className="text-[var(--brand-strong)]" />
-            <span>حسابي / دخول</span>
+            <User size={14} className="text-[var(--brand-strong)]" />
+            <span>حسابي</span>
           </Link>
         )}
-
-        {/* Newsletter Button */}
-        <button
-          type="button"
-          onClick={() => setNewsletterOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2 text-xs font-black text-[var(--ink)] shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand-strong)] active:scale-95"
-          title="اشتركي في النشرة البريدية"
-        >
-          <Mail size={14} className="text-[var(--brand-strong)]" />
-          <span>النشرة البريدية</span>
-        </button>
 
         <ThemeToggle showLabel={false} />
       </div>
@@ -677,28 +666,27 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         {/* Mobile Cart Button */}
         <Link
           href="/cart"
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)] shadow-sm transition active:scale-95"
+          className="relative flex h-9 items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-2.5 text-xs font-black text-[var(--ink)] shadow-sm transition active:scale-95"
           aria-label="سلة الاستفسارات"
         >
-          <ShoppingBag size={17} className="text-[var(--brand-strong)]" />
-          {mounted && totalCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4.5 min-w-[18px] items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[9px] font-black text-white shadow-sm">
+          <ShoppingBag size={16} className="text-[var(--brand-strong)]" />
+          {mounted && totalCount > 0 ? (
+            <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--brand)] px-1 text-[9px] font-black text-white shadow-sm">
               {totalCount}
             </span>
+          ) : (
+            <span className="text-[11px] font-black">السلة</span>
           )}
         </Link>
 
-        {/* Mobile Customer Button */}
+        {/* Mobile Customer Account Button */}
         <Link
           href={customer ? "/account" : "/login"}
-          className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)] shadow-sm transition active:scale-95"
-          aria-label={customer ? "حسابي الشخصي" : "تسجيل الدخول"}
+          className="flex h-9 items-center gap-1 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-2.5 text-xs font-black text-[var(--ink)] shadow-sm transition active:scale-95"
+          aria-label="حسابي"
         >
-          {customer ? (
-            <User size={17} className="text-[var(--brand-strong)]" />
-          ) : (
-            <LogIn size={17} className="text-[var(--muted)]" />
-          )}
+          <User size={15} className="text-[var(--brand-strong)]" />
+          <span className="text-[11px] font-black">حسابي</span>
         </Link>
 
         {/* Menu Toggle */}

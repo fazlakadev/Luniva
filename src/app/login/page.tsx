@@ -10,8 +10,8 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <PublicSiteShell section="about">
-      <div className="container-page py-12 sm:py-16">
+    <PublicSiteShell section="contact">
+      <div className="container-page pt-28 pb-16 sm:pt-36 sm:pb-24">
         <Suspense fallback={<div className="text-center p-12 text-muted">جارِ التحميل…</div>}>
           <CustomerLoginForm />
         </Suspense>
