@@ -26,6 +26,24 @@ export default function ContactForm() {
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [feedback, setFeedback] = useState("");
+  const [autoFilled, setAutoFilled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/customer/me")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.customer) {
+          setValues((prev) => ({
+            ...prev,
+            name: data.customer.fullName || prev.name,
+            email: data.customer.email || prev.email,
+            phone: data.customer.phone || prev.phone,
+          }));
+          setAutoFilled(true);
+        }
+      })
+      .catch(() => null);
+  }, []);
 
   useEffect(() => {
     if (status !== "success") return;
@@ -82,7 +100,14 @@ export default function ContactForm() {
           <Send size={19} />
         </span>
         <div className="min-w-0">
-          <h2 className="section-title">أرسلي رسالتك</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="section-title">أرسلي رسالتك</h2>
+            {autoFilled && (
+              <span className="badge badge-success text-[10px]">
+                تم ملء بياناتكِ تلقائياً من حسابكِ ✨
+              </span>
+            )}
+          </div>
           <p className="mt-1 text-[11px] leading-6 muted">املئي البيانات وسنصلك في أقرب وقت ممكن.</p>
         </div>
       </div>

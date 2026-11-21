@@ -66,7 +66,18 @@ export function ensureCustomersTable() {
       )
     `);
     await db.query(
-      "ALTER TABLE customers ADD COLUMN IF NOT EXISTS address TEXT, ADD COLUMN IF NOT EXISTS customer_code VARCHAR(32)",
+      `ALTER TABLE customers 
+       ADD COLUMN IF NOT EXISTS address TEXT, 
+       ADD COLUMN IF NOT EXISTS customer_code VARCHAR(32),
+       ADD COLUMN IF NOT EXISTS email VARCHAR(255),
+       ADD COLUMN IF NOT EXISTS password_hash VARCHAR(255),
+       ADD COLUMN IF NOT EXISTS google_id VARCHAR(255),
+       ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(50) DEFAULT 'local',
+       ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false`,
+    );
+    await db.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email ON customers(LOWER(email)) WHERE email IS NOT NULL;
+       CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_google_id ON customers(google_id) WHERE google_id IS NOT NULL;`,
     );
     await db.query(
       "INSERT INTO customer_phones (customer_id, phone) SELECT id, phone FROM customers ON CONFLICT (phone) DO NOTHING",
@@ -657,5 +668,77 @@ export function ensureWhatsAppTables() {
         );
       }
     }
+  });
+}
+
+export function ensureCustomerOrdersTable() {
+  return runOnce("customer_orders", async () => {
+    await ensureCustomersTable();
+    await db.query(`
+      CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1001;
+
+      CREATE TABLE IF NOT EXISTS customer_orders (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_number VARCHAR(32) UNIQUE NOT NULL,
+        customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+        customer_name VARCHAR(160) NOT NULL,
+        customer_phone VARCHAR(32) NOT NULL,
+        customer_email VARCHAR(255),
+        customer_address TEXT,
+        delivery_area VARCHAR(120),
+        status VARCHAR(32) NOT NULL DEFAULT 'new',
+        notes TEXT,
+        admin_notes TEXT,
+        total_estimated NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        converted_invoice_id UUID,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS customer_order_items (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        order_id UUID NOT NULL REFERENCES customer_orders(id) ON DELETE CASCADE,
+        item_type VARCHAR(20) NOT NULL DEFAULT 'product',
+        item_id UUID,
+        variant_id UUID,
+        title VARCHAR(255) NOT NULL,
+        sku VARCHAR(64),
+        color VARCHAR(64),
+        size VARCHAR(64),
+        quantity INT NOT NULL DEFAULT 1,
+        unit_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        total_price NUMERIC(12, 2) NOT NULL DEFAULT 0,
+        image_url TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_customer_orders_status ON customer_orders(status);
+      CREATE INDEX IF NOT EXISTS idx_customer_orders_created ON customer_orders(created_at DESC);
+    `);
+  });
+}
+
+export function ensureContactMessagesTable() {
+  return runOnce("contact_messages", async () => {
+    await ensureCustomersTable();
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS contact_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+        name VARCHAR(160) NOT NULL,
+        email VARCHAR(255) NOT NULL,
+        phone VARCHAR(32),
+        subject VARCHAR(255),
+        message TEXT NOT NULL,
+        status VARCHAR(32) NOT NULL DEFAULT 'unread',
+        reply_message TEXT,
+        replied_at TIMESTAMPTZ,
+        replied_by VARCHAR(120),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_contact_messages_status ON contact_messages(status);
+      CREATE INDEX IF NOT EXISTS idx_contact_messages_created ON contact_messages(created_at DESC);
+    `);
   });
 }

@@ -1,9 +1,12 @@
 import { isContactMailConfigured, sendContactEmail } from "@/lib/mail";
+import { db, ensureContactMessagesTable } from "@/lib/db";
+import { getCustomerSession } from "@/lib/customer-auth";
+import { createNotification } from "@/lib/notifications";
 
 export const runtime = "nodejs";
 
 const RATE_WINDOW_MS = 10 * 60 * 1000;
-const RATE_LIMIT = 3;
+const RATE_LIMIT = 5;
 const attempts = new Map<string, number[]>();
 
 function clientKey(request: Request) {
@@ -55,7 +58,7 @@ export async function POST(request: Request) {
   const name = asText(payload.name);
   const email = asText(payload.email);
   const phone = asText(payload.phone);
-  const subject = asText(payload.subject);
+  const subject = asText(payload.subject) || "استفسار تواصل عام";
   const message = asText(payload.message);
 
   if (name.length < 2 || name.length > 80) {
@@ -70,25 +73,56 @@ export async function POST(request: Request) {
   if (subject.length > 140) {
     return Response.json({ error: "الموضوع طويل جدًا." }, { status: 400 });
   }
-  if (message.length < 10 || message.length > 3000) {
-    return Response.json({ error: "يرجى كتابة رسالة من ١٠ إلى ٣٠٠٠ حرف." }, { status: 400 });
-  }
-
-  if (!isContactMailConfigured()) {
-    return Response.json(
-      { error: "خدمة البريد غير مفعّلة حاليًا. يرجى التواصل معنا عبر البريد الظاهر في الصفحة." },
-      { status: 503 },
-    );
+  if (message.length < 5 || message.length > 3000) {
+    return Response.json({ error: "يرجى كتابة رسالة من ٥ إلى ٣٠٠٠ حرف." }, { status: 400 });
   }
 
   try {
-    await sendContactEmail({ name, email, phone, subject, message });
-    return Response.json({ ok: true, message: "تم إرسال رسالتك بنجاح. سنرد عليك في أقرب وقت." });
+    await ensureContactMessagesTable();
+    const session = await getCustomerSession();
+
+    // 1. Save in database
+    const insertRes = await db.query(
+      `INSERT INTO contact_messages
+        (customer_id, name, email, phone, subject, message, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'unread')
+       RETURNING id`,
+      [session?.customerId || null, name, email, phone || null, subject, message],
+    );
+
+    const messageId = insertRes.rows[0]?.id;
+
+    // 2. Notify Admin in notification center
+    try {
+      await createNotification({
+        category: "system",
+        type: "contact_message",
+        title: `رسالة تواصل جديدة من ${name}`,
+        message: `${subject}: ${message.slice(0, 90)}…`,
+        link: `/messages`,
+        severity: "info",
+      });
+    } catch {
+      // ignore
+    }
+
+    // 3. Send email to admin if configured
+    if (isContactMailConfigured()) {
+      await sendContactEmail({ name, email, phone, subject, message }).catch((err) => {
+        console.error("Failed to forward contact email to admin:", err);
+      });
+    }
+
+    return Response.json({
+      ok: true,
+      messageId,
+      message: "تم إرسال رسالتك بنجاح. سنرد عليكِ في أقرب وقت عبر البريد أو الهاتف.",
+    });
   } catch (error) {
-    console.error("Contact form email failed:", error instanceof Error ? error.message : "unknown error");
+    console.error("Contact form failed:", error);
     return Response.json(
-      { error: "تعذّر إرسال الرسالة حاليًا. حاولي مرة أخرى بعد قليل أو راسلينا مباشرة." },
-      { status: 502 },
+      { error: "تعذّر حفظ الرسالة حاليًا. يرجى المحاولة مرة أخرى." },
+      { status: 500 },
     );
   }
 }

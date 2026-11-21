@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import PublicSiteShell from "@/components/public-site-shell";
 import ZoomableImage from "@/components/zoomable-image";
+import AddToCartButton from "@/components/add-to-cart-button";
 import type {
   CatalogPackageDetail,
   CatalogProduct,
@@ -270,6 +271,22 @@ export function PublicProductDetail({ product }: { product: CatalogProduct }) {
                     <span className="money text-sm font-black" style={{ color: "var(--brand-strong)" }}>{formatMoney(price)}</span>
                     {percent > 0 && <span className="money text-[10px] line-through muted-2">{formatMoney(before)}</span>}
                   </div>
+                  <div className="mt-3 pt-2.5 border-t border-[var(--line)]">
+                    <AddToCartButton
+                      itemId={product.id}
+                      itemType="product"
+                      title={product.name}
+                      variantId={variant.id}
+                      color={variant.color}
+                      size={variant.size}
+                      price={price}
+                      priceBeforeDiscount={before}
+                      imageUrl={variant.imageUrl || gallery[0]}
+                      sku={variant.sku}
+                      compact
+                      className="w-full"
+                    />
+                  </div>
                 </div>
               </article>
             );
@@ -456,6 +473,21 @@ export function PublicPackageDetail({ pkg }: { pkg: CatalogPackageDetail }) {
                           <span className="badge badge-warning">نفد من المخزون</span>
                         )
                       )}
+                    </div>
+                    <div className="mt-3 pt-2.5 border-t border-[var(--line)]">
+                      <AddToCartButton
+                        itemId={pkg.id}
+                        itemType="package"
+                        title={pkg.name}
+                        variantId={variant.id}
+                        variantName={variant.name || undefined}
+                        price={variantPrice}
+                        priceBeforeDiscount={variantBefore}
+                        imageUrl={variant.imageUrl || gallery[0]}
+                        sku={variant.sku}
+                        compact
+                        className="w-full"
+                      />
                     </div>
                   </div>
                 </article>

@@ -3,6 +3,7 @@ import Script from "next/script";
 import "lenis/dist/lenis.css";
 import RouteTransition from "@/components/motion/route-transition";
 import SmoothScroll from "@/components/motion/smooth-scroll";
+import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       </head>
       <body suppressHydrationWarning>
         <SmoothScroll>
-          <RouteTransition>{children}</RouteTransition>
+          <ToastProvider>
+            <RouteTransition>{children}</RouteTransition>
+          </ToastProvider>
         </SmoothScroll>
       </body>
     </html>

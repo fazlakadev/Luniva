@@ -5,6 +5,7 @@ import HomeAtmosphere from "@/components/motion/home-atmosphere";
 import NewsletterForm from "@/components/newsletter-form";
 import PublicNav from "@/components/public-nav";
 import SocialRail from "@/components/social-rail";
+import FloatingCartBar from "@/components/floating-cart-bar";
 import { getSettings } from "@/lib/settings";
 import type { PublicSection } from "@/lib/public-sections";
 
@@ -320,6 +321,7 @@ export default async function PublicSiteShell({
           </div>
         </div>
       </footer>
+      <FloatingCartBar />
     </main>
   );
 }

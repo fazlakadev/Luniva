@@ -252,3 +252,86 @@ export async function sendContactEmail(input: ContactMessage) {
     html,
   });
 }
+
+
+export async function sendCustomerReplyEmail(input: {
+  to: string;
+  customerName: string;
+  subject: string;
+  replyMessage: string;
+  originalMessage?: string;
+}) {
+  const host = readEnv("EMAIL_SERVER_HOST");
+  const user = readEnv("EMAIL_SERVER_USER");
+  const password = readEnv("EMAIL_SERVER_PASSWORD").replace(/\s+/g, "");
+  const from = readEnv("EMAIL_FROM");
+
+  if (!host || !user || !password || !from) {
+    throw new Error("Mail settings are incomplete.");
+  }
+
+  const portValue = Number(readEnv("EMAIL_SERVER_PORT") || "587");
+  const port = Number.isFinite(portValue) && portValue > 0 ? Math.trunc(portValue) : 587;
+  const senderName = readEnv("EMAIL_SENDER_NAME") || "لونيفا فاشون";
+  const logoUrl = readEnv("EMAIL_LOGO_URL");
+
+  const name = cleanLine(input.customerName, 80) || "عميلتنا العزيزة";
+  const subject = cleanLine(input.subject, 140) || "رد بخصوص استفسارك";
+  const replyMessage = input.replyMessage.trim();
+
+  const text = [
+    `مرحباً ${name}،`,
+    "",
+    replyMessage,
+    "",
+    "مع خالص تحيات فريق لونيفا فاشون 🌸",
+    input.originalMessage ? `\n---\nرسالتك السابقة:\n${input.originalMessage}` : "",
+  ].join("\n");
+
+  const html = `
+    <div dir="rtl" style="margin:0;padding:24px;background:#f9f5f3;font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#2b2228;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;margin:0 auto;border-collapse:collapse;">
+        <tr>
+          <td style="padding:0 0 16px;text-align:right;">
+            ${logoUrl ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(senderName)}" width="120" style="display:inline-block;max-width:120px;height:auto;border:0;" />` : `<span style="font-size:18px;font-weight:800;color:#8e445b;">${escapeHtml(senderName)}</span>`}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:28px;border:1px solid #eadcdf;border-radius:20px;background:#fffdfc;">
+            <p style="margin:0 0 6px;font-size:12px;font-weight:800;letter-spacing:.12em;color:#a95d73;">لونيفا فاشون · الرد على استفسارك</p>
+            <h1 style="margin:0 0 16px;font-size:22px;line-height:1.4;color:#2b2228;">مرحباً ${escapeHtml(name)} 🌸</h1>
+            <div style="font-size:14px;line-height:2;color:#33262d;white-space:pre-wrap;background:#fdf7f5;padding:18px;border-radius:14px;border:1px solid #eadcdf;">${escapeHtml(replyMessage)}</div>
+            ${
+              input.originalMessage
+                ? `<div style="margin-top:20px;padding:14px;border-radius:12px;background:#f7f0f2;font-size:12px;color:#7d6c74;line-height:1.8;">
+                    <p style="margin:0 0 4px;font-weight:800;color:#8e445b;">رسالتك السابقة:</p>
+                    <p style="margin:0;white-space:pre-wrap;">${escapeHtml(input.originalMessage)}</p>
+                   </div>`
+                : ""
+            }
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:16px 8px 0;text-align:center;font-size:11px;color:#9c8b92;">
+            شكراً لتواصلكِ مع لونيفا فاشون. يمكنكِ الرد مباشرة على هذه الرسالة لأي استفسار إضافي.
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+
+  const transporter = nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass: password },
+  });
+
+  await transporter.sendMail({
+    from: formatAddress(senderName, from),
+    to: input.to,
+    subject: `رد من لونيفا فاشون: ${subject}`,
+    text,
+    html,
+  });
+}
