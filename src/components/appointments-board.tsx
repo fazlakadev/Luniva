@@ -10,9 +10,12 @@ import {
   Clock,
   List,
   LoaderCircle,
+  MessageCircle,
   Pencil,
   Plus,
+  Scissors,
   Search,
+  Sparkles,
   Trash2,
   Truck,
   UsersRound,
@@ -20,6 +23,7 @@ import {
   X,
 } from "lucide-react";
 import EventCalendar, { type CalendarEvent } from "@/components/ui/event-calendar";
+import { Slot, SlotWeekPicker } from "@/components/ui/slot-week-picker";
 import { useToast } from "@/components/toast";
 import { formatMoney } from "@/lib/format";
 import {
@@ -42,7 +46,7 @@ import {
   type AppointmentTone,
 } from "@/lib/appointment-shared";
 
-type CustomerOption = { id: string; full_name: string };
+type CustomerOption = { id: string; full_name: string; phone?: string | null };
 type InvoiceOption = {
   id: string;
   invoice_number: string;
@@ -64,12 +68,14 @@ type FormState = {
   notes: string;
 };
 
-const kindIcons = {
+const kindIcons: Record<AppointmentKind, any> = {
   followup: UsersRound,
   payment: Wallet,
   delivery: Truck,
   meeting: CalendarClock,
-} as const;
+  fitting: Scissors,
+  consultation: Sparkles,
+};
 
 /** Maps appointment tones onto the Luniva CSS variables. */
 function toneColor(tone: AppointmentTone) {
@@ -112,7 +118,7 @@ export default function AppointmentsBoard({
   const presetCustomer = presetCustomerId ?? presetInvoice?.customer_id ?? "";
 
   const [appointments, setAppointments] = useState<AppointmentRecord[]>(initialAppointments);
-  const [view, setView] = useState<"calendar" | "list">("calendar");
+  const [view, setView] = useState<"calendar" | "slots" | "list">("calendar");
   const [statusFilter, setStatusFilter] = useState<"all" | AppointmentStatus>("all");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<Date>(new Date());
@@ -125,6 +131,70 @@ export default function AppointmentsBoard({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // Generate 28 days of 30-min appointment slots for SlotWeekPicker
+  const appointmentSlots: Slot[] = useMemo(() => {
+    const list: Slot[] = [];
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const hours = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
+    const minutes = [0, 30];
+
+    for (let dayOffset = 0; dayOffset < 28; dayOffset++) {
+      const day = new Date(today.getTime() + dayOffset * 86_400_000);
+      const yyyy = day.getFullYear();
+      const mm = String(day.getMonth() + 1).padStart(2, "0");
+      const dd = String(day.getDate()).padStart(2, "0");
+      const dateKeyStr = `${yyyy}-${mm}-${dd}`;
+
+      for (const h of hours) {
+        for (const m of minutes) {
+          const slotDate = new Date(day);
+          slotDate.setHours(h, m, 0, 0);
+          const timeString = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+
+          const booked = appointments.find(
+            (app) =>
+              app.status !== "cancelled" &&
+              app.appointment_date === dateKeyStr &&
+              app.appointment_time?.startsWith(timeString),
+          );
+
+          let unavailableReason: string | undefined = undefined;
+          if (booked) {
+            unavailableReason = `محجوز: ${booked.title}${booked.customer_name ? ` (${booked.customer_name})` : ""}`;
+          }
+
+          list.push({
+            start: slotDate.toISOString(),
+            unavailableReason,
+          });
+        }
+      }
+    }
+    return list;
+  }, [appointments]);
+
+  const handleSlotConfirm = (slot: Slot) => {
+    const d = new Date(slot.start);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const dKey = `${yyyy}-${mm}-${dd}`;
+    const hh = String(d.getHours()).padStart(2, "0");
+    const min = String(d.getMinutes()).padStart(2, "0");
+    const tKey = `${hh}:${min}`;
+
+    setForm({
+      ...emptyForm(dKey),
+      time: tKey,
+      title: "موعد متابعة وقياس",
+      kind: "fitting",
+      customerId: presetCustomer,
+      invoiceId: presetInvoice?.id ?? "",
+    });
+    setModalOpen(true);
+  };
 
   const byId = useMemo(() => new Map(appointments.map((item) => [item.id, item])), [appointments]);
 
@@ -291,6 +361,16 @@ export default function AppointmentsBoard({
   const renderEventExtra = (event: CalendarEvent) => {
     const record = byId.get(event.id);
     if (!record) return null;
+
+    const phone = record.customer_phone || customers.find((c) => c.id === record.customer_id)?.phone;
+    let waLink = "";
+    if (phone) {
+      const cleanPhone = phone.replace(/[^0-9]/g, "");
+      const formattedPhone = cleanPhone.startsWith("0") ? `20${cleanPhone.slice(1)}` : cleanPhone;
+      const msg = `مرحباً ${record.customer_name || "عزيزتنا"}، نذكّرك بموعدك لدى لونيفا (${record.title}) يوم ${record.appointment_date}${record.appointment_time ? ` الساعة ${record.appointment_time}` : ""}. يسعدنا ويشرفنا حضورك!`;
+      waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
+    }
+
     return (
       <span className="mt-1 flex flex-wrap items-center gap-1">
         <span className="badge badge-muted text-[9px]">{appointmentKindLabels[record.kind]}</span>
@@ -306,6 +386,18 @@ export default function AppointmentsBoard({
           <Link href={`/invoices/${record.invoice_id}`} className="badge badge-lav text-[9px]">
             {record.invoice_number}
           </Link>
+        )}
+        {waLink && (
+          <a
+            href={waLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="badge text-[9px] text-white flex items-center gap-1 font-bold"
+            style={{ background: "#25D366" }}
+            title="إرسال تذكير واتساب"
+          >
+            <MessageCircle size={9} />واتساب
+          </a>
         )}
         <button
           type="button"
@@ -363,7 +455,20 @@ export default function AppointmentsBoard({
               }
               aria-pressed={view === "calendar"}
             >
-              <CalendarDays size={14} />تقويم
+              <CalendarDays size={14} />تقويم شهري
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("slots")}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[11px] font-extrabold transition"
+              style={
+                view === "slots"
+                  ? { background: "var(--brand)", color: "#fff" }
+                  : { color: "var(--muted)" }
+              }
+              aria-pressed={view === "slots"}
+            >
+              <Sparkles size={14} />حجز أسبوعي ذكي
             </button>
             <button
               type="button"
@@ -411,7 +516,7 @@ export default function AppointmentsBoard({
         </div>
       </section>
 
-      {view === "calendar" ? (
+      {view === "calendar" && (
         <section className="app-card p-3 sm:p-5">
           {appointments.length === 0 ? (
             <EmptyState onAdd={openNew} />
@@ -425,7 +530,36 @@ export default function AppointmentsBoard({
             />
           )}
         </section>
-      ) : (
+      )}
+
+      {view === "slots" && (
+        <section className="app-card p-4 sm:p-6">
+          <div
+            className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between border-b pb-3"
+            style={{ borderColor: "var(--line)" }}
+          >
+            <div>
+              <h3 className="text-sm font-black text-ink">حجز وتوزيع المواعيد الأسبوعي الذكي</h3>
+              <p className="text-xs text-muted">
+                اختاري الفترة الزمنية المتاحة لتثبيت موعد جديد مباشرة، المواعيد المحجوزة مسبقاً تظهر مظللة مع اسم العميلة.
+              </p>
+            </div>
+            <button type="button" onClick={openNew} className="btn btn-primary text-xs self-start sm:self-auto">
+              <Plus size={14} /> موعد مخصص
+            </button>
+          </div>
+          <div className="flex justify-center py-2">
+            <SlotWeekPicker
+              slots={appointmentSlots}
+              onConfirm={handleSlotConfirm}
+              slotMinutes={30}
+              title="جدول الفترات المتاحة"
+            />
+          </div>
+        </section>
+      )}
+
+      {view === "list" && (
         <section className="space-y-3">
           {filtered.length === 0 ? (
             <div className="app-card p-8 text-center">
@@ -433,8 +567,17 @@ export default function AppointmentsBoard({
             </div>
           ) : (
             filtered.map((record) => {
-              const KindIcon = kindIcons[record.kind];
+              const KindIcon = kindIcons[record.kind] || CalendarClock;
               const busy = busyId === record.id;
+              const phone = record.customer_phone || customers.find((c) => c.id === record.customer_id)?.phone;
+              let waLink = "";
+              if (phone) {
+                const cleanPhone = phone.replace(/[^0-9]/g, "");
+                const formattedPhone = cleanPhone.startsWith("0") ? `20${cleanPhone.slice(1)}` : cleanPhone;
+                const msg = `مرحباً ${record.customer_name || "عزيزتنا"}، نذكّرك بموعدك لدى لونيفا (${record.title}) يوم ${record.appointment_date}${record.appointment_time ? ` الساعة ${record.appointment_time}` : ""}. يسعدنا ويشرفنا حضورك!`;
+                waLink = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(msg)}`;
+              }
+
               return (
                 <article
                   key={record.id}
@@ -493,6 +636,19 @@ export default function AppointmentsBoard({
                   </div>
 
                   <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:justify-end">
+                    {waLink && (
+                      <a
+                        href={waLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="btn px-2.5 py-1.5 text-[10px] font-bold text-white transition active:scale-95 flex items-center gap-1 shadow-sm"
+                        style={{ background: "#25D366" }}
+                        title="إرسال تذكير واتساب للعميلة"
+                      >
+                        <MessageCircle size={12} />
+                        <span>تذكير واتساب</span>
+                      </a>
+                    )}
                     {record.status !== "done" && (
                       <button
                         type="button"

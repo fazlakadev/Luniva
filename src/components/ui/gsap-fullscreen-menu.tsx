@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  Boxes,
   CalendarDays,
   ChevronLeft,
   Gift,
@@ -59,6 +60,7 @@ export const adminNav: AdminNavItem[] = [
   { href: "/customers", label: "إدارة العملاء", short: "العملاء", hint: "دليل العميلات", icon: UsersRound },
   { href: "/suppliers", label: "الموردون", short: "الموردون", hint: "أسعار التوريد والموردون", icon: Truck },
   { href: "/products", label: "إدارة المنتجات", short: "المنتجات", hint: "الكتالوج والمتغيرات", icon: Package },
+  { href: "/inventory", label: "المخزون والتحليلات", short: "المخزون", hint: "تنبيهات ورصيد البكدجات", icon: Boxes },
   { href: "/packages", label: "البكدجات", short: "البكدجات", hint: "عروض ومنتجات مجمعة", icon: Gift },
   { href: "/settings", label: "الإعدادات", short: "الإعدادات", hint: "بيانات الشركة والشروط", icon: Settings2 },
 ];

@@ -105,7 +105,7 @@ export default function CustomerAppointmentScheduler({
           appointmentDate,
           time: appointmentTime,
           kind: "fitting",
-          tone: "formal",
+          tone: "accent",
           status: "pending",
         }),
       });

@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { db, ensureAppointmentsTable } from "@/lib/db";
 import { getAppointment, listAppointments } from "@/lib/appointments";
 import { logActivity } from "@/lib/activity";
+import { createNotification } from "@/lib/notifications";
 import {
   isUuid,
   normalizeDateOnly,
@@ -114,6 +115,25 @@ export async function POST(request: Request) {
       summary: `موعد جديد: ${title} (${appointmentDate})`,
       actor: session.name,
     });
+
+    try {
+      await createNotification({
+        category: "appointment",
+        type: "appointment.created",
+        title: "موعد جديد مجدول",
+        message: `تم حجز وجدولة "${title}" بتاريخ ${appointmentDate}${appointmentTime ? ` الساعة ${appointmentTime}` : ""}`,
+        link: "/appointments",
+        severity: "info",
+        metadata: {
+          appointmentId: appointment?.id,
+          customerId: links.customerId,
+          appointmentDate,
+          time: appointmentTime,
+        },
+      });
+    } catch (notifErr) {
+      console.error("Failed to emit appointment notification", notifErr);
+    }
 
     return NextResponse.json({ appointment }, { status: 201 });
   } catch (error) {

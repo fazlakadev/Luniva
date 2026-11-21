@@ -550,3 +550,27 @@ export function ensureAppointmentsTable() {
     ]);
   });
 }
+
+export function ensureNotificationsTable() {
+  return runOnce("notifications", async () => {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS notifications (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        category VARCHAR(32) NOT NULL,
+        type VARCHAR(40) NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        message TEXT NOT NULL,
+        link VARCHAR(255),
+        read BOOLEAN NOT NULL DEFAULT FALSE,
+        severity VARCHAR(16) NOT NULL DEFAULT 'info',
+        metadata JSONB,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await Promise.all([
+      db.query("CREATE INDEX IF NOT EXISTS notifications_read_idx ON notifications (read, created_at DESC)"),
+      db.query("CREATE INDEX IF NOT EXISTS notifications_category_idx ON notifications (category)"),
+      db.query("CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications (created_at DESC)"),
+    ]);
+  });
+}

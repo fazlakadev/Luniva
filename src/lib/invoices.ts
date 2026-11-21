@@ -21,6 +21,7 @@ import { newViewNonce } from "@/lib/invoice-view";
 import { getSettings } from "@/lib/settings";
 import { logActivity } from "@/lib/activity";
 import { deductInvoiceInventory, restoreInvoiceInventory } from "@/lib/inventory";
+import { createNotification } from "@/lib/notifications";
 
 export {
   INVOICE_STATUSES,
@@ -406,6 +407,17 @@ export async function createInvoice(input: InvoiceInput, actor?: string) {
       client,
     );
     await client.query("COMMIT");
+
+    createNotification({
+      category: "sales",
+      type: "invoice.created",
+      title: `فاتورة جديدة: ${invoiceNumber}`,
+      message: `تم إصدار الفاتورة ${invoiceNumber} للعميلة ${input.customerName} بقيمة ${totals.total} ج.م (${items.length} عنصر).`,
+      link: `/invoices/${invoiceId}`,
+      severity: "success",
+      metadata: { invoiceId, invoiceNumber, total: totals.total },
+    }).catch(() => {});
+
     return invoiceId;
   } catch (error) {
     await client.query("ROLLBACK");
@@ -573,6 +585,18 @@ export async function updateInvoice(id: string, patch: InvoicePatch, actor?: str
         },
         client,
       );
+
+      if (patch.status === "cancelled") {
+        createNotification({
+          category: "sales",
+          type: "invoice.cancelled",
+          title: `إلغاء الفاتورة: ${existing.invoice_number}`,
+          message: `تم إلغاء الفاتورة ${existing.invoice_number} للعميلة ${existing.customer_name} واسترجاع المخزون.`,
+          link: `/invoices/${id}`,
+          severity: "warning",
+          metadata: { invoiceId: id, invoiceNumber: existing.invoice_number },
+        }).catch(() => {});
+      }
     }
 
     await client.query("COMMIT");

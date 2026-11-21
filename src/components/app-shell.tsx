@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import AdminFloatingMenu from "@/components/ui/admin-floating-menu";
 import WelcomeDialog from "@/components/welcome-dialog";
+import NotificationCenter from "@/components/notification-center";
 import {
   Component as AdminSidebar,
 } from "@/components/ui/gsap-fullscreen-menu";
@@ -60,6 +61,28 @@ export default function AppShell({ children, name }: { children: React.ReactNode
           collapsed ? "xl:pr-[88px]" : "xl:pr-[286px]"
         }`}
       >
+        {/* Mobile Top Bar with Notification Center */}
+        <header
+          className="flex items-center justify-between border-b px-4 py-2.5 xl:hidden print:hidden"
+          style={{ borderColor: "var(--line)", background: "color-mix(in srgb, var(--surface) 92%, transparent)", backdropFilter: "blur(12px)" }}
+        >
+          <div className="flex items-center gap-2.5">
+            <span
+              className="grid h-8 w-8 place-items-center rounded-xl text-xs font-black text-white shadow-sm"
+              style={{ background: "linear-gradient(135deg, var(--brand), var(--brand-strong))" }}
+            >
+              ل
+            </span>
+            <div>
+              <p className="text-[9px] font-bold" style={{ color: "var(--muted-2)" }}>لونيفا</p>
+              <p className="text-xs font-black text-ink">لوحة الإدارة</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <NotificationCenter />
+          </div>
+        </header>
+
         {/* Desktop Header */}
         <header
           className="hidden items-center justify-between gap-3 border-b px-6 py-3 xl:flex print:hidden"
@@ -77,7 +100,8 @@ export default function AppShell({ children, name }: { children: React.ReactNode
               <p className="text-sm font-extrabold" style={{ color: "var(--ink)" }}>مرحبًا بك في لوحة التحكم</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <NotificationCenter />
             <span className="badge badge-brand">شركة ملابس نسائية مصرية</span>
             <span className="badge badge-success"><ShieldCheck size={11} />جلسة آمنة</span>
           </div>

@@ -23,7 +23,7 @@ export default async function AppointmentsPage({
 
   const [appointments, customersResult, invoicesResult] = await Promise.all([
     listAppointments(),
-    db.query("SELECT id, full_name FROM customers ORDER BY full_name ASC"),
+    db.query("SELECT id, full_name, phone FROM customers ORDER BY full_name ASC"),
     db.query(
       `SELECT id, invoice_number, customer_id, total, status
          FROM invoices

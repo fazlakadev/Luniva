@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   BarChart3,
+  Boxes,
   Calendar,
   ChevronDown,
   CreditCard,
@@ -37,7 +38,8 @@ const ADMIN_LINKS = [
   { href: "/workspace", label: "مساحة العمل", desc: "الرئيسية", icon: LayoutDashboard },
   { href: "/invoices", label: "الفواتير", desc: "الإصدار والتحصيل", icon: Receipt },
   { href: "/customers", label: "العملاء", desc: "الملفات والأرقام", icon: Users },
-  { href: "/products", label: "المنتجات", desc: "المخزون والقطع", icon: Package },
+  { href: "/products", label: "المنتجات", desc: "الكتالوج والقطع", icon: Package },
+  { href: "/inventory", label: "المخزون", desc: "التحليلات والتنبيهات", icon: Boxes },
   { href: "/packages", label: "البكدجات", desc: "العروض المجمعة", icon: Gift },
   { href: "/payments", label: "المدفوعات", desc: "سجل السداد", icon: CreditCard },
   { href: "/profits", label: "الأرباح", desc: "صافي الأرباح", icon: TrendingUp },

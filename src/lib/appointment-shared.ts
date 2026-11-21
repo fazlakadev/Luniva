@@ -3,17 +3,26 @@
 export const APPOINTMENT_TONES = ["accent", "success", "warning", "danger", "info", "neutral"] as const;
 export type AppointmentTone = (typeof APPOINTMENT_TONES)[number];
 
-export const APPOINTMENT_KINDS = ["followup", "payment", "delivery", "meeting"] as const;
+export const APPOINTMENT_KINDS = [
+  "followup",
+  "payment",
+  "delivery",
+  "meeting",
+  "fitting",
+  "consultation",
+] as const;
 export type AppointmentKind = (typeof APPOINTMENT_KINDS)[number];
 
 export const APPOINTMENT_STATUSES = ["pending", "done", "cancelled"] as const;
 export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 
 export const appointmentKindLabels: Record<AppointmentKind, string> = {
-  followup: "متابعة",
+  followup: "متابعة عامة",
   payment: "تحصيل دفعة",
   delivery: "تسليم طلب",
-  meeting: "اجتماع",
+  meeting: "اجتماع في الفرع",
+  fitting: "جلسة قياس وتجربة",
+  consultation: "استشارة وتنسيق",
 };
 
 export const appointmentStatusLabels: Record<AppointmentStatus, string> = {
@@ -49,6 +58,7 @@ export type AppointmentRecord = {
   customer_id: string | null;
   invoice_id: string | null;
   customer_name: string | null;
+  customer_phone?: string | null;
   invoice_number: string | null;
   created_at: string;
   updated_at: string;

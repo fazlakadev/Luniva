@@ -1,6 +1,7 @@
 import type { PoolClient } from "pg";
 import { logActivity } from "@/lib/activity";
 import { db, ensureInvoiceTables } from "@/lib/db";
+import { createNotification } from "@/lib/notifications";
 import {
   PAYMENT_METHODS,
   deriveInvoiceStatus,
@@ -170,6 +171,17 @@ export async function recordPayment(invoiceId: string, raw: unknown, actor?: str
       client,
     );
     await client.query("COMMIT");
+
+    createNotification({
+      category: "sales",
+      type: "payment.received",
+      title: `دفعة محصّلة: ${receiptNumber}`,
+      message: `تم تسجيل سداد ${input.amount} ج.م للفاتورة ${invoice.invoice_number} للعميلة ${invoice.customer_name}.`,
+      link: `/invoices/${invoiceId}`,
+      severity: "success",
+      metadata: { invoiceId, receiptNumber, amount: input.amount },
+    }).catch(() => {});
+
     return { payment: inserted.rows[0], ...totals };
   } catch (error) {
     await client.query("ROLLBACK");

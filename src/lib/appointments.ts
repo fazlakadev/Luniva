@@ -15,6 +15,7 @@ const SELECT_COLUMNS = `
   a.customer_id, a.invoice_id,
   a.created_at::text AS created_at, a.updated_at::text AS updated_at,
   c.full_name AS customer_name,
+  c.phone AS customer_phone,
   i.invoice_number
 `;
 
