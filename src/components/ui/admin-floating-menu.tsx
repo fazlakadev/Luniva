@@ -14,6 +14,7 @@ import {
   Gift,
   LayoutDashboard,
   LogOut,
+  MessageSquare,
   Package,
   Plus,
   Receipt,
@@ -46,6 +47,7 @@ const ADMIN_LINKS = [
   { href: "/reports", label: "التقارير", desc: "التحليلات والمبيعات", icon: BarChart3 },
   { href: "/appointments", label: "المواعيد", desc: "جدول المواعيد", icon: Calendar },
   { href: "/suppliers", label: "الموردين", desc: "حسابات الموردين", icon: Truck },
+  { href: "/whatsapp", label: "أتمتة الواتساب", desc: "الحملات والرسائل", icon: MessageSquare },
   { href: "/settings", label: "الإعدادات", desc: "بيانات المنشأة", icon: Settings },
 ];
 

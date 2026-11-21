@@ -574,3 +574,88 @@ export function ensureNotificationsTable() {
     ]);
   });
 }
+
+export function ensureWhatsAppTables() {
+  return runOnce("whatsapp_tables", async () => {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS whatsapp_templates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        category VARCHAR(32) NOT NULL,
+        name VARCHAR(120) NOT NULL,
+        content TEXT NOT NULL,
+        is_default BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS whatsapp_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+        customer_name VARCHAR(180),
+        phone VARCHAR(40) NOT NULL,
+        template_category VARCHAR(32),
+        message TEXT NOT NULL,
+        status VARCHAR(16) NOT NULL DEFAULT 'sent',
+        sent_by VARCHAR(120),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+    `);
+
+    await Promise.all([
+      db.query("CREATE INDEX IF NOT EXISTS whatsapp_logs_customer_idx ON whatsapp_logs (customer_id)"),
+      db.query("CREATE INDEX IF NOT EXISTS whatsapp_logs_created_at_idx ON whatsapp_logs (created_at DESC)"),
+      db.query("CREATE INDEX IF NOT EXISTS whatsapp_templates_cat_idx ON whatsapp_templates (category)"),
+    ]);
+
+    // Pre-seed default templates if empty
+    const countCheck = await db.query("SELECT COUNT(*)::int AS count FROM whatsapp_templates");
+    if (countCheck.rows[0].count === 0) {
+      const defaultTemplates = [
+        {
+          category: "invoice",
+          name: "إرسال فاتورة جديدة مع الرابط الإلكتروني",
+          content: "مرحباً {اسم_العميلة} 💕\nيسعدنا ويشرفنا تعاملك مع لونيفا (Luniva) للأزياء.\nتم إصدار فاتورتك رقم {رقم_الفاتورة} بإجمالي {إجمالي_الفاتورة}.\n{حالة_السداد}\n\nيمكنكِ استعراض وتنزيل الفاتورة في أي وقت عبر الرابط الإلكتروني الآمن:\n{رابط_الفاتورة}\n\nشكراً لاختياركِ لونيفا ✨",
+          is_default: true,
+        },
+        {
+          category: "payment",
+          name: "إيصال استلام دفعة سداد",
+          content: "أهلاً بكِ {اسم_العميلة} 🌸\nتم تسجيل استلام دفعة مالية بقيمة {المبلغ_المدفوع} لصالح فاتورتك رقم {رقم_الفاتورة}.\nالمتبقي على الفاتورة: {المبلغ_المتبقي}.\n\nرابط متابعة الفاتورة وإيصالات السداد:\n{رابط_الفاتورة}\n\nشكراً لالتزامكِ وثقتكِ بنا 💕",
+          is_default: true,
+        },
+        {
+          category: "appointment",
+          name: "تذكير بالموعد وجلسة القياس / البروفة",
+          content: "مرحباً {اسم_العميلة} 🪡✨\nنود تذكيركِ بموعدكِ القادم لدى لونيفا ({موضوع_الموعد})\n📅 التاريخ: {تاريخ_الموعد}\n⏰ الساعة: {وقت_الموعد}\n\nيسعدنا ويشرفنا حضوركِ! للاعتذار أو تعديل الموعد يرجى مراسلتنا هنا 🌸",
+          is_default: true,
+        },
+        {
+          category: "overdue",
+          name: "تذكير لطيف برصيد متبقي",
+          content: "مرحباً {اسم_العميلة} 🤍\nنود تذكيركِ بلطف بوجود رصيد متبقي على فاتورتك رقم {رقم_الفاتورة} بقيمة {المبلغ_المتبقي}.\n\nيمكنكِ مراجعة الفاتورة عبر الرابط:\n{رابط_الفاتورة}\n\nشاكرين لكِ حسن تعاونكِ معنا 🌸",
+          is_default: true,
+        },
+        {
+          category: "marketing",
+          name: "حملة تشكيلة وموديلات جديدة (New Collection)",
+          content: "مرحباً {اسم_العميلة} ✨\nوصلت الآن تشكيلة جديدة ومميزة لدى لونيفا تناسب ذوقكِ الراقي! 💕\n\nتفضلي باستكشاف أحدث الموديلات والعروض عبر موقعنا:\n{رابط_المتجر}\n\nأو شرفينا بزيارة الفرع لتجربة القطع بنفسك 🌸",
+          is_default: true,
+        },
+        {
+          category: "winback",
+          name: "عرض خاص واسترجاع عميلة غائبة (Win-Back)",
+          content: "اشتقنا لكِ يا {اسم_العميلة} 💕\nيسعدنا تقديم كود خصم خاص لكِ: {كود_الخصم} عند زيارتكِ القادمة أو طلبكِ من لونيفا ✨\n\nتصفحي أحدث الموديلات هنا:\n{رابط_المتجر}\n\nيسعدنا دائماً أن تكوني جزءاً من عائلة لونيفا 🌸",
+          is_default: true,
+        },
+      ];
+
+      for (const t of defaultTemplates) {
+        await db.query(
+          `INSERT INTO whatsapp_templates (category, name, content, is_default)
+           VALUES ($1, $2, $3, $4)`,
+          [t.category, t.name, t.content, t.is_default],
+        );
+      }
+    }
+  });
+}

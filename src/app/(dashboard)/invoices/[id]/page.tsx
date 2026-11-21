@@ -175,6 +175,10 @@ export default async function InvoiceDetailPage({
               invoiceNumber={invoice.invoice_number}
               initialUrl={shareUrl}
               initialQr={shareQr}
+              customerName={invoice.customer_name}
+              customerPhone={invoice.customer_phone}
+              total={Number(invoice.total)}
+              remaining={Math.max(0, Number(invoice.total) - Number(invoice.paid_amount))}
             />
           )}
           <InvoiceActions

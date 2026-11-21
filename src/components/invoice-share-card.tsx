@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Check, Copy, ExternalLink, Link2, QrCode, RefreshCw, ShieldCheck } from "lucide-react";
+import { Check, Copy, ExternalLink, Link2, MessageSquare, QrCode, RefreshCw, Send, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/components/toast";
 
@@ -10,11 +10,19 @@ export default function InvoiceShareCard({
   invoiceNumber,
   initialUrl,
   initialQr,
+  customerName,
+  customerPhone,
+  total,
+  remaining,
 }: {
   id: string;
   invoiceNumber: string;
   initialUrl: string;
   initialQr: string;
+  customerName?: string | null;
+  customerPhone?: string | null;
+  total?: number;
+  remaining?: number;
 }) {
   const router = useRouter();
   const toast = useToast();
@@ -22,6 +30,7 @@ export default function InvoiceShareCard({
   const [qr, setQr] = useState(initialQr);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
 
   async function copy() {
     try {
@@ -52,6 +61,47 @@ export default function InvoiceShareCard({
       toast.update(toastId, { tone: "error", title: "لم يتم التجديد", description: message });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function sendViaWhatsApp() {
+    if (sendingWhatsApp) return;
+    setSendingWhatsApp(true);
+
+    const targetName = customerName || "عميلتنا العزيزة";
+    const totalText = total !== undefined ? `${total} ج.م` : "";
+    const remainingText = remaining !== undefined && remaining > 0 ? `المتبقي: ${remaining} ج.م` : "خالصة السداد بالكامل ✓";
+
+    const messageText = `مرحباً بكِ أستاذة ${targetName} ✨\nيسعدنا تسوقكِ من لونيفا فاشون.\nتم إصدار فاتورتك رقم ${invoiceNumber}.\n${totalText ? `الإجمالي: ${totalText}\n` : ""}${remainingText}\n\nيمكنكِ معاينة تفاصيل الفاتورة وحالة الطلب عبر هذا الرابط الآمن:\n${url}\n\nشكراً لاختياركِ Luniva! 🌸`;
+
+    try {
+      if (customerPhone) {
+        // Record in backend log
+        await fetch("/api/whatsapp/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerName: targetName,
+            phone: customerPhone,
+            templateCategory: "invoice",
+            message: messageText,
+            sentBy: "المسؤول",
+          }),
+        }).catch(() => null);
+
+        let digits = customerPhone.replace(/[^\d]/g, "");
+        if (digits.startsWith("01") && digits.length === 11) digits = "2" + digits;
+        if (digits.startsWith("00")) digits = digits.slice(2);
+
+        const waUrl = `https://wa.me/${digits}?text=${encodeURIComponent(messageText)}`;
+        window.open(waUrl, "_blank", "noopener,noreferrer");
+      } else {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(messageText)}`;
+        window.open(waUrl, "_blank", "noopener,noreferrer");
+      }
+      toast.success("تم تجهيز رسالة الواتساب", "تم فتح واتساب وجارِ إرسال الفاتورة للعميلة.");
+    } finally {
+      setSendingWhatsApp(false);
     }
   }
 
@@ -90,7 +140,18 @@ export default function InvoiceShareCard({
         <p dir="ltr" className="mono break-all text-left text-[10px] leading-4" style={{ color: "var(--brand-strong)" }}>{url}</p>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      {/* WhatsApp 1-Click Action */}
+      <button
+        type="button"
+        onClick={sendViaWhatsApp}
+        disabled={sendingWhatsApp}
+        className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-black text-white bg-[#25D366] hover:bg-[#20ba59] shadow-sm transition-all"
+      >
+        <Send size={14} />
+        {customerPhone ? `إرسال الفاتورة عبر واتساب (${customerPhone})` : "مشاركة الفاتورة عبر واتساب"}
+      </button>
+
+      <div className="mt-2.5 grid grid-cols-2 gap-2">
         <button type="button" onClick={copy} className="btn btn-primary px-2 py-2 text-[10px]">
           {copied ? <Check size={13} /> : <Copy size={13} />}{copied ? "تم النسخ" : "نسخ الرابط"}
         </button>
