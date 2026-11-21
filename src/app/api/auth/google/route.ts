@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { getGoogleCallbackUrl } from "@/lib/oauth-origin";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const returnTo = searchParams.get("returnTo") || "/catalog";
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -11,9 +12,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Google OAuth is not configured" }, { status: 500 });
   }
 
-  // Determine redirect URI: use current origin's callback endpoint
-  // Or check if GOOGLE_CALLBACK_URL matches current host
-  const callbackUrl = new URL("/api/auth/google/callback", origin).toString();
+  // Determine redirect URI with canonical HTTPS origin on production / Vercel
+  const callbackUrl = getGoogleCallbackUrl(request);
 
   const state = Buffer.from(JSON.stringify({ returnTo, callbackUrl })).toString("base64");
 

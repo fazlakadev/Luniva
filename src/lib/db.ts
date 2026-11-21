@@ -75,6 +75,7 @@ export function ensureCustomersTable() {
        ADD COLUMN IF NOT EXISTS auth_provider VARCHAR(50) DEFAULT 'local',
        ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT false`,
     );
+    await db.query("ALTER TABLE customers ALTER COLUMN phone DROP NOT NULL").catch(() => {});
     await db.query(
       `CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_email ON customers(LOWER(email)) WHERE email IS NOT NULL;
        CREATE UNIQUE INDEX IF NOT EXISTS idx_customers_google_id ON customers(google_id) WHERE google_id IS NOT NULL;`,

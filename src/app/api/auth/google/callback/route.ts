@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import { findOrCreateGoogleCustomer, setCustomerSessionCookie } from "@/lib/customer-auth";
+import { getCanonicalOrigin, getGoogleCallbackUrl } from "@/lib/oauth-origin";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const error = searchParams.get("error");
   const stateRaw = searchParams.get("state");
+
+  const origin = getCanonicalOrigin(request);
 
   let returnTo = "/catalog";
   let stateCallbackUrl = "";
@@ -32,7 +35,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/login?error=oauth_config_missing", origin));
   }
 
-  const redirectUri = stateCallbackUrl || new URL("/api/auth/google/callback", origin).toString();
+  const redirectUri = stateCallbackUrl || getGoogleCallbackUrl(request);
 
   try {
     // 1. Exchange authorization code for tokens
