@@ -35,6 +35,7 @@ const publicInvoiceHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@whiskeysockets/baileys", "pino", "jimp"],
   async headers() {
     return [
       {

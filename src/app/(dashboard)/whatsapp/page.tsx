@@ -5,21 +5,23 @@ import {
   getWhatsAppStats,
   getBroadcastAudience,
 } from "@/lib/whatsapp";
+import { getBaileysChats } from "@/lib/whatsapp-baileys";
 import WhatsAppHub from "@/components/whatsapp-hub";
 
 export const metadata: Metadata = {
-  title: "أتمتة الواتساب والتسويق | Luniva",
-  description: "مركز أتمتة رسائل وحملات الواتساب المجانية بدون تكلفة.",
+  title: "مركز الواتساب الذكي والمحادثات | Luniva",
+  description: "نظام متكامل لإدارة محادثات الواتساب، الكيو ار كود، الربط بالعملاء، والأتمتة بواسطة Baileys.",
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function WhatsAppPage() {
-  const [templates, logs, stats, audience] = await Promise.all([
+  const [templates, logs, stats, audience, chats] = await Promise.all([
     getWhatsAppTemplates(),
     getWhatsAppLogs(100),
     getWhatsAppStats(),
     getBroadcastAudience("all"),
+    getBaileysChats("all").catch(() => []),
   ]);
 
   return (
@@ -29,6 +31,7 @@ export default async function WhatsAppPage() {
         initialLogs={logs}
         initialStats={stats}
         initialAudience={audience}
+        initialChats={chats}
       />
     </div>
   );

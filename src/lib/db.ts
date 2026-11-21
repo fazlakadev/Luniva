@@ -611,12 +611,66 @@ export function ensureWhatsAppTables() {
         sent_by VARCHAR(120),
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS whatsapp_sessions_backup (
+        id VARCHAR(64) PRIMARY KEY,
+        session_data JSONB,
+        phone VARCHAR(50),
+        push_name VARCHAR(150),
+        connected_at TIMESTAMPTZ,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS whatsapp_chats (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        jid VARCHAR(120) UNIQUE NOT NULL,
+        name VARCHAR(255),
+        phone VARCHAR(50),
+        customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+        unread_count INT DEFAULT 0,
+        last_message TEXT,
+        last_message_at TIMESTAMPTZ DEFAULT NOW(),
+        is_archived BOOLEAN DEFAULT FALSE,
+        is_pinned BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS whatsapp_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        chat_jid VARCHAR(120) NOT NULL,
+        message_id VARCHAR(120) UNIQUE NOT NULL,
+        from_me BOOLEAN NOT NULL DEFAULT FALSE,
+        sender_jid VARCHAR(120),
+        sender_name VARCHAR(180),
+        content TEXT NOT NULL,
+        media_url TEXT,
+        media_type VARCHAR(50),
+        status VARCHAR(20) DEFAULT 'sent',
+        customer_id UUID REFERENCES customers(id) ON DELETE SET NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS whatsapp_bot_settings (
+        id VARCHAR(32) PRIMARY KEY DEFAULT 'default',
+        is_auto_reply_enabled BOOLEAN DEFAULT FALSE,
+        welcome_message TEXT DEFAULT 'أهلاً بكِ في لونيفا (Luniva) للأزياء ✨ نسعد بخدمتك دائماً. سيتواصل معكِ أحد ممثلينا في أقرب وقت 💕',
+        order_notification_enabled BOOLEAN DEFAULT TRUE,
+        invoice_auto_send BOOLEAN DEFAULT TRUE,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
     `);
 
     await Promise.all([
       db.query("CREATE INDEX IF NOT EXISTS whatsapp_logs_customer_idx ON whatsapp_logs (customer_id)"),
       db.query("CREATE INDEX IF NOT EXISTS whatsapp_logs_created_at_idx ON whatsapp_logs (created_at DESC)"),
       db.query("CREATE INDEX IF NOT EXISTS whatsapp_templates_cat_idx ON whatsapp_templates (category)"),
+      db.query("CREATE INDEX IF NOT EXISTS idx_whatsapp_chats_jid ON whatsapp_chats(jid)"),
+      db.query("CREATE INDEX IF NOT EXISTS idx_whatsapp_chats_customer_id ON whatsapp_chats(customer_id)"),
+      db.query("CREATE INDEX IF NOT EXISTS idx_whatsapp_chats_last_msg ON whatsapp_chats(last_message_at DESC)"),
+      db.query("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_chat ON whatsapp_messages(chat_jid, created_at ASC)"),
+      db.query("CREATE INDEX IF NOT EXISTS idx_whatsapp_messages_customer ON whatsapp_messages(customer_id)"),
+      db.query("INSERT INTO whatsapp_bot_settings (id) VALUES ('default') ON CONFLICT (id) DO NOTHING"),
     ]);
 
     // Pre-seed default templates if empty

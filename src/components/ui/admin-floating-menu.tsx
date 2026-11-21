@@ -51,7 +51,7 @@ const ADMIN_LINKS = [
   { href: "/suppliers", label: "الموردين", desc: "حسابات الموردين", icon: Truck },
   { href: "/orders", label: "طلبات الشراء", desc: "استفسارات الحجز", icon: ShoppingBag },
   { href: "/messages", label: "رسائل التواصل", desc: "صندوق الوارد", icon: Mail },
-  { href: "/whatsapp", label: "أتمتة الواتساب", desc: "الحملات والرسائل", icon: MessageSquare },
+  { href: "/whatsapp", label: "واتساب والمحادثات", desc: "محادثات مباشرة وربط QR", icon: MessageSquare },
   { href: "/newsletter", label: "النشرة البريدية", desc: "المشتركات والحملات", icon: Mail },
   { href: "/settings", label: "الإعدادات", desc: "بيانات المنشأة", icon: Settings },
 ];

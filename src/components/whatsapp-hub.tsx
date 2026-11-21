@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, useTransition, useMemo } from "react";
+import Link from "next/link";
 import {
   MessageSquare,
   Send,
@@ -9,7 +9,6 @@ import {
   Sparkles,
   FileText,
   Clock,
-  History,
   CheckCheck,
   Search,
   ExternalLink,
@@ -20,12 +19,21 @@ import {
   AlertCircle,
   Copy,
   UserCheck,
-  ChevronLeft,
-  ChevronRight,
   Filter,
   DollarSign,
   Phone,
   RefreshCw,
+  QrCode,
+  Smartphone,
+  Bot,
+  Settings2,
+  LogOut,
+  Wifi,
+  WifiOff,
+  Zap,
+  ShieldCheck,
+  ArrowRight,
+  TrendingUp,
 } from "lucide-react";
 import { useToast } from "@/components/toast";
 import {
@@ -36,7 +44,10 @@ import {
   templateCategoryLabels,
   compileTemplate,
   formatWhatsAppPhone,
-  generateWhatsAppUrl,
+  WhatsAppSessionInfo,
+  WhatsAppChat,
+  WhatsAppMessage,
+  WhatsAppBotSettings,
 } from "@/lib/whatsapp-shared";
 import { formatMoney } from "@/lib/format";
 
@@ -50,6 +61,7 @@ interface WhatsAppHubProps {
     templates_count: number;
   };
   initialAudience: BroadcastCustomer[];
+  initialChats?: WhatsAppChat[];
 }
 
 export default function WhatsAppHub({
@@ -57,15 +69,334 @@ export default function WhatsAppHub({
   initialLogs,
   initialStats,
   initialAudience,
+  initialChats = [],
 }: WhatsAppHubProps) {
-  const router = useRouter();
   const toast = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
-  // Tab State
-  const [activeTab, setActiveTab] = useState<"campaigns" | "templates" | "direct" | "logs">("campaigns");
+  // Active Tab
+  const [activeTab, setActiveTab] = useState<"chats" | "qr" | "bot" | "campaigns" | "templates" | "logs">("chats");
 
-  // Templates state
+  // ==========================================
+  // 1. BAILEYS SESSION & QR CODE STATE
+  // ==========================================
+  const [session, setSession] = useState<WhatsAppSessionInfo>({
+    status: "disconnected",
+    qrCode: null,
+    user: null,
+    connectedAt: null,
+    lastError: null,
+  });
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
+
+  // Poll Baileys status
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch("/api/whatsapp/baileys/status");
+      if (res.ok) {
+        const data: WhatsAppSessionInfo = await res.json();
+        setSession(data);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+    // Poll every 4 seconds if in connecting or qr_ready status
+    const interval = setInterval(() => {
+      if (session.status === "connecting" || session.status === "qr_ready" || activeTab === "qr") {
+        fetchStatus();
+      }
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [session.status, activeTab]);
+
+  const handleStartConnection = async () => {
+    setIsSessionLoading(true);
+    try {
+      const res = await fetch("/api/whatsapp/baileys/connect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل بدء جلسة واتساب");
+      setSession(data);
+      toast.success("جاري تشغيل محرك واتساب وتوليد رمز QR...");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء تشغيل واتساب");
+    } finally {
+      setIsSessionLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    if (!confirm("هل أنتِ متأكدة من رغبتكِ في تسجيل الخروج وقطع اتصال واتساب؟")) return;
+    setIsSessionLoading(true);
+    try {
+      const res = await fetch("/api/whatsapp/baileys/logout", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل تسجيل الخروج");
+      setSession({
+        status: "disconnected",
+        qrCode: null,
+        user: null,
+        connectedAt: null,
+        lastError: null,
+      });
+      toast.success("تم قطع الاتصال وتسجيل الخروج بنجاح.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء تسجيل الخروج");
+    } finally {
+      setIsSessionLoading(false);
+    }
+  };
+
+  // ==========================================
+  // 2. LIVE CHATS & MESSAGES STATE
+  // ==========================================
+  const [chats, setChats] = useState<WhatsAppChat[]>(initialChats);
+  const [selectedChatJid, setSelectedChatJid] = useState<string | null>(initialChats[0]?.jid || null);
+  const [chatSearch, setChatSearch] = useState("");
+  const [chatFilter, setChatFilter] = useState<"all" | "customers" | "unread">("all");
+  const [messages, setMessages] = useState<WhatsAppMessage[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [messageInput, setMessageInput] = useState("");
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  // Fetch chats list
+  const fetchChats = async () => {
+    try {
+      const res = await fetch(`/api/whatsapp/baileys/chats?filter=${chatFilter}`);
+      if (res.ok) {
+        const data = await res.json();
+        setChats(data);
+        if (!selectedChatJid && data.length > 0) {
+          setSelectedChatJid(data[0].jid);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  // Poll chats periodically
+  useEffect(() => {
+    if (activeTab === "chats") {
+      fetchChats();
+      const interval = setInterval(fetchChats, 6000);
+      return () => clearInterval(interval);
+    }
+  }, [activeTab, chatFilter]);
+
+  // Fetch messages for selected chat
+  useEffect(() => {
+    if (!selectedChatJid) return;
+    let isMounted = true;
+    setIsLoadingMessages(true);
+
+    fetch(`/api/whatsapp/baileys/messages?jid=${encodeURIComponent(selectedChatJid)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (isMounted) {
+          setMessages(Array.isArray(data) ? data : []);
+          setIsLoadingMessages(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setIsLoadingMessages(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedChatJid]);
+
+  // Scroll to bottom when messages update
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const activeChat = useMemo(() => {
+    return chats.find((c) => c.jid === selectedChatJid) || null;
+  }, [chats, selectedChatJid]);
+
+  const filteredChats = useMemo(() => {
+    return chats.filter((c) => {
+      if (!chatSearch.trim()) return true;
+      const q = chatSearch.toLowerCase();
+      return (
+        (c.name && c.name.toLowerCase().includes(q)) ||
+        (c.phone && c.phone.includes(q)) ||
+        (c.customer_name && c.customer_name.toLowerCase().includes(q)) ||
+        (c.last_message && c.last_message.toLowerCase().includes(q))
+      );
+    });
+  }, [chats, chatSearch]);
+
+  const handleSendMessage = async () => {
+    if (!messageInput.trim() || !selectedChatJid || isSendingMessage) return;
+    const textToSend = messageInput.trim();
+    setIsSendingMessage(true);
+
+    // Optimistic UI update
+    const optimisticMsg: WhatsAppMessage = {
+      id: `temp_${Date.now()}`,
+      chat_jid: selectedChatJid,
+      message_id: `temp_${Date.now()}`,
+      from_me: true,
+      sender_jid: "luniva",
+      sender_name: "لونيفا للأزياء",
+      content: textToSend,
+      media_url: null,
+      media_type: null,
+      status: "pending",
+      customer_id: activeChat?.customer_id || null,
+      created_at: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticMsg]);
+    setMessageInput("");
+
+    try {
+      const res = await fetch("/api/whatsapp/baileys/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: selectedChatJid, text: textToSend }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل إرسال الرسالة");
+
+      // Mark message as sent
+      setMessages((prev) =>
+        prev.map((m) => (m.id === optimisticMsg.id ? { ...m, status: "sent", message_id: data.messageId } : m)),
+      );
+      fetchChats();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "تعذر إرسال الرسالة");
+      setMessages((prev) =>
+        prev.map((m) => (m.id === optimisticMsg.id ? { ...m, status: "failed" } : m)),
+      );
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  // ==========================================
+  // 3. BOT & AUTO-REPLY SETTINGS STATE
+  // ==========================================
+  const [botSettings, setBotSettings] = useState<WhatsAppBotSettings>({
+    is_auto_reply_enabled: false,
+    welcome_message: "أهلاً بكِ في لونيفا (Luniva) للأزياء ✨ نسعد بخدمتك دائماً. سيتواصل معكِ أحد ممثلينا في أقرب وقت 💕",
+    order_notification_enabled: true,
+    invoice_auto_send: true,
+  });
+  const [isSavingBot, setIsSavingBot] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "bot") {
+      fetch("/api/whatsapp/baileys/settings")
+        .then((r) => r.json())
+        .then((data) => {
+          if (data && !data.error) setBotSettings(data);
+        })
+        .catch(() => {});
+    }
+  }, [activeTab]);
+
+  const handleSaveBotSettings = async () => {
+    setIsSavingBot(true);
+    try {
+      const res = await fetch("/api/whatsapp/baileys/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(botSettings),
+      });
+      if (!res.ok) throw new Error("فشل حفظ إعدادات البوت");
+      toast.success("تم حفظ إعدادات الرد التلقائي والبوت بنجاح.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء الحفظ");
+    } finally {
+      setIsSavingBot(false);
+    }
+  };
+
+  // ==========================================
+  // 4. CAMPAIGNS & BROADCASTS STATE
+  // ==========================================
+  const [segment, setSegment] = useState<"all" | "vip" | "with_balance" | "inactive_30d">("all");
+  const [audience, setAudience] = useState<BroadcastCustomer[]>(initialAudience);
+  const [loadingAudience, setLoadingAudience] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(initialTemplates[0]?.id || "");
+  const [customCampaignText, setCustomCampaignText] = useState("");
+  const [isSendingCampaign, setIsSendingCampaign] = useState(false);
+  const [campaignProgress, setCampaignProgress] = useState<{ sent: number; total: number } | null>(null);
+
+  const fetchAudience = async (targetSegment: typeof segment) => {
+    setLoadingAudience(true);
+    try {
+      const res = await fetch(`/api/whatsapp/campaigns?segment=${targetSegment}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAudience(data);
+      }
+    } catch {
+      toast.error("فشل تحميل قائمة العميلات المستهدفة");
+    } finally {
+      setLoadingAudience(false);
+    }
+  };
+
+  const handleSegmentChange = (newSegment: typeof segment) => {
+    setSegment(newSegment);
+    fetchAudience(newSegment);
+  };
+
+  const handleSendCampaign = async () => {
+    if (audience.length === 0) {
+      toast.error("لا توجد عميلات مستهدفات في هذه الفئة.");
+      return;
+    }
+    const templateContent = customCampaignText.trim() || initialTemplates.find((t) => t.id === selectedTemplateId)?.content || "";
+    if (!templateContent) {
+      toast.error("يرجى اختيار قالب أو كتابة نص الرسالة.");
+      return;
+    }
+
+    if (session.status !== "connected") {
+      toast.error("واتساب غير متصل. يرجى مسح رمز QR أولاً في تبويب الاتصال.");
+      setActiveTab("qr");
+      return;
+    }
+
+    if (!confirm(`هل أنتِ متأكدة من إرسال الحملة إلى ${audience.length} عميلة عبر واتساب الآن؟`)) return;
+
+    setIsSendingCampaign(true);
+    setCampaignProgress({ sent: 0, total: audience.length });
+
+    try {
+      const res = await fetch("/api/whatsapp/baileys/campaign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipients: audience,
+          templateContent,
+          category: "marketing",
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "فشل إرسال الحملة");
+
+      toast.success(`اكتملت الحملة بنجاح! تم إرسال ${data.sentCount} رسالة.`);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء إرسال الحملة");
+    } finally {
+      setIsSendingCampaign(false);
+      setCampaignProgress(null);
+    }
+  };
+
+  // ==========================================
+  // 5. TEMPLATES MANAGEMENT STATE
+  // ==========================================
   const [templates, setTemplates] = useState<WhatsAppTemplate[]>(initialTemplates);
   const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplate | null>(null);
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
@@ -73,685 +404,659 @@ export default function WhatsAppHub({
   const [tplCategory, setTplCategory] = useState<WhatsAppTemplateCategory>("marketing");
   const [tplContent, setTplContent] = useState("");
 
-  // Campaign State
-  const [segment, setSegment] = useState<"all" | "vip" | "with_balance" | "inactive_30d">("all");
-  const [audience, setAudience] = useState<BroadcastCustomer[]>(initialAudience);
-  const [loadingAudience, setLoadingAudience] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(
-    initialTemplates.find((t) => t.category === "marketing")?.id || initialTemplates[0]?.id || ""
-  );
-  const [customCampaignMessage, setCustomCampaignMessage] = useState("");
-  const [audienceSearch, setAudienceSearch] = useState("");
-  const [sentCustomerIds, setSentCustomerIds] = useState<Set<string>>(new Set());
-
-  // Sequential Sender State
-  const [currentIndex, setCurrentIndex] = useState<number | null>(null);
-
-  // Direct Send State
-  const [directPhone, setDirectPhone] = useState("");
-  const [directName, setDirectName] = useState("");
-  const [directTemplateId, setDirectTemplateId] = useState<string>("");
-  const [directMessage, setDirectMessage] = useState("");
-
-  // Logs State
-  const [logs, setLogs] = useState<WhatsAppLogEntry[]>(initialLogs);
-  const [logFilter, setLogFilter] = useState("");
-
-  // Selected Campaign Template
-  const activeCampaignTemplate = useMemo(() => {
-    return templates.find((t) => t.id === selectedTemplateId) || null;
-  }, [templates, selectedTemplateId]);
-
-  // Handle changing segment
-  async function handleSegmentChange(newSegment: "all" | "vip" | "with_balance" | "inactive_30d") {
-    setSegment(newSegment);
-    setLoadingAudience(true);
-    try {
-      const res = await fetch(`/api/whatsapp/campaigns?segment=${newSegment}`);
-      const data = await res.json();
-      if (data.success && data.audience) {
-        setAudience(data.audience);
-      }
-    } catch {
-      toast.error("تعذر تحميل الجمهور", "يرجى التحقق من الاتصال بالشبكة.");
-    } finally {
-      setLoadingAudience(false);
-    }
-  }
-
-  // Filtered Audience
-  const filteredAudience = useMemo(() => {
-    if (!audienceSearch.trim()) return audience;
-    const q = audienceSearch.toLowerCase().trim();
-    return audience.filter(
-      (c) =>
-        c.full_name.toLowerCase().includes(q) ||
-        c.phone.includes(q)
-    );
-  }, [audience, audienceSearch]);
-
-  // Compute live preview message for a specific or sample customer
-  function getSamplePreviewMessage(sampleCustomer?: BroadcastCustomer) {
-    const rawTemplate = customCampaignMessage || activeCampaignTemplate?.content || "";
-    if (!rawTemplate) return "اكتبي نص الرسالة أو اختاري قالبًا لعرض المعاينة…";
-
-    const vars = {
-      اسم_العميلة: sampleCustomer ? sampleCustomer.full_name : "سارة أحمد",
-      المتبقي: sampleCustomer ? formatMoney(sampleCustomer.open_balance) : "450 ج.م",
-      إجمالي_المشتريات: sampleCustomer ? formatMoney(sampleCustomer.total_spent) : "3,200 ج.م",
-      اسم_البراند: "لونيفا فاشون",
-      رابط_المتجر: window.location.origin,
-      رقم_الفاتورة: "INV-2026-089",
-      المبلغ_المدفوع: "500 ج.م",
-      تاريخ_الموعد: "غدًا الساعة 5 مساءً",
-      نوع_الموعد: "بروفة قياس الفستان",
-    };
-
-    return compileTemplate(rawTemplate, vars);
-  }
-
-  // Send to Single Customer in Campaign
-  async function handleSendToCustomer(customer: BroadcastCustomer) {
-    const rawTemplate = customCampaignMessage || activeCampaignTemplate?.content || "";
-    const vars = {
-      اسم_العميلة: customer.full_name,
-      المتبقي: formatMoney(customer.open_balance),
-      إجمالي_المشتريات: formatMoney(customer.total_spent),
-      اسم_البراند: "لونيفا فاشون",
-      رابط_المتجر: window.location.origin,
-    };
-    const compiled = compileTemplate(rawTemplate, vars);
-
-    try {
-      // 1. Log dispatch in background
-      await fetch("/api/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: customer.id,
-          customerName: customer.full_name,
-          phone: customer.phone,
-          templateCategory: activeCampaignTemplate?.category || "marketing",
-          message: compiled,
-          sentBy: "المسؤول",
-        }),
-      });
-
-      // 2. Mark as sent locally
-      setSentCustomerIds((prev) => new Set([...prev, customer.id]));
-
-      // 3. Open WhatsApp link
-      const url = generateWhatsAppUrl(customer.phone, compiled);
-      window.open(url, "_blank", "noopener,noreferrer");
-
-      toast.success("تم تجهيز المحادثة", `تم فتح واتساب للعميلة ${customer.full_name}`);
-    } catch {
-      toast.error("حدث خطأ", "تعذر تسجيل الإرسال.");
-    }
-  }
-
-  // Sequential Sender Step
-  async function advanceSequential(stepIndex: number) {
-    if (stepIndex >= filteredAudience.length) {
-      setCurrentIndex(null);
-      toast.success("اكتملت الحملة بنجاح!", "تم إرسال رسائل جميع العميلات المحددة.");
-      return;
-    }
-    const customer = filteredAudience[stepIndex];
-    setCurrentIndex(stepIndex);
-    await handleSendToCustomer(customer);
-  }
-
-  // Save Template Action
-  async function handleSaveTemplate(e: React.FormEvent) {
-    e.preventDefault();
+  const handleSaveTemplate = async () => {
     if (!tplName.trim() || !tplContent.trim()) {
-      toast.error("بيانات غير مكتملة", "يرجى كتابة اسم القالب ومحتواه.");
+      toast.error("يرجى إدخال اسم القالب ومحتواه.");
       return;
     }
 
     try {
-      const payload = {
-        id: editingTemplate?.id,
-        category: tplCategory,
-        name: tplName.trim(),
-        content: tplContent.trim(),
-      };
-
       const res = await fetch("/api/whatsapp/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          id: editingTemplate?.id,
+          name: tplName.trim(),
+          category: tplCategory,
+          content: tplContent.trim(),
+        }),
       });
-
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+      const saved = await res.json();
+      if (!res.ok) throw new Error(saved.error || "فشل حفظ القالب");
 
       if (editingTemplate) {
-        setTemplates((prev) => prev.map((t) => (t.id === data.template.id ? data.template : t)));
-        toast.success("تم تحديث القالب", "تم حفظ التعديلات بنجاح.");
+        setTemplates((prev) => prev.map((t) => (t.id === saved.id ? saved : t)));
+        toast.success("تم تحديث القالب بنجاح.");
       } else {
-        setTemplates((prev) => [data.template, ...prev]);
-        toast.success("تم إنشاء القالب", "تمت إضافة القالب الجديد بنجاح.");
+        setTemplates((prev) => [saved, ...prev]);
+        toast.success("تم إنشاء القالب الجديد بنجاح.");
       }
 
       setEditingTemplate(null);
       setIsCreatingTemplate(false);
       setTplName("");
       setTplContent("");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "تعذر حفظ القالب";
-      toast.error("خطأ", msg);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء حفظ القالب");
     }
-  }
+  };
 
-  // Delete Template Action
-  async function handleDeleteTemplate(id: string) {
+  const handleDeleteTemplate = async (id: string) => {
     if (!confirm("هل أنتِ متأكدة من حذف هذا القالب؟")) return;
     try {
       const res = await fetch(`/api/whatsapp/templates?id=${id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-
+      if (!res.ok) throw new Error("فشل حذف القالب");
       setTemplates((prev) => prev.filter((t) => t.id !== id));
-      toast.success("تم حذف القالب", "تمت إزالة القالب من النظام.");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "تعذر حذف القالب";
-      toast.error("خطأ", msg);
+      toast.success("تم حذف القالب.");
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "حدث خطأ أثناء الحذف");
     }
-  }
+  };
 
-  // Direct Send Action
-  async function handleDirectSend(e: React.FormEvent) {
-    e.preventDefault();
-    if (!directPhone.trim() || !directMessage.trim()) {
-      toast.error("بيانات ناقصة", "يرجى إدخال رقم الهاتف ونص الرسالة.");
-      return;
-    }
-
-    try {
-      const res = await fetch("/api/whatsapp/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerName: directName || "عميلة",
-          phone: directPhone,
-          message: directMessage,
-          templateCategory: "custom",
-          sentBy: "المسؤول",
-        }),
-      });
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error);
-
-      window.open(data.url, "_blank", "noopener,noreferrer");
-      toast.success("تم فتح واتساب", `تم توجيه الرسالة إلى ${data.formattedPhone}`);
-
-      // Refresh logs
-      setLogs((prev) => [
-        {
-          id: Math.random().toString(),
-          customer_id: null,
-          customer_name: directName || null,
-          phone: data.formattedPhone,
-          template_category: "custom",
-          message: directMessage,
-          status: "sent",
-          sent_by: "المسؤول",
-          created_at: new Date().toISOString(),
-        },
-        ...prev,
-      ]);
-
-      setDirectPhone("");
-      setDirectName("");
-      setDirectMessage("");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "تعذر الإرسال";
-      toast.error("خطأ", msg);
-    }
-  }
-
-  // Insert tag chip into active textarea
-  function insertTag(tag: string, targetState: "template" | "direct" | "campaign") {
-    const formatted = `{${tag}}`;
-    if (targetState === "template") {
-      setTplContent((prev) => prev + " " + formatted);
-    } else if (targetState === "direct") {
-      setDirectMessage((prev) => prev + " " + formatted);
-    } else if (targetState === "campaign") {
-      setCustomCampaignMessage((prev) => prev + " " + formatted);
-    }
-  }
+  // Total unread count across all chats
+  const totalUnreadCount = useMemo(() => {
+    return chats.reduce((acc, c) => acc + (c.unread_count || 0), 0);
+  }, [chats]);
 
   return (
-    <div className="space-y-6">
-      {/* Header & Stats Banner */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold" style={{ background: "rgba(37, 211, 102, 0.12)", color: "#128C7E" }}>
-            <Sparkles size={14} className="text-[#25D366]" />
-            أتمتة وحملات الواتساب المجانية 100%
-          </div>
-          <h1 className="mt-2 text-2xl font-black tracking-tight" style={{ color: "var(--brand-strong)" }}>
-            مركز التسويق وأتمتة الواتساب
-          </h1>
-          <p className="mt-1 text-xs font-medium muted">
-            أرسلي فواتير، تذكيرات سداد ومواعيد، وحملات تسويقية مجزأة بنقرة واحدة عبر واتساب مباشرة وبدون تكلفة.
-          </p>
-        </div>
-
-        {/* Quick KPI stats */}
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-          <div className="app-card px-3.5 py-2 text-center" style={{ minWidth: "105px" }}>
-            <span className="text-[10px] font-bold muted">المرسلة اليوم</span>
-            <p className="mt-0.5 text-lg font-black text-[#25D366]">{initialStats.sent_today}</p>
-          </div>
-          <div className="app-card px-3.5 py-2 text-center" style={{ minWidth: "105px" }}>
-            <span className="text-[10px] font-bold muted">إجمالي الإرسال</span>
-            <p className="mt-0.5 text-lg font-black" style={{ color: "var(--brand-strong)" }}>{initialStats.total_sent}</p>
-          </div>
-          <div className="app-card px-3.5 py-2 text-center" style={{ minWidth: "105px" }}>
-            <span className="text-[10px] font-bold muted">عميلات مخدومة</span>
-            <p className="mt-0.5 text-lg font-black" style={{ color: "var(--lav-strong)" }}>{initialStats.unique_customers_reached}</p>
-          </div>
-          <div className="app-card px-3.5 py-2 text-center" style={{ minWidth: "105px" }}>
-            <span className="text-[10px] font-bold muted">القوالب الجاهزة</span>
-            <p className="mt-0.5 text-lg font-black" style={{ color: "var(--brand-strong)" }}>{templates.length}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-zinc-800 gap-2">
-        <button
-          onClick={() => setActiveTab("campaigns")}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-black transition-all border-b-2 -mb-px ${
-            activeTab === "campaigns"
-              ? "border-[#25D366] text-[#128C7E] dark:text-[#25D366]"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <Users size={16} />
-          حملات البث الذكية (Broadcast)
-        </button>
-
-        <button
-          onClick={() => setActiveTab("templates")}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-black transition-all border-b-2 -mb-px ${
-            activeTab === "templates"
-              ? "border-[#25D366] text-[#128C7E] dark:text-[#25D366]"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <FileText size={16} />
-          إدارة القوالب ({templates.length})
-        </button>
-
-        <button
-          onClick={() => setActiveTab("direct")}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-black transition-all border-b-2 -mb-px ${
-            activeTab === "direct"
-              ? "border-[#25D366] text-[#128C7E] dark:text-[#25D366]"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <Send size={16} />
-          إرسال سريع ومباشر
-        </button>
-
-        <button
-          onClick={() => setActiveTab("logs")}
-          className={`flex items-center gap-2 px-4 py-3 text-xs font-black transition-all border-b-2 -mb-px ${
-            activeTab === "logs"
-              ? "border-[#25D366] text-[#128C7E] dark:text-[#25D366]"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          <History size={16} />
-          سجل الإرسال والإحصائيات
-        </button>
-      </div>
-
-      {/* TAB 1: CAMPAIGNS */}
-      {activeTab === "campaigns" && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left / Setup Column (7 cols) */}
-          <div className="lg:col-span-7 space-y-5">
-            {/* 1. Audience Segmentation Selector */}
-            <div className="app-card p-5">
-              <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
-                <Filter size={14} /> 1. تحديد شريحة الجمهور المستهدفة
-              </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { key: "all", label: "جميع العميلات", hint: "كامل جهات الاتصال" },
-                  { key: "vip", label: "عميلات VIP", hint: "مشتروات +4000 ج.م" },
-                  { key: "with_balance", label: "متبقي عليهم رصيد", hint: "تذكير بالسداد" },
-                  { key: "inactive_30d", label: "خاملات +30 يوم", hint: "إعادة تنشيط ومبيعات" },
-                ].map((seg) => (
-                  <button
-                    key={seg.key}
-                    type="button"
-                    onClick={() => handleSegmentChange(seg.key as any)}
-                    className={`p-3 rounded-xl border text-right transition-all ${
-                      segment === seg.key
-                        ? "border-[#25D366] bg-[rgba(37,211,102,0.08)] shadow-sm"
-                        : "border-[var(--line)] bg-[var(--surface-2)] hover:border-gray-400"
-                    }`}
-                  >
-                    <p className={`text-xs font-black ${segment === seg.key ? "text-[#128C7E] dark:text-[#25D366]" : ""}`}>
-                      {seg.label}
-                    </p>
-                    <p className="text-[10px] muted mt-0.5">{seg.hint}</p>
-                  </button>
-                ))}
+    <div className="space-y-6 text-right" dir="rtl">
+      {/* Top Header Card */}
+      <div className="rounded-2xl border border-border/80 bg-gradient-to-r from-card via-card/95 to-primary/5 p-6 shadow-sm">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 shadow-inner">
+                <Smartphone className="h-6 w-6" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                  منظومة واتساب لونيفا المتطورة (Baileys Engine)
+                </h1>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  محادثات حية مباشرة، ربط تلقائي بملفات العميلات، رمز QR دائم، وحملات مؤتمتة
+                </p>
               </div>
             </div>
+          </div>
 
-            {/* 2. Template Selection & Customization */}
-            <div className="app-card p-5 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
-                  <FileText size={14} /> 2. اختيار أو كتابة رسالة الحملة
-                </h3>
-                <span className="text-[11px] font-bold muted">
-                  المتغيرات تتبدل تلقائياً لكل عميلة
-                </span>
-              </div>
+          {/* Connection Status Badge & Quick Action */}
+          <div className="flex items-center gap-3">
+            <div
+              className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-1.5 text-xs font-semibold shadow-xs ${
+                session.status === "connected"
+                  ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  : session.status === "qr_ready"
+                  ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                  : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+              }`}
+            >
+              {session.status === "connected" ? (
+                <>
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+                  </span>
+                  <span>واتساب متصل ({session.user?.phone || session.user?.name || "جاهز"})</span>
+                </>
+              ) : session.status === "qr_ready" ? (
+                <>
+                  <QrCode className="h-4 w-4 animate-pulse" />
+                  <span>في انتظار مسح رمز QR</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-4 w-4" />
+                  <span>واتساب غير متصل</span>
+                </>
+              )}
+            </div>
 
-              {/* Template Picker Pills */}
-              <div className="flex flex-wrap gap-2">
-                {templates.map((tpl) => (
-                  <button
-                    key={tpl.id}
-                    onClick={() => {
-                      setSelectedTemplateId(tpl.id);
-                      setCustomCampaignMessage("");
-                    }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${
-                      selectedTemplateId === tpl.id && !customCampaignMessage
-                        ? "bg-[#25D366] text-white border-[#25D366] shadow-sm"
-                        : "bg-[var(--surface-2)] border-[var(--line)] text-gray-600 dark:text-zinc-300 hover:border-gray-400"
-                    }`}
-                  >
-                    {tpl.name}
-                  </button>
-                ))}
-              </div>
+            {session.status === "connected" ? (
+              <button
+                onClick={handleLogout}
+                disabled={isSessionLoading}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-1.5 text-xs font-medium text-rose-600 transition hover:bg-rose-500/20"
+                title="تسجيل الخروج وقطع الاتصال"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                قطع الاتصال
+              </button>
+            ) : (
+              <button
+                onClick={() => setActiveTab("qr")}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
+              >
+                <QrCode className="h-3.5 w-3.5" />
+                مسح رمز QR
+              </button>
+            )}
+          </div>
+        </div>
 
-              {/* Custom message override textarea */}
-              <div>
-                <label className="block text-[11px] font-bold mb-1.5 text-gray-500">
-                  تعديل نص الرسالة أو كتابة رسالة خاصة بهذه الحملة:
-                </label>
-                <textarea
-                  rows={6}
-                  value={customCampaignMessage || activeCampaignTemplate?.content || ""}
-                  onChange={(e) => setCustomCampaignMessage(e.target.value)}
-                  dir="rtl"
-                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed focus:outline-none focus:ring-2 focus:ring-[#25D366]"
-                  placeholder="اكتبي نص الرسالة هنا…"
+        {/* Tab Navigation Navigation Bar */}
+        <div className="mt-6 flex flex-wrap gap-2 border-t border-border/60 pt-4">
+          <button
+            onClick={() => setActiveTab("chats")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === "chats"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <MessageSquare className="h-4 w-4" />
+            المحادثات الحية
+            {totalUnreadCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[11px] font-bold text-white">
+                {totalUnreadCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("qr")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === "qr"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <QrCode className="h-4 w-4" />
+            الاتصال ورمز QR
+            {session.status === "qr_ready" && (
+              <span className="flex h-2 w-2 rounded-full bg-amber-400"></span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setActiveTab("bot")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === "bot"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Bot className="h-4 w-4" />
+            البوت والرد التلقائي
+          </button>
+
+          <button
+            onClick={() => setActiveTab("campaigns")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === "campaigns"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Zap className="h-4 w-4" />
+            الحملات التسويقية
+          </button>
+
+          <button
+            onClick={() => setActiveTab("templates")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === "templates"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <FileText className="h-4 w-4" />
+            قوالب الرسائل
+          </button>
+
+          <button
+            onClick={() => setActiveTab("logs")}
+            className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition ${
+              activeTab === "logs"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Clock className="h-4 w-4" />
+            السجل والإحصائيات
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* TAB 1: LIVE CHATS HUB (WHATSAPP WEB STYLE) */}
+      {/* ========================================================================= */}
+      {activeTab === "chats" && (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          {/* Chat List (Sidebar: 4 cols) */}
+          <div className="flex flex-col rounded-2xl border border-border bg-card shadow-sm lg:col-span-4 h-[720px]">
+            {/* Search and Filters */}
+            <div className="p-4 border-b border-border space-y-3">
+              <div className="relative">
+                <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="ابحثي بالاسم، الهاتف، أو الرسالة..."
+                  value={chatSearch}
+                  onChange={(e) => setChatSearch(e.target.value)}
+                  className="w-full rounded-xl border border-input bg-background pr-9 pl-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
 
-              {/* Dynamic tag chips */}
-              <div>
-                <p className="text-[10px] font-bold muted mb-1.5">انقري لإدراج متغير ذكي:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {["اسم_العميلة", "المتبقي", "إجمالي_المشتريات", "اسم_البراند", "رابط_المتجر"].map((tag) => (
-                    <button
-                      key={tag}
-                      type="button"
-                      onClick={() => insertTag(tag, "campaign")}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-black border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100"
-                    >
-                      <Plus size={10} />
-                      {`{${tag}}`}
-                    </button>
-                  ))}
-                </div>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={() => setChatFilter("all")}
+                  className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${
+                    chatFilter === "all" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  الكل ({chats.length})
+                </button>
+                <button
+                  onClick={() => setChatFilter("customers")}
+                  className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${
+                    chatFilter === "customers" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  العميلات
+                </button>
+                <button
+                  onClick={() => setChatFilter("unread")}
+                  className={`flex-1 rounded-lg py-1.5 text-xs font-semibold transition ${
+                    chatFilter === "unread" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  غير مقروءة ({totalUnreadCount})
+                </button>
               </div>
             </div>
 
-            {/* 3. Targeted Audience List */}
-            <div className="app-card p-5">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-                <div>
-                  <h3 className="text-sm font-black flex items-center gap-2">
-                    <Users size={16} className="text-[#25D366]" />
-                    قائمة الجمهور المستهدف ({filteredAudience.length} عميلة)
-                  </h3>
-                  <p className="text-[11px] muted">
-                    تم إرسال: {sentCustomerIds.size} من أصل {filteredAudience.length}
+            {/* Chats Scroll Area */}
+            <div className="flex-1 overflow-y-auto divide-y divide-border/50">
+              {filteredChats.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                  <MessageSquare className="h-10 w-10 stroke-[1.5] text-muted-foreground/40 mb-2" />
+                  <p className="text-sm font-medium">لا توجد محادثات مطابقة</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    ستظهر المحادثات هنا تلقائياً عند استلام أو إرسال أي رسالة عبر واتساب
                   </p>
                 </div>
-
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <Search size={14} className="absolute right-2.5 top-2.5 text-gray-400" />
-                    <input
-                      type="text"
-                      placeholder="بحث بالاسم أو الهاتف…"
-                      value={audienceSearch}
-                      onChange={(e) => setAudienceSearch(e.target.value)}
-                      className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pr-8 pl-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-[#25D366]"
-                    />
-                  </div>
-
-                  {currentIndex !== null ? (
+              ) : (
+                filteredChats.map((c) => {
+                  const isSelected = c.jid === selectedChatJid;
+                  return (
                     <button
-                      onClick={() => setCurrentIndex(null)}
-                      className="btn btn-outline text-xs px-3 py-1.5 border-rose-300 text-rose-600"
+                      key={c.jid}
+                      onClick={() => setSelectedChatJid(c.jid)}
+                      className={`w-full p-3.5 text-right transition flex items-start gap-3 hover:bg-muted/60 ${
+                        isSelected ? "bg-primary/10 border-r-4 border-r-primary" : ""
+                      }`}
                     >
-                      إيقاف التتابع
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => advanceSequential(0)}
-                      disabled={filteredAudience.length === 0}
-                      className="btn text-xs px-3 py-1.5 bg-[#25D366] text-white hover:bg-[#20ba59] font-black shadow-sm disabled:opacity-50"
-                    >
-                      بدء الإرسال المتتابع
-                    </button>
-                  )}
-                </div>
-              </div>
+                      <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-500/20 text-emerald-700 font-bold text-sm">
+                        {c.name ? c.name.charAt(0) : "W"}
+                        {c.unread_count > 0 && (
+                          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+                            {c.unread_count}
+                          </span>
+                        )}
+                      </div>
 
-              {/* Progress bar if sequential is running */}
-              {currentIndex !== null && (
-                <div className="mb-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
-                  <div className="flex justify-between items-center text-xs font-black text-emerald-800 dark:text-emerald-300 mb-1.5">
-                    <span>جارِ معالجة العميلة {currentIndex + 1} من {filteredAudience.length}</span>
-                    <button
-                      onClick={() => advanceSequential((currentIndex ?? 0) + 1)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#25D366] text-white text-[11px]"
-                    >
-                      التالية <ChevronLeft size={12} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-sm truncate text-foreground">
+                            {c.customer_name || c.name || c.phone || "محادثة"}
+                          </h4>
+                          <span className="text-[11px] text-muted-foreground shrink-0">
+                            {c.last_message_at
+                              ? new Date(c.last_message_at).toLocaleTimeString("ar-EG", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })
+                              : ""}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          {c.customer_code && (
+                            <span className="inline-block rounded bg-primary/10 px-1.5 py-0.2 text-[10px] font-medium text-primary shrink-0">
+                              {c.customer_code}
+                            </span>
+                          )}
+                          <p className="text-xs text-muted-foreground truncate">
+                            {c.last_message || "محادثة جديدة"}
+                          </p>
+                        </div>
+                      </div>
                     </button>
-                  </div>
-                  <div className="w-full bg-emerald-200 dark:bg-emerald-900 rounded-full h-2">
-                    <div
-                      className="bg-[#25D366] h-2 rounded-full transition-all"
-                      style={{ width: `${Math.round(((currentIndex + 1) / filteredAudience.length) * 100)}%` }}
-                    />
-                  </div>
-                </div>
+                  );
+                })
               )}
-
-              {/* Audience Table */}
-              <div className="overflow-x-auto max-h-[420px] rounded-xl border border-[var(--line)]">
-                <table className="w-full text-right text-xs">
-                  <thead className="bg-[var(--surface-2)] sticky top-0 border-b border-[var(--line)] font-black text-gray-500">
-                    <tr>
-                      <th className="p-3">العميلة</th>
-                      <th className="p-3">الهاتف</th>
-                      <th className="p-3">المشتريات</th>
-                      <th className="p-3">المتبقي</th>
-                      <th className="p-3 text-center">الإجراء</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--line)]">
-                    {loadingAudience ? (
-                      <tr>
-                        <td colSpan={5} className="p-6 text-center muted">
-                          <RefreshCw size={18} className="animate-spin inline-block mr-2" />
-                          جارِ تجميع بيانات الشريحة…
-                        </td>
-                      </tr>
-                    ) : filteredAudience.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="p-6 text-center muted">
-                          لا توجد عميلات ينطبق عليهن هذا التصنيف
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredAudience.map((cust, idx) => {
-                        const isSent = sentCustomerIds.has(cust.id);
-                        const isCurrent = currentIndex === idx;
-                        return (
-                          <tr
-                            key={cust.id}
-                            className={`transition-colors ${
-                              isCurrent
-                                ? "bg-emerald-50 dark:bg-emerald-950/40"
-                                : isSent
-                                ? "opacity-60 bg-[var(--surface-2)]"
-                                : "hover:bg-[var(--surface-2)]"
-                            }`}
-                          >
-                            <td className="p-3 font-bold">
-                              {cust.full_name}
-                              {cust.total_spent >= 4000 && (
-                                <span className="mr-1.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                                  VIP
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-3 mono font-medium" dir="ltr">
-                              {cust.phone}
-                            </td>
-                            <td className="p-3 font-medium">
-                              {formatMoney(cust.total_spent)}
-                            </td>
-                            <td className="p-3">
-                              {cust.open_balance > 0 ? (
-                                <span className="text-rose-600 font-black">
-                                  {formatMoney(cust.open_balance)}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400">0 ج.م</span>
-                              )}
-                            </td>
-                            <td className="p-3 text-center">
-                              <button
-                                type="button"
-                                onClick={() => handleSendToCustomer(cust)}
-                                className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold transition-all shadow-sm ${
-                                  isSent
-                                    ? "bg-gray-100 text-gray-600 dark:bg-zinc-800 dark:text-zinc-400"
-                                    : "bg-[#25D366] text-white hover:bg-[#20ba59]"
-                                }`}
-                              >
-                                {isSent ? (
-                                  <>
-                                    <CheckCheck size={13} className="text-[#25D366]" /> تم الإرسال
-                                  </>
-                                ) : (
-                                  <>
-                                    <Send size={12} /> إرسال عبر واتساب
-                                  </>
-                                )}
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
 
-          {/* Right / Live Phone Mockup Preview (5 cols) */}
-          <div className="lg:col-span-5">
-            <div className="sticky top-6 space-y-4">
-              <div className="app-card p-5">
-                <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3 flex items-center justify-between">
-                  <span>معاينة حية لشكل الرسالة في واتساب</span>
-                  <span className="text-[#25D366] font-bold text-[10px] flex items-center gap-1">
-                    <CheckCheck size={13} /> مطابق للتطبيق
-                  </span>
-                </h3>
-
-                {/* Smartphone Shell */}
-                <div className="mx-auto max-w-[340px] rounded-[36px] p-3 shadow-2xl border-4 border-zinc-800 bg-zinc-900 text-white">
-                  {/* Phone Speaker Notch */}
-                  <div className="mx-auto h-4 w-28 rounded-full bg-zinc-800 mb-2 flex items-center justify-center">
-                    <div className="h-1.5 w-12 rounded-full bg-zinc-700" />
-                  </div>
-
-                  {/* WhatsApp App Header */}
-                  <div className="rounded-t-2xl bg-[#075E54] p-3 flex items-center justify-between shadow-md">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center font-black text-xs border border-white/20">
-                        L
+          {/* Active Conversation Messages Area (8 cols) */}
+          <div className="flex flex-col rounded-2xl border border-border bg-card shadow-sm lg:col-span-8 h-[720px]">
+            {activeChat ? (
+              <>
+                {/* Active Chat Header */}
+                <div className="flex items-center justify-between border-b border-border p-4 bg-muted/20">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-700 font-bold">
+                      {activeChat.name ? activeChat.name.charAt(0) : "W"}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-base text-foreground">
+                          {activeChat.customer_name || activeChat.name || activeChat.phone}
+                        </h3>
+                        {activeChat.customer_id && (
+                          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600">
+                            عميلة مسجلة
+                          </span>
+                        )}
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs font-black leading-tight text-white">Luniva Fashion</p>
-                        <p className="text-[9px] text-emerald-200">متصل الآن • حساب معتمد</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 text-white/80">
-                      <Phone size={14} />
-                    </div>
-                  </div>
-
-                  {/* Chat Wallpaper Container */}
-                  <div
-                    className="p-3 min-h-[300px] max-h-[380px] overflow-y-auto flex flex-col justify-end text-zinc-900"
-                    style={{
-                      backgroundColor: "#ECE5DD",
-                      backgroundImage: "radial-gradient(#d3c7b7 0.75px, transparent 0.75px)",
-                      backgroundSize: "12px 12px",
-                    }}
-                  >
-                    <div className="text-center my-2">
-                      <span className="px-2 py-0.5 rounded-md bg-white/70 text-[9px] font-bold text-zinc-600 shadow-xs">
-                        اليوم
-                      </span>
-                    </div>
-
-                    {/* WhatsApp Chat Bubble */}
-                    <div className="relative self-start max-w-[92%] rounded-2xl rounded-tr-none bg-[#DCF8C6] p-3 shadow-md text-right text-xs leading-relaxed border border-[#c1e7a6]">
-                      <p className="whitespace-pre-line text-[11px] font-medium text-zinc-800 select-text">
-                        {getSamplePreviewMessage(filteredAudience[0])}
+                      <p className="text-xs text-muted-foreground font-mono" dir="ltr">
+                        {activeChat.phone ? `+${activeChat.phone}` : activeChat.jid}
                       </p>
-                      <div className="mt-1 flex items-center justify-end gap-1 text-[9px] text-zinc-500">
-                        <span>12:45 م</span>
-                        <CheckCheck size={13} className="text-[#34B7F1]" />
-                      </div>
                     </div>
                   </div>
 
-                  {/* WhatsApp Input Bar */}
-                  <div className="rounded-b-2xl bg-zinc-800 p-2 flex items-center gap-2">
-                    <div className="flex-1 rounded-full bg-zinc-700 px-3 py-1.5 text-[10px] text-zinc-400 text-right">
-                      رسالة…
-                    </div>
-                    <div className="w-7 h-7 rounded-full bg-[#25D366] flex items-center justify-center text-white">
-                      <Send size={12} />
-                    </div>
-                  </div>
+                  {/* Customer Profile Quick Link */}
+                  {activeChat.customer_id && (
+                    <Link
+                      href={`/customers/${activeChat.customer_id}`}
+                      className="inline-flex items-center gap-1.5 rounded-xl border border-primary/20 bg-primary/5 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                    >
+                      <span>ملف العميلة</span>
+                      <ExternalLink className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
                 </div>
 
-                {/* Helpful instructions */}
-                <div className="mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-[11px] leading-5 text-amber-800 dark:text-amber-300">
-                  <p className="font-bold flex items-center gap-1 mb-1">
-                    <AlertCircle size={14} /> نصيحة للأمان والموثوقية:
+                {/* Messages Body */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-muted/5">
+                  {isLoadingMessages ? (
+                    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                      <RefreshCw className="h-5 w-5 animate-spin mr-2 text-primary" />
+                      جاري تحميل الرسائل...
+                    </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center text-center text-muted-foreground">
+                      <Sparkles className="h-8 w-8 text-primary/40 mb-2" />
+                      <p className="text-sm font-medium">لا توجد رسائل سابقة في هذه المحادثة</p>
+                      <p className="text-xs text-muted-foreground/70 mt-1">
+                        اكتبي رسالتكِ بالأسفل لبدء التواصل المباشر مع العميلة عبر واتساب
+                      </p>
+                    </div>
+                  ) : (
+                    messages.map((msg) => {
+                      const isMe = msg.from_me;
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isMe ? "justify-start" : "justify-end"}`}
+                        >
+                          <div
+                            className={`max-w-[78%] rounded-2xl px-4 py-2.5 text-sm shadow-xs ${
+                              isMe
+                                ? "bg-primary text-primary-foreground rounded-tr-xs"
+                                : "bg-card border border-border text-foreground rounded-tl-xs"
+                            }`}
+                          >
+                            <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                            <div
+                              className={`mt-1 flex items-center justify-end gap-1 text-[10px] ${
+                                isMe ? "text-primary-foreground/75" : "text-muted-foreground"
+                              }`}
+                            >
+                              <span>
+                                {new Date(msg.created_at).toLocaleTimeString("ar-EG", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                              {isMe && (
+                                <CheckCheck className="h-3.5 w-3.5" />
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {/* Message Input & Quick Templates Bar */}
+                <div className="border-t border-border p-3 bg-card space-y-2">
+                  {/* Quick Templates Selector */}
+                  <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                    <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3 text-primary" /> قوالب سريعة:
+                    </span>
+                    {templates.slice(0, 4).map((tpl) => (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onClick={() => {
+                          const compiled = compileTemplate(tpl.content, {
+                            اسم_العميلة: activeChat.customer_name || activeChat.name || "عزيزتي",
+                          });
+                          setMessageInput(compiled);
+                        }}
+                        className="rounded-lg border border-border bg-muted/60 px-2.5 py-1 text-xs text-muted-foreground transition hover:bg-muted hover:text-foreground shrink-0"
+                      >
+                        {tpl.name}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Textarea and Send Button */}
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }}
+                    className="flex items-end gap-2"
+                  >
+                    <textarea
+                      value={messageInput}
+                      onChange={(e) => setMessageInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      placeholder="اكتبي رسالتكِ هنا... (اضغطي Enter للإرسال، Shift+Enter لسطر جديد)"
+                      rows={2}
+                      className="flex-1 resize-none rounded-xl border border-input bg-background p-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+
+                    <button
+                      type="submit"
+                      disabled={!messageInput.trim() || isSendingMessage}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {isSendingMessage ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <span>إرسال</span>
+                          <Send className="h-4 w-4 rotate-180" />
+                        </>
+                      )}
+                    </button>
+                  </form>
+                </div>
+              </>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
+                <Smartphone className="h-12 w-12 text-muted-foreground/30 mb-3" />
+                <h3 className="text-base font-bold text-foreground">حددي محادثة للبدء</h3>
+                <p className="text-xs text-muted-foreground max-w-sm mt-1">
+                  يمكنكِ اختيار أي محادثة من القائمة الجانبية لقراءة الرسائل والرد مباشرة عبر واتساب
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 2: BAILEYS SESSION & QR CODE */}
+      {/* ========================================================================= */}
+      {activeTab === "qr" && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          {/* Main QR Card (7 cols) */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:col-span-7 space-y-6">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <QrCode className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-foreground">ربط واتساب عبر رمز QR</h3>
+                  <p className="text-xs text-muted-foreground">
+                    تقنية Baileys Multi-Device الأصلية — يعمل الاتصال بشكل دائم في السيرفر
                   </p>
-                  يتم فتح المحادثات عبر رابط واتساب الرسمي مجاناً 100%. نظام التتابع يضمن لك مراجعة كل رسالة قبل اعتمادها، مما يمنع حظر رقمك أو تصنيفه كرسائل مزعجة (Spam).
+                </div>
+              </div>
+
+              <button
+                onClick={fetchStatus}
+                disabled={isSessionLoading}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-1.5 text-xs font-medium text-foreground transition hover:bg-muted"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isSessionLoading ? "animate-spin" : ""}`} />
+                تحديث الحالة
+              </button>
+            </div>
+
+            {/* Status View */}
+            {session.status === "connected" ? (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-8 text-center space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-600">
+                  <ShieldCheck className="h-8 w-8" />
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-emerald-800 dark:text-emerald-300">
+                    واتساب متصل ويعمل بنجاح!
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    جميع الرسائل الواردة والصادرة يتم مزامنتها تلقائياً وحفظها في قاعدة البيانات.
+                  </p>
+                </div>
+
+                <div className="inline-block rounded-xl border border-emerald-500/20 bg-background/80 p-4 text-sm font-mono text-foreground" dir="ltr">
+                  <p><strong>Phone:</strong> {session.user?.phone ? `+${session.user.phone}` : "Linked"}</p>
+                  <p><strong>Device:</strong> {session.user?.name || "Luniva WhatsApp"}</p>
+                  {session.connectedAt && (
+                    <p><strong>Connected At:</strong> {new Date(session.connectedAt).toLocaleString("ar-EG")}</p>
+                  )}
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={handleLogout}
+                    disabled={isSessionLoading}
+                    className="inline-flex items-center gap-2 rounded-xl border border-rose-500/30 bg-rose-500/10 px-5 py-2.5 text-sm font-semibold text-rose-600 transition hover:bg-rose-500/20"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    تسجيل الخروج وربط جهاز آخر
+                  </button>
+                </div>
+              </div>
+            ) : session.status === "qr_ready" && session.qrCode ? (
+              <div className="flex flex-col items-center justify-center p-4 text-center space-y-4">
+                <div className="rounded-2xl border-2 border-dashed border-primary/40 p-4 bg-white shadow-md">
+                  <img
+                    src={session.qrCode}
+                    alt="WhatsApp QR Code"
+                    className="h-64 w-64 object-contain"
+                  />
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-foreground">امسحي الرمز الآن عبر تطبيق WhatsApp</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    يتم تحديث الرمز تلقائياً في خوادم واتساب لضمان أعلى مستوى أمان
+                  </p>
+                </div>
+              </div>
+            ) : session.status === "connecting" ? (
+              <div className="flex flex-col items-center justify-center p-12 text-center space-y-3">
+                <RefreshCw className="h-10 w-10 animate-spin text-primary" />
+                <h4 className="font-bold text-foreground">جاري تهيئة جلسة واتساب وتوليد الرمز...</h4>
+                <p className="text-xs text-muted-foreground">قد يستغرق ذلك بضع ثوانٍ</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+                <WifiOff className="h-12 w-12 text-muted-foreground/30" />
+                <div>
+                  <h4 className="font-bold text-lg text-foreground">واتساب غير متصل حالياً</h4>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                    اضغطي على الزر أدناه لتوليد رمز الاستجابة السريعة (QR Code) ومسحه بهاتفك
+                  </p>
+                </div>
+                <button
+                  onClick={handleStartConnection}
+                  disabled={isSessionLoading}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
+                >
+                  <QrCode className="h-5 w-5" />
+                  بدء الاتصال وتوليد رمز QR
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Instructions and Features Guide (5 cols) */}
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:col-span-5 space-y-6">
+            <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              كيف يعمل النظام؟
+            </h3>
+
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  1
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">افتحي تطبيق WhatsApp</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    على هاتفك المحمول أو هاتف العمل الخاص بلونيفا
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  2
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">اختاري "الأجهزة المرتبطة"</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    من قائمة الإعدادات (في الآيفون) أو القائمة العلوية ذات الثلاث نقاط (في الأندرويد)
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
+                  3
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">امسحي رمز QR</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    وجّهي كاميرا هاتفك نحو رمز QR المعروض على الشاشة
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-xl border border-border/60 bg-muted/30 p-3.5">
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-xs font-bold text-white">
+                  ✓
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground">ارتباط دائم وآمن</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    يتم حفظ مفاتيح الجلسة في قاعدة البيانات (Neon PostgreSQL) لضمان استمرار الاتصال حتى بعد إعادة تشغيل السيرفر
+                  </p>
                 </div>
               </div>
             </div>
@@ -759,188 +1064,418 @@ export default function WhatsAppHub({
         </div>
       )}
 
-      {/* TAB 2: TEMPLATES MANAGER */}
-      {activeTab === "templates" && (
-        <div className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-black" style={{ color: "var(--brand-strong)" }}>
-                إدارة قوالب رسائل الواتساب
-              </h2>
-              <p className="text-xs muted">
-                يمكنك تخصيص نصوص الرسائل الافتراضية للفواتير والتحصيل والمواعيد، أو إضافة قوالب تسويقية جديدة.
+      {/* ========================================================================= */}
+      {/* TAB 3: SMART AUTO-REPLY BOT & AUTOMATIONS */}
+      {/* ========================================================================= */}
+      {activeTab === "bot" && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:col-span-8 space-y-6">
+            <div className="border-b border-border pb-4">
+              <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
+                <Bot className="h-5 w-5 text-primary" />
+                إعدادات البوت والرد التلقائي الذكي
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                تكوين الردود التلقائية ورسائل الترحيب للعميلات عبر واتساب
               </p>
             </div>
+
+            {/* Toggle 1: Auto-reply */}
+            <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
+              <div>
+                <h4 className="text-sm font-bold text-foreground">تفعيل الرد التلقائي على الرسائل الجديدة</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  يرد البوت فوراً على أي عميلة تراسل المتجر لأول مرة اليوم
+                </p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={botSettings.is_auto_reply_enabled}
+                  onChange={(e) =>
+                    setBotSettings((prev) => ({ ...prev, is_auto_reply_enabled: e.target.checked }))
+                  }
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+              </label>
+            </div>
+
+            {/* Welcome message text */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">نص رسالة الترحيب التلقائية:</label>
+              <textarea
+                rows={4}
+                value={botSettings.welcome_message}
+                onChange={(e) =>
+                  setBotSettings((prev) => ({ ...prev, welcome_message: e.target.value }))
+                }
+                className="w-full rounded-xl border border-input bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <p className="text-xs text-muted-foreground">
+                يمكنكِ استخدام الوسم <code className="bg-muted px-1.5 py-0.5 rounded text-primary">{"{اسم_العميلة}"}</code> ليتم استبداله تلقائياً باسم العميلة.
+              </p>
+            </div>
+
+            {/* Toggle 2: Order Notification */}
+            <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
+              <div>
+                <h4 className="text-sm font-bold text-foreground">إشعار العميلة تلقائياً عند إنشاء طلب شراء جديد</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  إرسال رسالة واتساب للعميلة تؤكد استلام طلبها من المتجر
+                </p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={botSettings.order_notification_enabled}
+                  onChange={(e) =>
+                    setBotSettings((prev) => ({ ...prev, order_notification_enabled: e.target.checked }))
+                  }
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+              </label>
+            </div>
+
+            {/* Toggle 3: Invoice auto-send */}
+            <div className="flex items-center justify-between rounded-xl border border-border/80 p-4 bg-muted/10">
+              <div>
+                <h4 className="text-sm font-bold text-foreground">إرسال رابط الفاتورة الإلكترونية عبر واتساب</h4>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  إرسال الفاتورة مع رابط الاستعراض والتحميل فور إنشائها في النظام
+                </p>
+              </div>
+              <label className="relative inline-flex cursor-pointer items-center">
+                <input
+                  type="checkbox"
+                  checked={botSettings.invoice_auto_send}
+                  onChange={(e) =>
+                    setBotSettings((prev) => ({ ...prev, invoice_auto_send: e.target.checked }))
+                  }
+                  className="peer sr-only"
+                />
+                <div className="peer h-6 w-11 rounded-full bg-muted-foreground/30 peer-checked:bg-primary peer-checked:after:translate-x-full peer-checked:after:border-white after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all"></div>
+              </label>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={handleSaveBotSettings}
+                disabled={isSavingBot}
+                className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-2.5 font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isSavingBot ? <RefreshCw className="h-4 w-4 animate-spin" /> : <SaveIcon className="h-4 w-4" />}
+                حفظ الإعدادات
+              </button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm lg:col-span-4 space-y-4">
+            <h3 className="font-bold text-base text-foreground">معاينة رد البوت</h3>
+            <div className="rounded-2xl border border-border bg-muted/10 p-4 text-xs space-y-2">
+              <div className="flex justify-start">
+                <div className="rounded-2xl rounded-tr-xs bg-primary px-3.5 py-2 text-primary-foreground max-w-[85%]">
+                  <p className="whitespace-pre-wrap">
+                    {botSettings.welcome_message.replace(/\{اسم_العميلة\}/g, "سارة أحمد")}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              يقوم البوت بالتحقق من هوية العميلة تلقائياً بناءً على رقم هاتفها، وإذا كانت مسجلة في المتجر يحييها باسمها الحقيقي.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 4: MARKETING CAMPAIGNS (BROADCASTS) */}
+      {/* ========================================================================= */}
+      {activeTab === "campaigns" && (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-border bg-card p-6 shadow-sm space-y-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-4">
+              <div>
+                <h3 className="font-bold text-lg text-foreground">الحملات التسويقية ورسائل البث الجماعي</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  أرسلي عروضكِ وتخفيضاتكِ مباشرة إلى هواتف العميلات عبر واتساب بأمان وبدون حظر
+                </p>
+              </div>
+
+              {/* Segment filter pills */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { key: "all", label: "جميع العميلات" },
+                  { key: "vip", label: "عميلات VIP" },
+                  { key: "with_balance", label: "عليهن متبقي" },
+                  { key: "inactive_30d", label: "غير نشطات (30+ يوم)" },
+                ].map((s) => (
+                  <button
+                    key={s.key}
+                    onClick={() => handleSegmentChange(s.key as typeof segment)}
+                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                      segment === s.key ? "bg-primary text-primary-foreground shadow-xs" : "bg-muted text-muted-foreground hover:bg-muted/80"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Campaign Composer */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+              <div className="space-y-4 lg:col-span-7">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">اختاري قالباً محفوظاً أو اكتبي نصاً مخصصاً:</label>
+                  <select
+                    value={selectedTemplateId}
+                    onChange={(e) => {
+                      setSelectedTemplateId(e.target.value);
+                      const tpl = templates.find((t) => t.id === e.target.value);
+                      if (tpl) setCustomCampaignText(tpl.content);
+                    }}
+                    className="w-full rounded-xl border border-input bg-background p-2.5 text-sm focus:border-primary focus:outline-none"
+                  >
+                    <option value="">-- قالب مخصص --</option>
+                    {templates.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({templateCategoryLabels[t.category]})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-foreground">نص الرسالة:</label>
+                  <textarea
+                    rows={6}
+                    value={customCampaignText}
+                    onChange={(e) => setCustomCampaignText(e.target.value)}
+                    placeholder="اكتبي نص الرسالة التسويقية هنا..."
+                    className="w-full rounded-xl border border-input bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <span>الوسوم المتاحة:</span>
+                    <button
+                      type="button"
+                      onClick={() => setCustomCampaignText((prev) => prev + " {اسم_العميلة} ")}
+                      className="rounded bg-muted px-1.5 py-0.5 text-primary hover:bg-muted/80"
+                    >
+                      {"{اسم_العميلة}"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomCampaignText((prev) => prev + " {إجمالي_المشتريات} ")}
+                      className="rounded bg-muted px-1.5 py-0.5 text-primary hover:bg-muted/80"
+                    >
+                      {"{إجمالي_المشتريات}"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCustomCampaignText((prev) => prev + " {المبلغ_المتبقي} ")}
+                      className="rounded bg-muted px-1.5 py-0.5 text-primary hover:bg-muted/80"
+                    >
+                      {"{المبلغ_المتبقي}"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    onClick={handleSendCampaign}
+                    disabled={isSendingCampaign || audience.length === 0}
+                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    {isSendingCampaign ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>جاري الإرسال ({campaignProgress?.sent || 0} / {campaignProgress?.total || audience.length})...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4" />
+                        <span>إرسال الحملة إلى {audience.length} عميلة الآن</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Target Audience Summary List */}
+              <div className="rounded-xl border border-border bg-muted/10 p-4 lg:col-span-5 flex flex-col h-[380px]">
+                <h4 className="font-bold text-sm text-foreground mb-3 flex items-center justify-between">
+                  <span>الجمهور المستهدف ({audience.length} عميلة)</span>
+                  {loadingAudience && <RefreshCw className="h-3.5 w-3.5 animate-spin text-primary" />}
+                </h4>
+
+                <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                  {audience.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-10">
+                      لا توجد عميلات في هذا التصنيف
+                    </p>
+                  ) : (
+                    audience.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-center justify-between rounded-lg border border-border/60 bg-background p-2.5 text-xs"
+                      >
+                        <div>
+                          <p className="font-semibold text-foreground">{a.full_name}</p>
+                          <p className="text-[11px] text-muted-foreground font-mono" dir="ltr">
+                            {a.phone}
+                          </p>
+                        </div>
+                        <div className="text-left font-mono text-[11px]">
+                          <span className="text-emerald-600 font-semibold">{formatMoney(a.total_spent)}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB 5: SAVED TEMPLATES */}
+      {/* ========================================================================= */}
+      {activeTab === "templates" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-lg text-foreground">قوالب رسائل الواتساب</h3>
             <button
               onClick={() => {
+                setIsCreatingTemplate(true);
                 setEditingTemplate(null);
                 setTplName("");
-                setTplCategory("custom");
                 setTplContent("");
-                setIsCreatingTemplate(true);
               }}
-              className="btn btn-primary text-xs px-3.5 py-2 inline-flex items-center gap-1.5"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
             >
-              <Plus size={14} /> إضافة قالب جديد
+              <Plus className="h-4 w-4" />
+              قالب جديد
             </button>
           </div>
 
-          {/* Form Modal / Inline Editor */}
-          {isCreatingTemplate && (
-            <div className="app-card p-5 border-2 border-[#25D366]/40 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-black text-[#128C7E] dark:text-[#25D366]">
-                  {editingTemplate ? "تعديل القالب" : "إنشاء قالب رسالة جديد"}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingTemplate(false)}
-                  className="text-gray-400 hover:text-gray-600 text-xs font-bold"
-                >
-                  إلغاء
-                </button>
-              </div>
+          {/* Create or Edit Form */}
+          {(isCreatingTemplate || editingTemplate) && (
+            <div className="rounded-2xl border border-primary/30 bg-card p-6 shadow-md space-y-4">
+              <h4 className="font-bold text-base text-foreground">
+                {editingTemplate ? "تعديل القالب" : "إنشاء قالب جديد"}
+              </h4>
 
-              <form onSubmit={handleSaveTemplate} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold mb-1 muted">اسم القالب</label>
-                    <input
-                      type="text"
-                      required
-                      value={tplName}
-                      onChange={(e) => setTplName(e.target.value)}
-                      placeholder="مثال: خصم نهاية الموسم"
-                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs focus:ring-2 focus:ring-[#25D366]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold mb-1 muted">التصنيف</label>
-                    <select
-                      value={tplCategory}
-                      onChange={(e) => setTplCategory(e.target.value as any)}
-                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs focus:ring-2 focus:ring-[#25D366]"
-                    >
-                      {Object.entries(templateCategoryLabels).map(([key, label]) => (
-                        <option key={key} value={key}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold muted">نص الرسالة</label>
-                    <span className="text-[10px] muted">استخدمي الأقواس لإدراج المتغيرات</span>
-                  </div>
-                  <textarea
-                    rows={6}
-                    required
-                    value={tplContent}
-                    onChange={(e) => setTplContent(e.target.value)}
-                    dir="rtl"
-                    className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed focus:ring-2 focus:ring-[#25D366]"
-                    placeholder="اكتبي نص الرسالة هنا…"
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">اسم القالب:</label>
+                  <input
+                    type="text"
+                    value={tplName}
+                    onChange={(e) => setTplName(e.target.value)}
+                    placeholder="مثال: رسالة ترحيبية خاصة"
+                    className="w-full rounded-xl border border-input bg-background p-2.5 text-sm focus:border-primary focus:outline-none"
                   />
                 </div>
 
-                {/* Tag chips shortcut */}
-                <div>
-                  <p className="text-[10px] font-bold muted mb-1.5">إدراج متغير سريع:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[
-                      "اسم_العميلة",
-                      "رقم_الفاتورة",
-                      "المبلغ_المدفوع",
-                      "المتبقي",
-                      "تاريخ_الموعد",
-                      "نوع_الموعد",
-                      "رابط_الفاتورة",
-                      "اسم_البراند",
-                      "رابط_المتجر",
-                    ].map((tag) => (
-                      <button
-                        key={tag}
-                        type="button"
-                        onClick={() => insertTag(tag, "template")}
-                        className="px-2 py-1 rounded bg-gray-100 dark:bg-zinc-800 text-[10px] font-mono hover:bg-emerald-100"
-                      >
-                        {`{${tag}}`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatingTemplate(false)}
-                    className="btn btn-outline text-xs px-4 py-2"
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground">التصنيف:</label>
+                  <select
+                    value={tplCategory}
+                    onChange={(e) => setTplCategory(e.target.value as WhatsAppTemplateCategory)}
+                    className="w-full rounded-xl border border-input bg-background p-2.5 text-sm focus:border-primary focus:outline-none"
                   >
-                    إلغاء
-                  </button>
-                  <button type="submit" className="btn btn-primary text-xs px-5 py-2">
-                    حفظ القالب
-                  </button>
+                    {Object.entries(templateCategoryLabels).map(([k, label]) => (
+                      <option key={k} value={k}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </form>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">محتوى القالب:</label>
+                <textarea
+                  rows={4}
+                  value={tplContent}
+                  onChange={(e) => setTplContent(e.target.value)}
+                  placeholder="اكتبي نص القالب..."
+                  className="w-full rounded-xl border border-input bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreatingTemplate(false);
+                    setEditingTemplate(null);
+                  }}
+                  className="rounded-xl border border-border px-4 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted"
+                >
+                  إلغاء
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveTemplate}
+                  className="rounded-xl bg-primary px-5 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:bg-primary/90"
+                >
+                  حفظ القالب
+                </button>
+              </div>
             </div>
           )}
 
           {/* Templates Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {templates.map((tpl) => (
               <div
                 key={tpl.id}
-                className="app-card p-4 flex flex-col justify-between transition-all hover:border-[#25D366]/50"
+                className="flex flex-col justify-between rounded-2xl border border-border bg-card p-5 shadow-xs transition hover:border-primary/40 hover:shadow-sm"
               >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
-                      {templateCategoryLabels[tpl.category] || tpl.category}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="rounded-lg bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+                      {templateCategoryLabels[tpl.category]}
                     </span>
                     {tpl.is_default && (
-                      <span className="text-[10px] font-bold text-gray-400">افتراضي</span>
+                      <span className="text-[10px] font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                        افتراضي
+                      </span>
                     )}
                   </div>
-                  <h4 className="text-sm font-black mb-2" style={{ color: "var(--brand-strong)" }}>
-                    {tpl.name}
-                  </h4>
-                  <p className="text-xs leading-relaxed muted whitespace-pre-line bg-[var(--surface-2)] p-3 rounded-xl border border-[var(--line)]">
+                  <h4 className="font-bold text-sm text-foreground">{tpl.name}</h4>
+                  <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-4 leading-relaxed">
                     {tpl.content}
                   </p>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-[var(--line)] flex items-center justify-between">
-                  <span className="text-[10px] muted">
-                    {new Date(tpl.updated_at).toLocaleDateString("ar-EG")}
-                  </span>
-                  <div className="flex items-center gap-1">
+                <div className="mt-4 flex items-center justify-end gap-1.5 border-t border-border/60 pt-3">
+                  <button
+                    onClick={() => {
+                      setEditingTemplate(tpl);
+                      setTplName(tpl.name);
+                      setTplCategory(tpl.category);
+                      setTplContent(tpl.content);
+                      setIsCreatingTemplate(false);
+                    }}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                    title="تعديل"
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </button>
+                  {!tpl.is_default && (
                     <button
-                      onClick={() => {
-                        setEditingTemplate(tpl);
-                        setTplName(tpl.name);
-                        setTplCategory(tpl.category);
-                        setTplContent(tpl.content);
-                        setIsCreatingTemplate(true);
-                      }}
-                      className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-zinc-800"
-                      title="تعديل القالب"
+                      onClick={() => handleDeleteTemplate(tpl.id)}
+                      className="rounded-lg p-1.5 text-rose-500 hover:bg-rose-500/10"
+                      title="حذف"
                     >
-                      <Edit3 size={14} />
+                      <Trash2 className="h-4 w-4" />
                     </button>
-                    {!tpl.is_default && (
-                      <button
-                        onClick={() => handleDeleteTemplate(tpl.id)}
-                        className="p-1.5 rounded-lg text-gray-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-zinc-800"
-                        title="حذف القالب"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -948,178 +1483,98 @@ export default function WhatsAppHub({
         </div>
       )}
 
-      {/* TAB 3: DIRECT QUICK SEND */}
-      {activeTab === "direct" && (
-        <div className="max-w-2xl mx-auto app-card p-6 space-y-5">
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-[#25D366] flex items-center justify-center mb-2">
-              <Send size={24} />
-            </div>
-            <h2 className="text-lg font-black" style={{ color: "var(--brand-strong)" }}>
-              إرسال رسالة واتساب فورية
-            </h2>
-            <p className="text-xs muted mt-1">
-              أدخلي رقم الهاتف ونص الرسالة ليتم توجيهها فورًا إلى محادثة واتساب الرسمية مع تسجيلها في النظام.
-            </p>
-          </div>
-
-          <form onSubmit={handleDirectSend} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold mb-1 muted">اسم العميلة (اختياري)</label>
-                <input
-                  type="text"
-                  placeholder="مثال: ياسمين عمر"
-                  value={directName}
-                  onChange={(e) => setDirectName(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs focus:ring-2 focus:ring-[#25D366]"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1 muted">رقم هاتف الواتساب</label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="01012345678"
-                  dir="ltr"
-                  value={directPhone}
-                  onChange={(e) => setDirectPhone(e.target.value)}
-                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs text-right focus:ring-2 focus:ring-[#25D366]"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold mb-1.5 muted">اختيار قالب جاهز (اختياري):</label>
-              <select
-                value={directTemplateId}
-                onChange={(e) => {
-                  setDirectTemplateId(e.target.value);
-                  const selected = templates.find((t) => t.id === e.target.value);
-                  if (selected) {
-                    setDirectMessage(
-                      compileTemplate(selected.content, {
-                        اسم_العميلة: directName || "عميلتنا العزيزة",
-                        اسم_البراند: "لونيفا فاشون",
-                        رابط_المتجر: window.location.origin,
-                      })
-                    );
-                  }
-                }}
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs focus:ring-2 focus:ring-[#25D366]"
-              >
-                <option value="">-- اختاري قالباً لملء النص تلقائياً --</option>
-                {templates.map((tpl) => (
-                  <option key={tpl.id} value={tpl.id}>
-                    {tpl.name} ({templateCategoryLabels[tpl.category] || tpl.category})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold mb-1 muted">نص الرسالة المرسلة:</label>
-              <textarea
-                rows={5}
-                required
-                value={directMessage}
-                onChange={(e) => setDirectMessage(e.target.value)}
-                dir="rtl"
-                placeholder="اكتبي نص الرسالة هنا…"
-                className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-3 text-xs leading-relaxed focus:ring-2 focus:ring-[#25D366]"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="w-full btn py-3 text-sm font-black bg-[#25D366] text-white hover:bg-[#20ba59] shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
-            >
-              <Send size={16} /> فتح وإرسال عبر تطبيق واتساب
-            </button>
-          </form>
-        </div>
-      )}
-
-      {/* TAB 4: DISPATCH HISTORY & LOGS */}
+      {/* ========================================================================= */}
+      {/* TAB 6: AUDIT LOGS & STATS */}
+      {/* ========================================================================= */}
       {activeTab === "logs" && (
-        <div className="app-card p-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <h2 className="text-base font-black flex items-center gap-2" style={{ color: "var(--brand-strong)" }}>
-                <History size={18} className="text-[#25D366]" />
-                سجل رسائل الواتساب الصادرة ({logs.length})
-              </h2>
-              <p className="text-xs muted">
-                سجل موثق بجميع الإشعارات، الفواتير، والحملات التسويقية التي تم إرسالها للعميلات.
+        <div className="space-y-6">
+          {/* KPI Cards */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+              <p className="text-xs text-muted-foreground">إجمالي الرسائل المرسلة</p>
+              <p className="mt-1 text-2xl font-bold text-foreground font-mono">
+                {initialStats.total_sent}
               </p>
             </div>
-
-            <div className="relative">
-              <Search size={14} className="absolute right-2.5 top-2.5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="بحث في السجل بالاسم أو الهاتف…"
-                value={logFilter}
-                onChange={(e) => setLogFilter(e.target.value)}
-                className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] pr-8 pl-3 py-1.5 text-xs focus:ring-1 focus:ring-[#25D366]"
-              />
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+              <p className="text-xs text-muted-foreground">مرسل اليوم</p>
+              <p className="mt-1 text-2xl font-bold text-primary font-mono">
+                {initialStats.sent_today}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+              <p className="text-xs text-muted-foreground">عميلات تم الوصول إليهن</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-600 font-mono">
+                {initialStats.unique_customers_reached}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-xs">
+              <p className="text-xs text-muted-foreground">قوالب جاهزة</p>
+              <p className="mt-1 text-2xl font-bold text-foreground font-mono">
+                {templates.length}
+              </p>
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-            <table className="w-full text-right text-xs">
-              <thead className="bg-[var(--surface-2)] border-b border-[var(--line)] font-black text-gray-500">
-                <tr>
-                  <th className="p-3">العميلة</th>
-                  <th className="p-3">رقم الهاتف</th>
-                  <th className="p-3">النوع</th>
-                  <th className="p-3">مقتطف من الرسالة</th>
-                  <th className="p-3">بواسطة</th>
-                  <th className="p-3">التاريخ والوقت</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--line)]">
-                {logs
-                  .filter((log) => {
-                    if (!logFilter.trim()) return true;
-                    const q = logFilter.toLowerCase();
-                    return (
-                      (log.customer_name && log.customer_name.toLowerCase().includes(q)) ||
-                      log.phone.includes(q) ||
-                      log.message.toLowerCase().includes(q)
-                    );
-                  })
-                  .map((log) => (
-                    <tr key={log.id} className="hover:bg-[var(--surface-2)] transition-colors">
-                      <td className="p-3 font-bold">
-                        {log.customer_name || "عميلة بدون اسم"}
+          {/* Logs Table */}
+          <div className="rounded-2xl border border-border bg-card shadow-sm overflow-hidden">
+            <div className="border-b border-border p-4 bg-muted/20">
+              <h3 className="font-bold text-base text-foreground">سجل إرسال رسائل الواتساب</h3>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-right text-xs">
+                <thead className="border-b border-border bg-muted/40 text-muted-foreground">
+                  <tr>
+                    <th className="p-3">العميلة</th>
+                    <th className="p-3">الهاتف</th>
+                    <th className="p-3">التصنيف</th>
+                    <th className="p-3">نص الرسالة</th>
+                    <th className="p-3">الحالة</th>
+                    <th className="p-3">الوقت</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {initialLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-muted/30">
+                      <td className="p-3 font-semibold text-foreground">
+                        {log.customer_name || "عميلة عامة"}
                       </td>
-                      <td className="p-3 mono font-medium" dir="ltr">
+                      <td className="p-3 font-mono" dir="ltr">
                         {log.phone}
                       </td>
                       <td className="p-3">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                          {templateCategoryLabels[log.template_category as WhatsAppTemplateCategory] ||
-                            log.template_category ||
-                            "مخصص"}
+                        <span className="rounded bg-muted px-2 py-0.5 text-[10px]">
+                          {log.template_category || "مباشر"}
                         </span>
                       </td>
-                      <td className="p-3 max-w-[280px] truncate muted" title={log.message}>
+                      <td className="p-3 max-w-xs truncate text-muted-foreground">
                         {log.message}
                       </td>
-                      <td className="p-3 text-[11px] muted font-medium">
-                        {log.sent_by || "النظام"}
+                      <td className="p-3">
+                        <span className="inline-flex items-center gap-1 text-emerald-600 font-medium">
+                          <CheckCheck className="h-3.5 w-3.5" />
+                          تم الإرسال
+                        </span>
                       </td>
-                      <td className="p-3 text-[11px] muted" dir="ltr">
+                      <td className="p-3 text-muted-foreground">
                         {new Date(log.created_at).toLocaleString("ar-EG")}
                       </td>
                     </tr>
                   ))}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function SaveIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+    </svg>
   );
 }

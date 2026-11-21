@@ -138,7 +138,33 @@ export default function CustomerWhatsAppBox({
       return;
     }
 
-    // 1. Immediately open WhatsApp deep-link
+    // 1. Try sending directly via Baileys socket first if connected
+    try {
+      const baileysRes = await fetch("/api/whatsapp/baileys/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ to: clean, text: message }),
+      });
+      if (baileysRes.ok) {
+        toast.success("تم إرسال الرسالة مباشرة عبر واتساب!", `تم التسليم إلى ${clean}`);
+        setLogs((prev) => [
+          {
+            id: Math.random().toString(),
+            message,
+            template_category: selectedPreset || "custom",
+            created_at: new Date().toISOString(),
+            sent_by: "المسؤول (Baileys)",
+          },
+          ...prev,
+        ]);
+        setMessage("");
+        return;
+      }
+    } catch {
+      // fallback
+    }
+
+    // 2. Fallback: Immediately open WhatsApp deep-link
     const url = generateWhatsAppUrl(clean, message);
     window.open(url, "_blank", "noopener,noreferrer");
     toast.success("تم فتح محادثة واتساب", `جارِ إرسال الرسالة إلى ${clean}`);

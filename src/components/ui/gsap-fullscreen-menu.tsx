@@ -68,7 +68,7 @@ export const adminNav: AdminNavItem[] = [
   { href: "/packages", label: "البكدجات", short: "البكدجات", hint: "عروض ومنتجات مجمعة", icon: Gift },
   { href: "/orders", label: "طلبات الشراء", short: "الطلبات", hint: "استفسارات الحجز والشراء", icon: ShoppingBag },
   { href: "/messages", label: "رسائل التواصل", short: "الرسائل", hint: "استفسارات ودعم العميلات", icon: Mail },
-  { href: "/whatsapp", label: "أتمتة الواتساب", short: "واتساب", hint: "حملات ورسائل تلقائية", icon: MessageSquare },
+  { href: "/whatsapp", label: "واتساب والمحادثات", short: "واتساب", hint: "محادثات مباشرة وربط QR", icon: MessageSquare },
   { href: "/newsletter", label: "النشرة البريدية", short: "النشرة", hint: "المشتركات وحملات البريد", icon: MailCheck },
   { href: "/settings", label: "الإعدادات", short: "الإعدادات", hint: "بيانات الشركة والشروط", icon: Settings2 },
 ];

@@ -103,3 +103,56 @@ export function compileTemplate(
 
   return result;
 }
+
+export type WhatsAppConnectionStatus = "disconnected" | "connecting" | "qr_ready" | "connected";
+
+export type WhatsAppSessionInfo = {
+  status: WhatsAppConnectionStatus;
+  qrCode: string | null;
+  user: {
+    id: string;
+    name?: string;
+    phone?: string;
+  } | null;
+  connectedAt: string | null;
+  lastError: string | null;
+};
+
+export type WhatsAppChat = {
+  id: string;
+  jid: string;
+  name: string | null;
+  phone: string | null;
+  customer_id: string | null;
+  customer_name?: string | null;
+  customer_code?: string | null;
+  customer_balance?: number;
+  unread_count: number;
+  last_message: string | null;
+  last_message_at: string;
+  is_pinned: boolean;
+  is_archived: boolean;
+};
+
+export type WhatsAppMessage = {
+  id: string;
+  chat_jid: string;
+  message_id: string;
+  from_me: boolean;
+  sender_jid: string | null;
+  sender_name: string | null;
+  content: string;
+  media_url: string | null;
+  media_type: string | null;
+  status: "pending" | "sent" | "delivered" | "read" | "failed" | "received";
+  customer_id: string | null;
+  created_at: string;
+};
+
+export type WhatsAppBotSettings = {
+  is_auto_reply_enabled: boolean;
+  welcome_message: string;
+  order_notification_enabled: boolean;
+  invoice_auto_send: boolean;
+};
+
