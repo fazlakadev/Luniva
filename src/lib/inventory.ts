@@ -417,8 +417,8 @@ export async function getComprehensiveInventoryData(): Promise<ComprehensiveInve
         (SELECT COUNT(*)::int FROM product_variants WHERE stock = 0) AS out_of_stock_count,
         (SELECT COUNT(*)::int FROM product_variants WHERE stock > 0 AND stock <= min_stock_alert) AS low_stock_count,
         (SELECT COUNT(*)::int FROM product_variants WHERE stock > min_stock_alert) AS healthy_stock_count,
-        (SELECT COALESCE(SUM(pv.stock * COALESCE(p.supply_price, 0)), 0)::float FROM product_variants pv JOIN products p ON p.id = pv.product_id) AS total_cost_value,
-        (SELECT COALESCE(SUM(pv.stock * COALESCE(pv.price, p.price, 0)), 0)::float FROM product_variants pv JOIN products p ON p.id = pv.product_id) AS total_retail_value,
+        (SELECT COALESCE(SUM(pv.stock * COALESCE(pv.supply_price, 0)), 0)::float FROM product_variants pv) AS total_cost_value,
+        (SELECT COALESCE(SUM(pv.stock * COALESCE(pv.price, 0)), 0)::float FROM product_variants pv) AS total_retail_value,
         (SELECT COUNT(*)::int FROM packages WHERE status = 'active') AS total_packages
     `),
 
@@ -428,20 +428,20 @@ export async function getComprehensiveInventoryData(): Promise<ComprehensiveInve
         pv.id AS variant_id,
         pv.product_id,
         p.name AS product_name,
-        p.category,
+        NULL::text AS category,
         p.primary_sku,
         pv.color,
         pv.size,
         pv.sku,
         pv.stock::int AS stock,
         pv.min_stock_alert::int AS min_stock_alert,
-        COALESCE(pv.price, p.price, 0)::float AS price,
-        COALESCE(p.supply_price, 0)::float AS supply_price,
+        COALESCE(pv.price, 0)::float AS price,
+        COALESCE(pv.supply_price, 0)::float AS supply_price,
         s.name AS supplier_name,
         COALESCE(pv.image_url, p.image_url) AS image_url
       FROM product_variants pv
       JOIN products p ON p.id = pv.product_id
-      LEFT JOIN suppliers s ON s.id = p.supplier_id
+      LEFT JOIN suppliers s ON s.id = pv.supplier_id
       ORDER BY p.name ASC, pv.color ASC, pv.size ASC
     `),
 

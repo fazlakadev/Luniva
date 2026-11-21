@@ -3,7 +3,6 @@
 import * as React from "react";
 import {
   AnimatePresence,
-  animate,
   motion,
   useMotionTemplate,
   useMotionValue,
@@ -19,6 +18,7 @@ import {
   Globe2,
   Hourglass,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -78,80 +78,11 @@ function until(ms: number) {
   return h % 24 ? `${d} يوم و ${h % 24} س` : `${d} يوم`;
 }
 
-const GRADIENT = "linear-gradient(125deg, #7c3aed 0%, #9333ea 50%, #db2777 100%)";
-const BURST = ["#7c3aed", "#a855f7", "#ec4899", "#f43f5e", "#fb7185"];
-
-/** Two blobs of the same colour that follow a target with different springs; the goo filter fuses them into liquid. */
-function Liquid({
-  x,
-  y,
-  w,
-  h,
-  show,
-  gid,
-  radius = 12,
-}: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  show: boolean;
-  gid: string;
-  radius?: number;
-}) {
-  const reduce = useReducedMotion();
-  const fast = { stiffness: 420, damping: 24 };
-  const slow = { stiffness: 110, damping: 15 };
-  const ax = useSpring(x, (reduce ? { duration: 0 } : fast) as never);
-  const ay = useSpring(y, (reduce ? { duration: 0 } : fast) as never);
-  const bx = useSpring(x, (reduce ? { duration: 0 } : slow) as never);
-  const by = useSpring(y, (reduce ? { duration: 0 } : slow) as never);
-
-  React.useEffect(() => {
-    ax.set(x);
-    ay.set(y);
-    bx.set(x);
-    by.set(y);
-  }, [x, y, ax, ay, bx, by]);
-
-  return (
-    <motion.div
-      aria-hidden
-      className="pointer-events-none absolute left-0 top-0"
-      initial={false}
-      animate={{ opacity: show ? 1 : 0 }}
-      style={{
-        filter: reduce ? undefined : `url(#${gid})`,
-        width: 0,
-        height: 0,
-      }}
-    >
-      {[
-        [ax, ay, 1],
-        [bx, by, 0.92],
-      ].map(([px, py, sc], i) => (
-        <motion.span
-          key={i}
-          className="absolute block shadow-[0_8px_24px_-6px_rgba(124,58,237,0.8)]"
-          style={{
-            x: px as never,
-            y: py as never,
-            width: w,
-            height: h,
-            borderRadius: radius,
-            background: GRADIENT,
-            scale: sc as number,
-          }}
-        />
-      ))}
-    </motion.div>
-  );
-}
+const GRADIENT = "linear-gradient(135deg, #7c3aed 0%, #9333ea 50%, #db2777 100%)";
 
 export function SlotWeekPicker({
   slots,
   timeZone,
-  slotMinutes = 30,
   minNoticeHours = 2,
   now,
   title = "اختيار الموعد المناسب",
@@ -160,7 +91,6 @@ export function SlotWeekPicker({
   className,
 }: SlotWeekPickerProps) {
   const reduce = useReducedMotion();
-  const gid = React.useId().replace(/:/g, "");
   const tz = timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const base = React.useRef(now ? new Date(now).getTime() : Date.now());
   const [clock, setClock] = React.useState(base.current);
@@ -188,31 +118,16 @@ export function SlotWeekPicker({
   const [focusIdx, setFocusIdx] = React.useState(0);
   const [peek, setPeek] = React.useState<number | null>(null);
   const [status, setStatus] = React.useState<"idle" | "busy" | "done">("idle");
-  const [bursts, setBursts] = React.useState<{ id: number; x: number; y: number }[]>([]);
   const cells = React.useRef<(HTMLButtonElement | null)[]>([]);
-  const stripRef = React.useRef<HTMLDivElement>(null);
-  const gridRef = React.useRef<HTMLDivElement>(null);
-  const [stripW, setStripW] = React.useState(380);
-  const [gridW, setGridW] = React.useState(380);
 
-  React.useEffect(() => {
-    const ro = new ResizeObserver(() => {
-      setStripW(stripRef.current?.offsetWidth ?? 380);
-      setGridW(gridRef.current?.offsetWidth ?? 380);
-    });
-    if (stripRef.current) ro.observe(stripRef.current);
-    if (gridRef.current) ro.observe(gridRef.current);
-    return () => ro.disconnect();
-  }, []);
-
-  // card depth
+  // 3D Card Depth & subtle glow
   const mx = useMotionValue(0.5);
   const my = useMotionValue(0.5);
-  const rx = useSpring(useTransform(my, [0, 1], [4, -4]), { stiffness: 120, damping: 18 });
-  const ry = useSpring(useTransform(mx, [0, 1], [-5, 5]), { stiffness: 120, damping: 18 });
+  const rx = useSpring(useTransform(my, [0, 1], [3, -3]), { stiffness: 120, damping: 18 });
+  const ry = useSpring(useTransform(mx, [0, 1], [-4, 4]), { stiffness: 120, damping: 18 });
   const px = useMotionValue(-300);
   const py = useMotionValue(-300);
-  const glow = useMotionTemplate`radial-gradient(280px circle at ${px}px ${py}px, rgba(168, 85, 247, 0.2), transparent 70%)`;
+  const glow = useMotionTemplate`radial-gradient(280px circle at ${px}px ${py}px, rgba(168, 85, 247, 0.18), transparent 70%)`;
 
   const all = React.useMemo(
     () =>
@@ -238,22 +153,14 @@ export function SlotWeekPicker({
   const daySlots = all.filter((s) => s.key === dayKey);
   const sel = all.find((s) => s.start === picked && !s.reason);
   const selIdx = daySlots.findIndex((s) => s.start === picked && !s.reason);
-  const dayIdx = days.indexOf(dayKey);
 
-  const stripX = useMotionValue(0);
-  const goWeek = (n: number) => {
-    const w = Math.max(0, week + n);
-    if (w === week) {
-      animate(stripX, 0, { type: "spring", stiffness: 300, damping: 25 });
-      return;
-    }
-    setWeek(w);
-    setDayKey(addDays(todayKey, w * 7));
+  const goWeek = (direction: -1 | 1) => {
+    // In RTL: direction -1 is previous week (past), direction +1 is next week (future)
+    const nextWeek = Math.max(0, week + direction);
+    if (nextWeek === week) return;
+    setWeek(nextWeek);
+    setDayKey(addDays(todayKey, nextWeek * 7));
     setFocusIdx(0);
-    if (!reduce) {
-      stripX.set(n * 90);
-      animate(stripX, 0, { type: "spring", stiffness: 170, damping: 14 });
-    }
   };
 
   const choose = (i: number) => {
@@ -262,25 +169,12 @@ export function SlotWeekPicker({
     setPicked(s.start);
     setStatus("idle");
     onChange?.({ start: s.start, unavailableReason: s.unavailableReason });
-    if (!reduce) {
-      const cw = (gridW - 16) / 3;
-      const id = Date.now();
-      setBursts((b) => [
-        ...b,
-        {
-          id,
-          x: (i % 3) * (cw + 8) + cw / 2,
-          y: Math.floor(i / 3) * 52 + 22,
-        },
-      ]);
-      setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 1100);
-    }
   };
 
   const onKey = (e: React.KeyboardEvent, i: number) => {
     const n = daySlots.length;
     const move: Record<string, number> = {
-      ArrowRight: i - 1, // RTL inverted
+      ArrowRight: i - 1,
       ArrowLeft: i + 1,
       ArrowDown: i + 3,
       ArrowUp: i - 3,
@@ -316,35 +210,16 @@ export function SlotWeekPicker({
     ?.replace("GMT", "UTC");
   const range = `${fmt(new Date(days[0] + "T12:00:00Z"), "UTC", { month: "short", day: "numeric" })} إلى ${fmt(new Date(days[6] + "T12:00:00Z"), "UTC", { month: "short", day: "numeric" })}`;
   const peeked = peek !== null ? daySlots[peek] : undefined;
-  const cellW = (gridW - 16) / 3;
-  const dayW = stripW / 7;
 
   return (
-    <div dir="rtl" className={cn("relative w-full max-w-lg", className)} style={{ perspective: 1100 }}>
-      <svg width="0" height="0" className="absolute" aria-hidden>
-        <defs>
-          <filter id={gid}>
-            <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="b" />
-            <feColorMatrix
-              in="b"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 22 -9"
-            />
-          </filter>
-        </defs>
-      </svg>
-
-      <motion.div
+    <div dir="rtl" className={cn("relative w-full max-w-xl", className)} style={{ perspective: 1100 }}>
+      {/* Background ambient aura */}
+      <div
         aria-hidden
-        className="pointer-events-none absolute -inset-3 rounded-[2.25rem] blur-2xl opacity-40"
+        className="pointer-events-none absolute -inset-3 rounded-[2.5rem] blur-2xl opacity-35"
         style={{
-          background: "conic-gradient(from 90deg, #7c3aed, #ec4899, #db2777, #7c3aed)",
+          background: "conic-gradient(from 180deg, #7c3aed, #ec4899, #db2777, #7c3aed)",
         }}
-        animate={
-          reduce
-            ? { opacity: 0.25 }
-            : { opacity: [0.25, 0.45, 0.25], rotate: [0, 4, 0] }
-        }
-        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
       />
 
       <motion.section
@@ -367,10 +242,9 @@ export function SlotWeekPicker({
           borderColor: "var(--line)",
           background: "var(--surface)",
         }}
-        initial={{ opacity: 0, y: reduce ? 0 : 20 }}
+        initial={{ opacity: 0, y: reduce ? 0 : 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 140, damping: 18 }}
-        className="relative rounded-3xl border p-5 shadow-2xl"
+        className="relative rounded-3xl border p-5 sm:p-6 shadow-2xl overflow-hidden"
       >
         {!reduce && (
           <motion.div
@@ -380,156 +254,168 @@ export function SlotWeekPicker({
           />
         )}
 
+        {/* Top Header with RTL Aware Navigation */}
         <header
-          className="relative mb-4 flex items-center justify-between gap-3 border-b pb-3.5"
-          style={{ borderColor: "var(--line)", transform: "translateZ(20px)" }}
+          className="relative mb-5 flex items-center justify-between gap-3 border-b pb-4"
+          style={{ borderColor: "var(--line)", transform: "translateZ(15px)" }}
         >
-          <div>
-            <h2 className="text-base font-black leading-tight" style={{ color: "var(--ink)" }}>
-              {title}
-            </h2>
-            <p aria-live="polite" className="mt-1 text-xs font-bold" style={{ color: "var(--muted)" }}>
-              الأسبوع: {range}
-            </p>
+          <div className="flex items-center gap-2.5">
+            <span
+              className="grid h-9 w-9 place-items-center rounded-xl text-white shadow-sm"
+              style={{ background: GRADIENT }}
+            >
+              <Sparkles size={16} />
+            </span>
+            <div>
+              <h2 className="text-sm font-black text-ink">{title}</h2>
+              <p aria-live="polite" className="text-xs font-bold text-muted">
+                الأسبوع: {range}
+              </p>
+            </div>
           </div>
-          <div className="flex gap-1.5">
-            {[1, -1].map((n) => (
-              <motion.button
-                key={n}
-                type="button"
-                onClick={() => goWeek(n)}
-                disabled={n < 0 && week === 0}
-                whileTap={reduce ? undefined : { scale: 0.88 }}
-                whileHover={reduce ? undefined : { y: -2 }}
-                aria-label={n > 0 ? "الأسبوع التالي" : "الأسبوع السابق"}
-                className="grid h-9 w-9 place-items-center rounded-xl border outline-none transition active:scale-95 disabled:opacity-35"
-                style={{
-                  borderColor: "var(--line)",
-                  background: "var(--surface-2)",
-                  color: "var(--ink)",
-                }}
-              >
-                {n > 0 ? (
-                  <ChevronRight className="h-4 w-4" aria-hidden />
-                ) : (
-                  <ChevronLeft className="h-4 w-4" aria-hidden />
-                )}
-              </motion.button>
-            ))}
+
+          {/* Navigation Controls: In RTL, Right arrow goes Back (Previous), Left arrow goes Forward (Next) */}
+          <div className="flex items-center gap-1.5" dir="rtl">
+            <button
+              type="button"
+              onClick={() => goWeek(-1)}
+              disabled={week === 0}
+              aria-label="الأسبوع السابق"
+              title="الأسبوع السابق"
+              className="grid h-8 w-8 place-items-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-ink transition hover:bg-[var(--surface-3)] active:scale-95 disabled:opacity-30 disabled:pointer-events-none"
+            >
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </button>
+
+            <span className="px-2 text-xs font-black text-ink select-none">
+              {week === 0 ? "هذا الأسبوع" : `+${week} أسبوع`}
+            </span>
+
+            <button
+              type="button"
+              onClick={() => goWeek(1)}
+              aria-label="الأسبوع التالي"
+              title="الأسبوع التالي"
+              className="grid h-8 w-8 place-items-center rounded-xl border border-[var(--line)] bg-[var(--surface-2)] text-ink transition hover:bg-[var(--surface-3)] active:scale-95"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden />
+            </button>
           </div>
         </header>
 
-        {/* Week strip */}
-        <div ref={stripRef} className="relative" style={{ transform: "translateZ(24px)" }}>
-          <motion.div
-            role="tablist"
-            aria-label="الأيام"
-            className="relative touch-pan-y"
-            style={{ x: stripX }}
-            drag={reduce ? false : "x"}
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.5}
-            dragTransition={{ bounceStiffness: 260, bounceDamping: 16 }}
-            onDragEnd={(_, i) => {
-              if (i.offset.x + i.velocity.x * 0.2 < -60) goWeek(1);
-              else if (i.offset.x + i.velocity.x * 0.2 > 60) goWeek(-1);
-              else animate(stripX, 0, { type: "spring", stiffness: 300, damping: 22 });
-            }}
-          >
-            <Liquid
-              gid={gid}
-              x={Math.max(0, dayIdx) * dayW + 2}
-              y={0}
-              w={dayW - 4}
-              h={64}
-              show={dayIdx >= 0}
-              radius={14}
-            />
-            <div className="relative grid grid-cols-7 gap-1">
-              {days.map((k) => {
-                const free = all.filter((s) => s.key === k && !s.reason).length;
-                const on = k === dayKey;
-                const d = new Date(k + "T12:00:00Z");
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    role="tab"
-                    aria-selected={on}
-                    onClick={() => {
-                      setDayKey(k);
-                      setFocusIdx(0);
-                      setPeek(null);
-                    }}
-                    aria-label={`${fmt(d, "UTC", { weekday: "long", month: "long", day: "numeric" })}, ${free ? `${free} متاح` : "غير متاح"}`}
-                    className="relative flex h-16 flex-col items-center justify-center rounded-xl text-xs outline-none transition"
+        {/* Week Strip (7 Days): Full RTL Perfect Layout with layoutId pill */}
+        <div className="relative mb-5" style={{ transform: "translateZ(20px)" }}>
+          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+            {days.map((k) => {
+              const free = all.filter((s) => s.key === k && !s.reason).length;
+              const dateObj = new Date(k + "T12:00:00Z");
+              const isTodayDay = k === todayKey;
+              const active = k === dayKey;
+              const weekday = fmt(dateObj, "UTC", { weekday: "short" });
+              const dayNumber = fmt(dateObj, "UTC", { day: "numeric" });
+
+              return (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => {
+                    setDayKey(k);
+                    setFocusIdx(0);
+                  }}
+                  className={cn(
+                    "relative flex flex-col items-center justify-center py-2.5 px-1 rounded-2xl border transition-all duration-200 outline-none select-none",
+                    active
+                      ? "border-transparent text-white shadow-lg"
+                      : "border-[var(--line)] bg-[var(--surface-2)]/60 text-ink hover:bg-[var(--surface-2)] hover:border-purple-300",
+                  )}
+                >
+                  {/* Active Day Shading Pill (Immune to RTL bug) */}
+                  {active && (
+                    <motion.span
+                      layoutId="active-day-pill"
+                      className="absolute inset-0 rounded-2xl shadow-[0_8px_20px_-6px_rgba(124,58,237,0.7)]"
+                      style={{ background: GRADIENT, zIndex: 0 }}
+                      transition={{ type: "spring", stiffness: 380, damping: 28 }}
+                    />
+                  )}
+
+                  <span
+                    className={cn(
+                      "relative z-10 text-[10px] font-bold",
+                      active ? "text-purple-100" : isTodayDay ? "text-purple-600 dark:text-purple-400 font-black" : "text-muted",
+                    )}
                   >
-                    <span
-                      className={cn(
-                        "text-[10px] font-bold transition-colors",
-                        on ? "text-white/90 font-black" : "text-muted",
-                      )}
-                    >
-                      {fmt(d, "UTC", { weekday: "narrow" })}
-                    </span>
-                    <span
-                      className={cn(
-                        "text-sm font-black tabular-nums transition-colors",
-                        on ? "text-white" : free ? "text-ink" : "text-muted-2",
-                      )}
-                    >
-                      {fmt(d, "UTC", { day: "numeric" })}
-                    </span>
-                    <span aria-hidden className="mt-0.5 flex h-1.5 gap-0.5">
-                      {Array.from({ length: Math.min(free, 3) }).map((_, i) => (
-                        <span
-                          key={i}
-                          className={cn(
-                            "h-1 w-1 rounded-full",
-                            on ? "bg-white/90" : "bg-purple-500",
-                          )}
-                        />
-                      ))}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </motion.div>
+                    {weekday}
+                  </span>
+
+                  <span
+                    className={cn(
+                      "relative z-10 text-sm font-black my-0.5",
+                      active ? "text-white" : "text-ink",
+                    )}
+                  >
+                    {dayNumber}
+                  </span>
+
+                  <span
+                    className={cn(
+                      "relative z-10 inline-flex items-center gap-0.5 text-[9px] font-bold px-1 rounded-full",
+                      active
+                        ? "bg-white/20 text-white"
+                        : free > 0
+                        ? "bg-purple-500/10 text-purple-600 dark:text-purple-400"
+                        : "text-muted opacity-60",
+                    )}
+                  >
+                    {free > 0 ? `${free} متاح` : "ممتلئ"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Slot grid with liquid selection */}
-        <div className="relative mt-4 min-h-[12rem]" style={{ transform: "translateZ(16px)" }}>
+        {/* Selected Day Header Label */}
+        <div className="flex items-center justify-between border-b border-[var(--line)] pb-2 mb-3">
+          <p className="text-xs font-black text-ink">
+            الفترات الزمنية ليوم:{" "}
+            <span className="text-purple-600 dark:text-purple-400">
+              {fmt(new Date(dayKey + "T12:00:00Z"), "UTC", { weekday: "long", day: "numeric", month: "long" })}
+            </span>
+          </p>
+          <span className="text-[10px] font-bold text-muted">
+            {daySlots.filter((s) => !s.reason).length} فترة متاحة
+          </span>
+        </div>
+
+        {/* Slot Grid: 3 columns, layoutId pill for 100% accurate RTL highlight */}
+        <div className="relative min-h-[14rem]" style={{ transform: "translateZ(16px)" }}>
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={dayKey}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: reduce ? 0.01 : 0.12 }}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.15 }}
             >
               {daySlots.length === 0 ? (
-                <div className="grid h-48 place-items-center rounded-2xl border border-dashed text-xs font-bold text-muted p-4 text-center">
-                  لا توجد فترات مواعيد مجدولة في هذا اليوم.
+                <div className="flex flex-col items-center justify-center h-48 rounded-2xl border border-dashed border-[var(--line)] p-4 text-center">
+                  <Ban size={24} className="text-muted mb-1.5" />
+                  <p className="text-xs font-bold text-ink">لا توجد مواعيد متاحة في هذا اليوم</p>
+                  <p className="text-[11px] text-muted mt-0.5">يرجى اختيار يوم آخر من الشريط أعلاه</p>
                 </div>
               ) : (
                 <div
-                  ref={gridRef}
+                  ref={(el) => {}}
                   role="radiogroup"
-                  aria-label={`أوقات يوم ${fmt(new Date(dayKey + "T12:00:00Z"), "UTC", { weekday: "long", month: "long", day: "numeric" })}`}
-                  className="relative grid grid-cols-3 gap-2"
+                  aria-label="الفترات المتاحة"
+                  className="grid grid-cols-3 gap-2"
                   onMouseLeave={() => setPeek(null)}
                 >
-                  <Liquid
-                    gid={gid}
-                    x={Math.max(0, selIdx % 3) * (cellW + 8)}
-                    y={Math.max(0, Math.floor(selIdx / 3)) * 52}
-                    w={cellW}
-                    h={44}
-                    show={selIdx >= 0}
-                  />
                   {daySlots.map((s, i) => {
-                    const on = i === selIdx;
+                    const on = s.start === picked && !s.reason;
+                    const disabled = Boolean(s.reason);
+
                     return (
                       <motion.button
                         key={s.start}
@@ -539,7 +425,7 @@ export function SlotWeekPicker({
                         type="button"
                         role="radio"
                         aria-checked={on}
-                        aria-disabled={!!s.reason || undefined}
+                        aria-disabled={disabled || undefined}
                         tabIndex={i === Math.min(focusIdx, daySlots.length - 1) ? 0 : -1}
                         onClick={() => choose(i)}
                         onKeyDown={(e) => onKey(e, i)}
@@ -549,164 +435,98 @@ export function SlotWeekPicker({
                         }}
                         onMouseEnter={() => setPeek(i)}
                         onBlur={() => setPeek(null)}
-                        initial={{
-                          opacity: 0,
-                          y: reduce ? 0 : 16,
-                          scale: reduce ? 1 : 0.9,
-                        }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 260,
-                          damping: 16,
-                          delay: reduce ? 0 : i * 0.02,
-                        }}
-                        whileHover={
-                          reduce || s.reason ? undefined : { scale: 1.05, y: -2 }
-                        }
-                        whileTap={
-                          reduce || s.reason ? undefined : { scale: 0.92, scaleY: 0.88 }
-                        }
+                        whileTap={disabled ? undefined : { scale: 0.95 }}
                         className={cn(
-                          "relative flex h-11 items-center justify-center gap-1 rounded-xl border text-xs font-black tabular-nums outline-none transition-all duration-200",
-                          s.reason
-                            ? "cursor-not-allowed border-dashed opacity-45 line-through"
+                          "relative flex h-11 items-center justify-center gap-1.5 rounded-xl border text-xs font-black tabular-nums outline-none transition-all duration-150 overflow-hidden",
+                          disabled
+                            ? "cursor-not-allowed border-dashed border-[var(--line)] bg-[var(--surface-2)]/30 text-muted opacity-40 line-through"
                             : on
-                              ? "border-transparent text-white font-black shadow-lg"
-                              : "border-[var(--line)] bg-[var(--surface-2)] text-[var(--ink)] hover:border-purple-400",
+                            ? "border-transparent text-white shadow-md font-black"
+                            : "border-[var(--line)] bg-[var(--surface-2)] text-ink hover:border-purple-400 hover:bg-[var(--surface-3)]",
                         )}
                       >
-                        {s.reason && <Ban className="h-3 w-3 shrink-0" aria-hidden />}
-                        <span className="relative">{timeLabel(s.date, tz)}</span>
+                        {/* Selected Slot Shading Pill (Morphs accurately in RTL) */}
+                        {on && (
+                          <motion.span
+                            layoutId="active-slot-pill"
+                            className="absolute inset-0 rounded-xl shadow-[0_6px_20px_-4px_rgba(124,58,237,0.75)]"
+                            style={{ background: GRADIENT, zIndex: 0 }}
+                            transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                          />
+                        )}
+
+                        {disabled && <Ban className="h-3 w-3 shrink-0 relative z-10" aria-hidden />}
+                        <span className="relative z-10">{timeLabel(s.date, tz)}</span>
                       </motion.button>
                     );
                   })}
-
-                  {/* Soft particle burst from chosen tile */}
-                  {bursts.map((b) => (
-                    <span
-                      key={b.id}
-                      aria-hidden
-                      className="pointer-events-none absolute left-0 top-0 z-10"
-                      style={{ transform: `translate(${b.x}px, ${b.y}px)` }}
-                    >
-                      {Array.from({ length: 18 }).map((_, i) => {
-                        const a = (i / 18) * Math.PI * 2 + (i % 3) * 0.2;
-                        const r = 36 + ((i * 37) % 40);
-                        return (
-                          <motion.span
-                            key={i}
-                            className="absolute -ml-1 -mt-1 h-2 w-2 rounded-full blur-[1px]"
-                            style={{
-                              background: BURST[i % BURST.length],
-                              boxShadow: `0 0 10px ${BURST[i % BURST.length]}`,
-                            }}
-                            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
-                            animate={{
-                              x: Math.cos(a) * r,
-                              y: Math.sin(a) * r * 0.8 + 14,
-                              opacity: 0,
-                              scale: 0.2,
-                            }}
-                            transition={{ duration: 0.9, ease: [0.1, 0.8, 0.3, 1] }}
-                          />
-                        );
-                      })}
-                    </span>
-                  ))}
                 </div>
               )}
             </motion.div>
           </AnimatePresence>
         </div>
 
-        {/* Hover / focus peek feedback */}
-        <p aria-live="polite" className="relative mt-2.5 h-5 text-[11px] font-bold text-muted">
+        {/* Hover / Reason Feedback */}
+        <div aria-live="polite" className="relative mt-2.5 h-6 text-[11px] font-bold text-muted">
           <AnimatePresence mode="wait" initial={false}>
             {peeked?.reason && (
               <motion.span
                 key={peeked.start}
-                initial={{ opacity: 0, y: reduce ? 0 : 5 }}
+                initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.14 }}
-                className="inline-flex items-center gap-1.5 text-rose-500"
+                className="inline-flex items-center gap-1.5 text-rose-500 font-bold"
               >
-                <Ban className="h-3.5 w-3.5" aria-hidden /> وقت {timeLabel(peeked.date, tz)} غير متاح: {peeked.reason}.
+                <Ban className="h-3.5 w-3.5" aria-hidden /> وقت {timeLabel(peeked.date, tz)} غير متاح: {peeked.reason}
               </motion.span>
             )}
           </AnimatePresence>
-        </p>
+        </div>
 
-        {/* Footer controls */}
+        {/* Footer with Selected Time summary and Confirmation button */}
         <footer
-          className="relative mt-3 border-t pt-4"
+          className="relative mt-2 border-t pt-4"
           style={{ borderColor: "var(--line)", transform: "translateZ(18px)" }}
         >
-          <p className="flex items-center gap-1.5 text-[10.5px] font-bold text-muted">
-            <Globe2 className="h-3.5 w-3.5 text-purple-400" aria-hidden /> التوقيت المحلي ({offset})
-          </p>
-
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0 text-xs font-bold" aria-live="polite">
               <AnimatePresence mode="wait" initial={false}>
                 {sel ? (
                   <motion.div
                     key={sel.start}
-                    initial={{ opacity: 0, y: reduce ? 0 : 8 }}
+                    initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
                   >
-                    <p className="truncate font-black" style={{ color: "var(--ink)" }}>
+                    <p className="truncate font-black text-ink text-sm">
                       {fmt(sel.date, tz, { weekday: "long", month: "long", day: "numeric" })} · {timeLabel(sel.date, tz)}
                     </p>
-                    <p className="mt-0.5 flex items-center gap-1 text-[10px] text-purple-600 font-extrabold">
+                    <p className="mt-0.5 flex items-center gap-1 text-[10.5px] text-purple-600 dark:text-purple-400 font-extrabold">
                       <Hourglass className="h-3 w-3" aria-hidden /> يبدأ خلال {until(sel.date.getTime() - clock)}
                     </p>
                   </motion.div>
                 ) : (
-                  <motion.p
-                    key="none"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="text-muted text-[11px]"
-                  >
-                    يرجى اختيار موعد من الجدول.
-                  </motion.p>
+                  <p className="text-muted text-[11px]">
+                    اضغطي على أي فترة زمنية متاحة أعلاه لاختيارها.
+                  </p>
                 )}
               </AnimatePresence>
             </div>
 
-            <motion.button
+            <button
               type="button"
               onClick={confirm}
               disabled={!sel || status === "busy"}
-              whileTap={reduce || !sel ? undefined : { scale: 0.94 }}
-              whileHover={reduce || !sel ? undefined : { y: -2 }}
-              animate={
-                sel && !reduce && status === "idle"
-                  ? {
-                      boxShadow: [
-                        "0 8px 20px -8px rgba(124,58,237,0.5)",
-                        "0 8px 30px -4px rgba(219,39,119,0.7)",
-                        "0 8px 20px -8px rgba(124,58,237,0.5)",
-                      ],
-                    }
-                  : { boxShadow: "0 0 0 rgba(0,0,0,0)" }
-              }
-              transition={{ duration: 2.4, repeat: Infinity }}
               style={{ background: GRADIENT }}
-              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-4 py-2 text-xs font-black text-white shadow-lg outline-none transition disabled:opacity-40"
+              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-xl px-5 py-2 text-xs font-black text-white shadow-lg transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none"
             >
               {status === "busy" ? (
-                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden />
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
               ) : (
                 <CalendarCheck className="h-4 w-4" aria-hidden />
               )}
-              {status === "done" ? "تم تثبيت الموعد ✓" : "تأكيد وحجز الموعد"}
-            </motion.button>
+              {status === "done" ? "تم تثبيت الموعد ✓" : "تأكيد وتثبيت الموعد"}
+            </button>
           </div>
         </footer>
       </motion.section>

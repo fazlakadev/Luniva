@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import EventCalendar, { type CalendarEvent } from "@/components/ui/event-calendar";
 import { Slot, SlotWeekPicker } from "@/components/ui/slot-week-picker";
+import { AnimatePresence, motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { useToast } from "@/components/toast";
 import { formatMoney } from "@/lib/format";
 import {
@@ -694,209 +696,259 @@ export default function AppointmentsBoard({
         </section>
       )}
 
-      {modalOpen && (
-        <div
-          className="fixed inset-0 z-[200] flex items-start justify-center overflow-y-auto p-3 sm:items-center sm:p-6"
-          style={{ background: "rgba(20, 12, 17, 0.55)", backdropFilter: "blur(3px)" }}
-          role="dialog"
-          aria-modal="true"
-          aria-label={form.id ? "تعديل موعد" : "موعد جديد"}
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) closeModal();
-          }}
-        >
-          <form
-            onSubmit={save}
-            className="page-enter my-auto w-full max-w-xl rounded-2xl border p-5 shadow-2xl sm:p-6"
-            style={{ background: "var(--surface)", borderColor: "var(--line)" }}
+      {/* Redesigned Animated Modal: Fully responsive, never clipped from bottom */}
+      <AnimatePresence>
+        {modalOpen && (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center p-3 sm:p-5"
+            role="dialog"
+            aria-modal="true"
+            aria-label={form.id ? "تعديل موعد" : "موعد جديد"}
           >
-            <div className="mb-5 flex items-start justify-between gap-3">
-              <div>
-                <p className="eyebrow">{form.id ? "تعديل موعد" : "موعد جديد"}</p>
-                <h2 className="section-title mt-1">{form.id ? "تحديث تفاصيل الموعد" : "إضافة موعد للمتابعة"}</h2>
+            {/* Backdrop with blur & fade */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              onClick={closeModal}
+              className="fixed inset-0 bg-black/60 backdrop-blur-md"
+            />
+
+            {/* Modal Card with spring animation and fixed scrollable container */}
+            <motion.form
+              onSubmit={save}
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 16 }}
+              transition={{ type: "spring", stiffness: 350, damping: 28 }}
+              className="relative z-10 w-full max-w-xl max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-4rem)] flex flex-col rounded-3xl border border-[var(--line)] bg-[var(--surface)] shadow-2xl overflow-hidden"
+              style={{
+                boxShadow: "0 25px 60px -15px rgba(0,0,0,0.4), 0 0 35px -5px rgba(124,58,237,0.15)",
+              }}
+            >
+              {/* Header (fixed at top of modal) */}
+              <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4 sm:px-6 bg-[var(--surface)] shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className="grid h-9 w-9 place-items-center rounded-xl text-white shadow-sm"
+                    style={{ background: "linear-gradient(135deg, var(--brand), #9333ea)" }}
+                  >
+                    <CalendarClock size={18} />
+                  </span>
+                  <div>
+                    <p className="text-[10px] font-black tracking-wide text-purple-600 dark:text-purple-400">
+                      {form.id ? "تعديل موعد" : "موعد جديد"}
+                    </p>
+                    <h2 className="text-sm font-black text-ink">
+                      {form.id ? "تحديث تفاصيل الموعد" : "إضافة موعد للمتابعة والحجز"}
+                    </h2>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={saving}
+                  className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] text-muted hover:text-ink hover:bg-[var(--surface-2)] transition disabled:opacity-50"
+                  aria-label="إغلاق"
+                >
+                  <X size={16} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={closeModal}
-                disabled={saving}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg transition hover:bg-[var(--surface-3)] disabled:opacity-50"
-                style={{ color: "var(--muted)" }}
-                aria-label="إغلاق"
-              >
-                <X size={17} />
-              </button>
-            </div>
 
-            <div className="space-y-4">
-              <label className="block">
-                <span className="field-label">عنوان الموعد</span>
-                <input
-                  value={form.title}
-                  onChange={(event) => setField("title", event.target.value)}
-                  required
-                  maxLength={180}
-                  className="field"
-                  placeholder="متابعة عميلة، تحصيل دفعة، تسليم طلب..."
-                  autoFocus
-                />
-              </label>
-
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* Scrollable Form Body (flex-1 overflow-y-auto ensures never clipped!) */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 space-y-4">
                 <label className="block">
-                  <span className="field-label">التاريخ</span>
+                  <span className="block text-xs font-black text-ink mb-1.5">عنوان الموعد / الغرض</span>
                   <input
-                    value={form.date}
-                    onChange={(event) => setField("date", event.target.value)}
-                    type="date"
+                    value={form.title}
+                    onChange={(event) => setField("title", event.target.value)}
                     required
-                    className="field"
+                    maxLength={180}
+                    className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 transition"
+                    placeholder="متابعة عميلة، جلسة قياس، تحصيل دفعة، تسليم طلب..."
+                    autoFocus
                   />
                 </label>
-                <label className="block">
-                  <span className="field-label">الوقت (اختياري)</span>
-                  <input
-                    value={form.time}
-                    onChange={(event) => setField("time", event.target.value)}
-                    type="time"
-                    className="field"
-                  />
-                </label>
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="field-label">النوع</span>
-                  <select
-                    value={form.kind}
-                    onChange={(event) => setField("kind", event.target.value as AppointmentKind)}
-                    className="field"
-                  >
-                    {APPOINTMENT_KINDS.map((kind) => (
-                      <option key={kind} value={kind}>{appointmentKindLabels[kind]}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="field-label">الحالة</span>
-                  <select
-                    value={form.status}
-                    onChange={(event) => setField("status", event.target.value as AppointmentStatus)}
-                    className="field"
-                  >
-                    {APPOINTMENT_STATUSES.map((status) => (
-                      <option key={status} value={status}>{appointmentStatusLabels[status]}</option>
-                    ))}
-                  </select>
-                </label>
-              </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="block text-xs font-black text-ink mb-1.5">التاريخ</span>
+                    <input
+                      value={form.date}
+                      onChange={(event) => setField("date", event.target.value)}
+                      type="date"
+                      required
+                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 transition"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="block text-xs font-black text-ink mb-1.5">الوقت (اختياري)</span>
+                    <input
+                      value={form.time}
+                      onChange={(event) => setField("time", event.target.value)}
+                      type="time"
+                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 transition"
+                    />
+                  </label>
+                </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="field-label">العميلة (اختياري)</span>
-                  <select
-                    value={form.customerId}
-                    onChange={(event) => setField("customerId", event.target.value)}
-                    className="field"
-                  >
-                    <option value="">بدون ربط</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>{customer.full_name}</option>
-                    ))}
-                  </select>
-                </label>
-                <label className="block">
-                  <span className="field-label">الفاتورة (اختياري)</span>
-                  <select
-                    value={form.invoiceId}
-                    onChange={(event) => {
-                      const invoiceId = event.target.value;
-                      const invoice = invoices.find((item) => item.id === invoiceId);
-                      setForm((current) => ({
-                        ...current,
-                        invoiceId,
-                        customerId: invoice?.customer_id ?? current.customerId,
-                      }));
-                    }}
-                    className="field"
-                  >
-                    <option value="">بدون ربط</option>
-                    {invoices
-                      .filter((invoice) => !form.customerId || invoice.customer_id === form.customerId)
-                      .map((invoice) => (
-                        <option key={invoice.id} value={invoice.id}>
-                          {invoice.invoice_number} · {formatMoney(invoice.total)}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="block text-xs font-black text-ink mb-1.5">نوع الموعد</span>
+                    <select
+                      value={form.kind}
+                      onChange={(event) => setField("kind", event.target.value as AppointmentKind)}
+                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 transition"
+                    >
+                      {APPOINTMENT_KINDS.map((kind) => (
+                        <option key={kind} value={kind}>
+                          {appointmentKindLabels[kind]}
                         </option>
                       ))}
-                  </select>
-                </label>
-              </div>
-
-              <div>
-                <span className="field-label">لون التمييز</span>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {APPOINTMENT_TONES.map((tone) => (
-                    <button
-                      key={tone}
-                      type="button"
-                      onClick={() => setField("tone", tone)}
-                      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-extrabold transition"
-                      style={{
-                        background: form.tone === tone ? "var(--brand-soft)" : "var(--surface-2)",
-                        color: form.tone === tone ? "var(--brand-strong)" : "var(--muted)",
-                        border: `1px solid ${form.tone === tone ? "var(--brand)" : "var(--line)"}`,
-                      }}
-                      aria-pressed={form.tone === tone}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="block text-xs font-black text-ink mb-1.5">حالة الموعد</span>
+                    <select
+                      value={form.status}
+                      onChange={(event) => setField("status", event.target.value as AppointmentStatus)}
+                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 transition"
                     >
-                      <span
-                        className="h-2.5 w-2.5 rounded-full"
-                        style={{ background: toneColor(tone) }}
-                      />
-                      {appointmentToneLabels[tone]}
-                    </button>
-                  ))}
+                      {APPOINTMENT_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {appointmentStatusLabels[status]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="block text-xs font-black text-ink mb-1.5">العميلة (اختياري)</span>
+                    <select
+                      value={form.customerId}
+                      onChange={(event) => setField("customerId", event.target.value)}
+                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 transition"
+                    >
+                      <option value="">بدون ربط بعميلة</option>
+                      {customers.map((customer) => (
+                        <option key={customer.id} value={customer.id}>
+                          {customer.full_name} {customer.phone ? `(${customer.phone})` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="block text-xs font-black text-ink mb-1.5">الفاتورة المرتبطة (اختياري)</span>
+                    <select
+                      value={form.invoiceId}
+                      onChange={(event) => {
+                        const invoiceId = event.target.value;
+                        const invoice = invoices.find((item) => item.id === invoiceId);
+                        setForm((current) => ({
+                          ...current,
+                          invoiceId,
+                          customerId: invoice?.customer_id ?? current.customerId,
+                        }));
+                      }}
+                      className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 transition"
+                    >
+                      <option value="">بدون ربط بفاتورة</option>
+                      {invoices
+                        .filter((invoice) => !form.customerId || invoice.customer_id === form.customerId)
+                        .map((invoice) => (
+                          <option key={invoice.id} value={invoice.id}>
+                            {invoice.invoice_number} · {formatMoney(invoice.total)}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div>
+                  <span className="block text-xs font-black text-ink mb-1.5">لون التمييز</span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {APPOINTMENT_TONES.map((tone) => {
+                      const isSelected = form.tone === tone;
+                      return (
+                        <button
+                          key={tone}
+                          type="button"
+                          onClick={() => setField("tone", tone)}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold transition active:scale-95",
+                            isSelected
+                              ? "bg-purple-600 text-white shadow-sm ring-2 ring-purple-400/40"
+                              : "border border-[var(--line)] bg-[var(--surface-2)] text-muted hover:text-ink hover:bg-[var(--surface-3)]",
+                          )}
+                          aria-pressed={isSelected}
+                        >
+                          <span
+                            className="h-2 w-2 rounded-full"
+                            style={{ background: isSelected ? "#fff" : toneColor(tone) }}
+                          />
+                          {appointmentToneLabels[tone]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <label className="block">
+                  <span className="block text-xs font-black text-ink mb-1.5">ملاحظات إضافية</span>
+                  <textarea
+                    value={form.notes}
+                    onChange={(event) => setField("notes", event.target.value)}
+                    rows={2}
+                    maxLength={2000}
+                    className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] p-2.5 text-xs font-bold text-ink outline-none focus:border-purple-500 resize-y transition"
+                    placeholder="أي تفاصيل خاصة بالمتابعة أو الطلب أو القياسات..."
+                  />
+                </label>
+
+                {error && (
+                  <div
+                    role="alert"
+                    className="flex items-start gap-2.5 rounded-xl p-3 text-xs font-bold bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400"
+                  >
+                    <AlertTriangle size={15} className="mt-0.5 shrink-0" />
+                    <span>{error}</span>
+                  </div>
+                )}
               </div>
 
-              <label className="block">
-                <span className="field-label">ملاحظات (اختياري)</span>
-                <textarea
-                  value={form.notes}
-                  onChange={(event) => setField("notes", event.target.value)}
-                  rows={3}
-                  maxLength={2000}
-                  className="field resize-y"
-                  placeholder="تفاصيل المتابعة أو المبلغ المطلوب..."
-                />
-              </label>
-
-              {error && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2.5 rounded-2xl px-4 py-3 text-xs font-bold leading-6"
-                  style={{
-                    background: "var(--danger-soft)",
-                    color: "var(--danger)",
-                    border: "1px solid color-mix(in srgb, var(--danger) 45%, transparent)",
-                  }}
+              {/* Footer (fixed at bottom of modal, never clipped!) */}
+              <div className="flex items-center justify-between border-t border-[var(--line)] px-5 py-3.5 sm:px-6 bg-[var(--surface-2)]/60 shrink-0">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={saving}
+                  className="rounded-xl border border-[var(--line)] px-4 py-2 text-xs font-bold text-muted hover:text-ink hover:bg-[var(--surface-3)] transition"
                 >
-                  <AlertTriangle size={15} className="mt-0.5 shrink-0" />
-                  <span>{error}</span>
-                </div>
-              )}
-            </div>
+                  إلغاء
+                </button>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-              <button type="button" onClick={closeModal} disabled={saving} className="btn btn-outline px-4 py-2.5 text-xs">
-                إلغاء
-              </button>
-              <button type="submit" disabled={saving} className="btn btn-primary px-4 py-2.5 text-xs">
-                {saving ? <LoaderCircle size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                {form.id ? "حفظ التعديلات" : "إضافة الموعد"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{ background: "linear-gradient(135deg, var(--brand), #9333ea)" }}
+                  className="inline-flex items-center gap-2 rounded-xl px-5 py-2 text-xs font-black text-white shadow-md transition active:scale-95 disabled:opacity-50"
+                >
+                  {saving ? (
+                    <LoaderCircle size={15} className="animate-spin" />
+                  ) : (
+                    <CheckCircle2 size={15} />
+                  )}
+                  <span>{form.id ? "حفظ التعديلات" : "تأكيد وإضافة الموعد"}</span>
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
