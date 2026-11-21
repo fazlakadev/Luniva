@@ -44,6 +44,7 @@ import LiquidNavbar, {
   NimbusIcons,
   type LiquidNavItem,
 } from "@/components/ui/nimbus-liquid-nav";
+import NewsletterModal from "@/components/newsletter-modal";
 import {
   isCatalogMenuActive,
   isSupportSection,
@@ -105,9 +106,11 @@ const CONTACT_LINK: NavLink = {
   section: "contact",
 };
 
-const CATALOG_LINKS: NavLink[] = [HOME_LINK, PRODUCTS_LINK, PACKAGES_LINK];
+const CATALOG_LINKS: NavLink[] = [PRODUCTS_LINK, PACKAGES_LINK, SHOES_LINK];
 
 const SUPPORT_LINKS: NavLink[] = [
+  ABOUT_LINK,
+  CONTACT_LINK,
   {
     href: "/faq",
     label: "الأسئلة الشائعة",
@@ -132,7 +135,7 @@ const SUPPORT_LINKS: NavLink[] = [
 ];
 
 const CATALOG_LABEL = "الكتالوج";
-const SUPPORT_LABEL = "المساعدة";
+const SUPPORT_LABEL = "عالم وخدمات لونيفا";
 
 /** Panel geometry: keep these in sync with the panel style below. */
 const MENU_WIDTH = 288;
@@ -196,6 +199,7 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
   const active = resolveActive(pathname, section);
   const { totalCount } = useCart();
   const [customer, setCustomer] = useState<{ fullName: string; imageUrl?: string | null } | null>(null);
+  const [newsletterOpen, setNewsletterOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(false);
@@ -549,16 +553,13 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         menuId: "catalog",
         menuExpanded: openMenu === "catalog",
       },
-      { label: "من نحن", href: "/about", icon: <Sparkles size={16} />, fx: "pop" },
-      { label: "الأحذية", href: "/shoes", icon: <Footprints size={16} />, fx: "wave" },
       {
         label: SUPPORT_LABEL,
-        icon: <CircleHelp size={16} />,
+        icon: <Sparkles size={16} />,
         fx: "drop",
         menuId: "support",
         menuExpanded: openMenu === "support",
       },
-      { label: "تواصل", href: "/contact", icon: <Mail size={16} />, fx: "pop" },
     ],
     [openMenu],
   );
@@ -609,8 +610,8 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
           id="support"
           open={openMenu === "support"}
           anchor={anchor}
-          label="قائمة المساعدة"
-          eyebrow="معلومات تهمّك"
+          label={SUPPORT_LABEL}
+          eyebrow="خدمات الدعم، تواصل، ومعلومات تهمك"
           entries={SUPPORT_LINKS}
           active={supportActive}
           isActive={(entry) => active === entry.section}
@@ -657,9 +658,17 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
           </Link>
         )}
 
-        <Link href={ctaHref} className="btn btn-primary px-3 py-2 text-[11px]">
-          <ArrowLeft size={13} />{ctaLabel}
-        </Link>
+        {/* Newsletter Button */}
+        <button
+          type="button"
+          onClick={() => setNewsletterOpen(true)}
+          className="flex items-center gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3 py-2 text-xs font-black text-[var(--ink)] shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand-strong)] active:scale-95"
+          title="اشتركي في النشرة البريدية"
+        >
+          <Mail size={14} className="text-[var(--brand-strong)]" />
+          <span>النشرة البريدية</span>
+        </button>
+
         <ThemeToggle showLabel={false} />
       </div>
 
@@ -950,20 +959,23 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
                     })}
                   </div>
 
-                  {/* Action CTA */}
-                  <Link
-                    href={ctaHref}
-                    onClick={() => setDrawerOpen(false)}
-                    className="btn btn-primary mb-4 flex w-full items-center justify-center gap-2 py-2.5 text-xs font-black shadow-md"
+                  {/* Newsletter Subscription in Drawer */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDrawerOpen(false);
+                      setNewsletterOpen(true);
+                    }}
+                    className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--brand)]/30 bg-[var(--brand-soft)] py-2.5 text-xs font-black text-[var(--brand-strong)] transition hover:bg-[var(--brand)] hover:text-white"
                   >
-                    <ArrowLeft size={14} />
-                    {ctaLabel}
-                  </Link>
+                    <Gift size={15} />
+                    <span>اشتركي في النشرة واحصلي على كود خصم</span>
+                  </button>
 
                   {/* Accordion Group: Support & Policies */}
                   <DrawerGroup
-                    label="المساعدة والسياسات"
-                    icon={CircleHelp}
+                    label={SUPPORT_LABEL}
+                    icon={Sparkles}
                     open={supportOpen}
                     onToggle={() => setSupportOpen((value) => !value)}
                     active={supportActive}
@@ -1050,6 +1062,12 @@ export default function PublicNav({ section, contactEmail = "", phone = "" }: Pu
         </AnimatePresence>,
         document.body,
       )}
+
+      {/* Newsletter Modal */}
+      <NewsletterModal
+        open={newsletterOpen}
+        onClose={() => setNewsletterOpen(false)}
+      />
     </>
   );
 }

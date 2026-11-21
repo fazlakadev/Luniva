@@ -2,12 +2,13 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto
 import { db, ensureInvoiceTables } from "@/lib/db";
 import { sendOtpEmail } from "@/lib/mail";
 
-export type OtpPurpose = "login" | "email_current" | "email_new";
+export type OtpPurpose = "login" | "email_current" | "email_new" | "customer_register";
 
 const TTL_MS: Record<OtpPurpose, number> = {
   login: 10 * 60 * 1000,
   email_current: 10 * 60 * 1000,
   email_new: 15 * 60 * 1000,
+  customer_register: 15 * 60 * 1000,
 };
 
 export const OTP_MAX_ATTEMPTS = 5;
@@ -18,7 +19,7 @@ let tableReady: Promise<void> | null = null;
 let lastCleanup = 0;
 
 export function isOtpPurpose(value: unknown): value is OtpPurpose {
-  return value === "login" || value === "email_current" || value === "email_new";
+  return value === "login" || value === "email_current" || value === "email_new" || value === "customer_register";
 }
 
 function hashCode(code: string, salt: string) {
@@ -49,6 +50,7 @@ export function ensureOtpTable() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await db.query("ALTER TABLE auth_otp ADD COLUMN IF NOT EXISTS metadata TEXT");
     await Promise.all([
       db.query("CREATE INDEX IF NOT EXISTS auth_otp_lookup_idx ON auth_otp (id, purpose)"),
       db.query("CREATE INDEX IF NOT EXISTS auth_otp_user_idx ON auth_otp (user_id, purpose)"),
@@ -94,6 +96,7 @@ export type SaveOtpInput = {
   otp: GeneratedOtp;
   userId?: string | null;
   pendingEmail?: string | null;
+  metadata?: string | null;
   remember?: boolean;
 };
 
@@ -113,8 +116,8 @@ export async function saveOtpChallenge(input: SaveOtpInput): Promise<{ id: strin
 
   const result = await db.query(
     `INSERT INTO auth_otp
-       (purpose, email, code_hash, salt, token, user_id, pending_email, remember, expires_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+       (purpose, email, code_hash, salt, token, user_id, pending_email, metadata, remember, expires_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
      RETURNING id`,
     [
       purpose,
@@ -124,6 +127,7 @@ export async function saveOtpChallenge(input: SaveOtpInput): Promise<{ id: strin
       otp.token,
       userId,
       input.pendingEmail ?? null,
+      input.metadata ?? null,
       input.remember === true,
       otp.expiresAt,
     ],
@@ -133,7 +137,7 @@ export async function saveOtpChallenge(input: SaveOtpInput): Promise<{ id: strin
 }
 
 export type OtpVerifyResult =
-  | { ok: true; userId: string | null; email: string; pendingEmail: string | null; remember: boolean }
+  | { ok: true; userId: string | null; email: string; pendingEmail: string | null; metadata?: string | null; remember: boolean }
   | { ok: false; reason: "expired" | "invalid" | "locked" };
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -150,7 +154,7 @@ export async function verifyOtpChallenge(input: {
   }
   await ensureOtpTable();
   const result = await db.query(
-    `SELECT id, purpose, email, code_hash, salt, token, user_id, pending_email, remember,
+    `SELECT id, purpose, email, code_hash, salt, token, user_id, pending_email, metadata, remember,
             expires_at, attempts, consumed_at
        FROM auth_otp
       WHERE id = $1 AND purpose = $2`,
@@ -197,6 +201,7 @@ export async function verifyOtpChallenge(input: {
     userId: row.user_id ? String(row.user_id) : null,
     email: String(row.email),
     pendingEmail: row.pending_email ? String(row.pending_email) : null,
+    metadata: row.metadata ? String(row.metadata) : null,
     remember: row.remember === true,
   };
 }

@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   LogOut,
   Mail,
+  MailCheck,
   MessageSquare,
   Package,
   PanelRightClose,
@@ -68,6 +69,7 @@ export const adminNav: AdminNavItem[] = [
   { href: "/orders", label: "طلبات الشراء", short: "الطلبات", hint: "استفسارات الحجز والشراء", icon: ShoppingBag },
   { href: "/messages", label: "رسائل التواصل", short: "الرسائل", hint: "استفسارات ودعم العميلات", icon: Mail },
   { href: "/whatsapp", label: "أتمتة الواتساب", short: "واتساب", hint: "حملات ورسائل تلقائية", icon: MessageSquare },
+  { href: "/newsletter", label: "النشرة البريدية", short: "النشرة", hint: "المشتركات وحملات البريد", icon: MailCheck },
   { href: "/settings", label: "الإعدادات", short: "الإعدادات", hint: "بيانات الشركة والشروط", icon: Settings2 },
 ];
 

@@ -81,7 +81,7 @@ function createTransport(): MailTransport {
   };
 }
 
-export type OtpMailPurpose = "login" | "email_current" | "email_new";
+export type OtpMailPurpose = "login" | "email_current" | "email_new" | "customer_register";
 
 const OTP_COPY: Record<OtpMailPurpose, { subject: string; title: string; intro: string }> = {
   login: {
@@ -98,6 +98,11 @@ const OTP_COPY: Record<OtpMailPurpose, { subject: string; title: string; intro: 
     subject: "تأكيد بريد الإدارة الجديد · لونيفا",
     title: "تأكيد البريد الجديد",
     intro: "استخدمي الرمز التالي لتأكيد ملكية هذا البريد الجديد قبل حفظه لبريد الإدارة.",
+  },
+  customer_register: {
+    subject: "رمز تفعيل حسابكِ في لونيفا فاشون ✨",
+    title: "تأكيد إنشاء حساب عميلة لونيفا",
+    intro: "أهلاً بكِ في لونيفا! استخدمي الرمز التالي لتأكيد بريدكِ وتفعيل حسابكِ للاطلاع على الكولكشن ومتابعة الحجوزات.",
   },
 };
 
@@ -253,6 +258,22 @@ export async function sendContactEmail(input: ContactMessage) {
   });
 }
 
+
+export async function sendNewsletterMail(input: {
+  to: string;
+  subject: string;
+  html: string;
+  text?: string;
+}) {
+  const { transporter, from, senderName } = createTransport();
+  await transporter.sendMail({
+    from: `${senderName} <${from}>`,
+    to: input.to,
+    subject: input.subject,
+    html: input.html,
+    text: input.text || "",
+  });
+}
 
 export async function sendCustomerReplyEmail(input: {
   to: string;

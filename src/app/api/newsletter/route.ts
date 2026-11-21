@@ -1,9 +1,7 @@
-import { db, ensureInvoiceTables } from "@/lib/db";
+import { subscribeNewsletter } from "@/lib/newsletter";
 
 export const runtime = "nodejs";
 
-const EMAIL_KEY = "newsletter_emails";
-const MAX_EMAILS = 5000;
 const RATE_WINDOW_MS = 10 * 60 * 1000;
 const RATE_LIMIT = 5;
 const attempts = new Map<string, number[]>();
@@ -49,30 +47,16 @@ export async function POST(request: Request) {
   }
 
   const email = asText(payload.email).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 160) {
-    return Response.json({ error: "يرجى إدخال بريد إلكتروني صحيح." }, { status: 400 });
-  }
+  const source = asText(payload.source) || "storefront";
 
   try {
-    await ensureInvoiceTables();
-    const existing = await db.query("SELECT value FROM app_settings WHERE key = $1", [EMAIL_KEY]);
-    const raw = existing.rows[0]?.value;
-    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    const current = Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-
-    const emails = new Set(current.map((item) => item.toLowerCase()));
-    emails.add(email);
-    const next = Array.from(emails).slice(-MAX_EMAILS);
-
-    await db.query(
-      `INSERT INTO app_settings (key, value, updated_at) VALUES ($1, $2::jsonb, NOW())
-       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
-      [EMAIL_KEY, JSON.stringify(next)],
-    );
-
-    return Response.json({ ok: true, message: "شكرًا لاشتراكك! سنرسل لكِ أخبار لونيفا قريبًا." });
+    await subscribeNewsletter(email, source);
+    return Response.json({
+      ok: true,
+      message: "شكرًا لاشتراككِ في نادي لونيفا! ستصلكِ أحدث التشكيلات والعروض الحصرية فور إطلاقها.",
+    });
   } catch (error) {
-    console.error("Newsletter signup failed:", error instanceof Error ? error.message : "unknown error");
-    return Response.json({ error: "تعذّر تسجيل البريد حاليًا. حاولي مرة أخرى بعد قليل." }, { status: 502 });
+    const msg = error instanceof Error ? error.message : "تعذّر تسجيل البريد حاليًا.";
+    return Response.json({ error: msg }, { status: 400 });
   }
 }
