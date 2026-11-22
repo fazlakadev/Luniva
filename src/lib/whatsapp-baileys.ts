@@ -9,6 +9,7 @@ import makeWASocket, {
 import pino from "pino";
 import QRCode from "qrcode";
 import { db, ensureWhatsAppTables } from "@/lib/db";
+import { saveMedia } from "@/lib/media-storage";
 import { formatWhatsAppPhone, WhatsAppSessionInfo, WhatsAppChat, WhatsAppMessage, WhatsAppBotSettings } from "./whatsapp-shared";
 
 export type BaileysStatus = "disconnected" | "connecting" | "qr_ready" | "connected";
@@ -21,9 +22,7 @@ export type BaileysStreamEvent =
 type EventSubscriber = (event: BaileysStreamEvent) => void;
 
 const AUTH_FOLDER = path.join(process.cwd(), "data", "whatsapp_auth");
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "whatsapp");
 
-// Helper to check if current time is within night hours (Cairo / local time)
 function isCurrentlyNight(startTime = "22:00", endTime = "09:00"): boolean {
   try {
     const now = new Date();
@@ -38,7 +37,6 @@ function isCurrentlyNight(startTime = "22:00", endTime = "09:00"): boolean {
     const endMinutes = endH * 60 + endM;
 
     if (startMinutes > endMinutes) {
-      // Overnight span (e.g. 22:00 to 09:00)
       return currentMinutes >= startMinutes || currentMinutes < endMinutes;
     } else {
       return currentMinutes >= startMinutes && currentMinutes < endMinutes;
@@ -61,13 +59,7 @@ class WhatsAppBaileysManager {
   private silentLogger = pino({ level: "silent" });
 
   constructor() {
-    if (!fs.existsSync(UPLOAD_DIR)) {
-      try {
-        fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-      } catch {
-        // ignore
-      }
-    }
+    // Empty constructor
   }
 
   public subscribe(cb: EventSubscriber): void {
@@ -160,6 +152,21 @@ class WhatsAppBaileysManager {
   public async matchCustomer(phoneOrJid: string): Promise<{ id: string; full_name: string; customer_code: string | null } | null> {
     try {
       await ensureWhatsAppTables();
+
+      // 1. Check if chat already has a linked customer in whatsapp_chats
+      const existingChat = await db.query(
+        "SELECT customer_id FROM whatsapp_chats WHERE jid = $1 AND customer_id IS NOT NULL LIMIT 1",
+        [phoneOrJid],
+      );
+      if (existingChat.rowCount && existingChat.rows[0]?.customer_id) {
+        const custRes = await db.query(
+          "SELECT id, full_name, customer_code FROM customers WHERE id = $1",
+          [existingChat.rows[0].customer_id],
+        );
+        if (custRes.rowCount) return custRes.rows[0];
+      }
+
+      // 2. Normalize digits
       const rawNumber = phoneOrJid.split("@")[0].replace(/\D/g, "");
       if (!rawNumber) return null;
 
@@ -295,52 +302,49 @@ class WhatsAppBaileysManager {
           const messageId = msg.key.id || `msg_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
           const senderName = msg.pushName || (fromMe ? "لونيفا" : "عميلة لونيفا");
 
-          // Download media if attached
+          // Download media if attached using database storage (Zero filesystem dependency)
           let mediaUrl: string | null = null;
           let mediaType: "image" | "video" | "audio" | "document" | null = null;
 
           if (msg.message.imageMessage) {
             mediaType = "image";
             try {
-              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
-              const fileName = `img_${messageId}_${Date.now()}.jpg`;
-              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-              fs.writeFileSync(path.join(UPLOAD_DIR, fileName), buffer);
-              mediaUrl = `/uploads/whatsapp/${fileName}`;
+              const buffer = (await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage })) as Buffer;
+              if (buffer && buffer.length > 0) {
+                mediaUrl = await saveMedia({ buffer, mimeType: "image/jpeg", fileName: `img_${messageId}.jpg` });
+              }
             } catch (err) {
               console.warn("Could not download image attachment:", err);
             }
           } else if (msg.message.audioMessage) {
             mediaType = "audio";
             try {
-              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
-              const fileName = `audio_${messageId}_${Date.now()}.mp3`;
-              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-              fs.writeFileSync(path.join(UPLOAD_DIR, fileName), buffer);
-              mediaUrl = `/uploads/whatsapp/${fileName}`;
+              const buffer = (await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage })) as Buffer;
+              if (buffer && buffer.length > 0) {
+                mediaUrl = await saveMedia({ buffer, mimeType: "audio/ogg", fileName: `audio_${messageId}.ogg` });
+              }
             } catch (err) {
               console.warn("Could not download audio attachment:", err);
             }
           } else if (msg.message.videoMessage) {
             mediaType = "video";
             try {
-              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
-              const fileName = `video_${messageId}_${Date.now()}.mp4`;
-              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-              fs.writeFileSync(path.join(UPLOAD_DIR, fileName), buffer);
-              mediaUrl = `/uploads/whatsapp/${fileName}`;
+              const buffer = (await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage })) as Buffer;
+              if (buffer && buffer.length > 0) {
+                mediaUrl = await saveMedia({ buffer, mimeType: "video/mp4", fileName: `video_${messageId}.mp4` });
+              }
             } catch (err) {
               console.warn("Could not download video attachment:", err);
             }
           } else if (msg.message.documentMessage) {
             mediaType = "document";
             try {
-              const buffer = await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage });
-              const origName = msg.message.documentMessage.fileName || `file_${Date.now()}.pdf`;
-              const safeName = `${Date.now()}_${origName.replace(/[^a-zA-Z0-9._-]/g, "")}`;
-              if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-              fs.writeFileSync(path.join(UPLOAD_DIR, safeName), buffer);
-              mediaUrl = `/uploads/whatsapp/${safeName}`;
+              const buffer = (await downloadMediaMessage(msg, "buffer", {}, { logger: this.silentLogger, reuploadRequest: sock.updateMediaMessage })) as Buffer;
+              if (buffer && buffer.length > 0) {
+                const origName = msg.message.documentMessage.fileName || `file_${messageId}.pdf`;
+                const mime = msg.message.documentMessage.mimetype || "application/pdf";
+                mediaUrl = await saveMedia({ buffer, mimeType: mime, fileName: origName });
+              }
             } catch (err) {
               console.warn("Could not download doc attachment:", err);
             }
@@ -395,7 +399,7 @@ class WhatsAppBaileysManager {
                 rawPhone,
                 matchedCust?.id || null,
                 fromMe ? 0 : 1,
-                text || "[وسائط]",
+                text || `[${mediaType}]`,
                 profilePic,
                 fromMe,
               ],
@@ -413,7 +417,7 @@ class WhatsAppBaileysManager {
                 fromMe,
                 msg.key.participant || jid,
                 senderName,
-                text || "[وسائط]",
+                text || `[${mediaType}]`,
                 mediaUrl,
                 mediaType,
                 fromMe ? "sent" : "received",
@@ -428,7 +432,7 @@ class WhatsAppBaileysManager {
               from_me: fromMe,
               sender_jid: msg.key.participant || jid,
               sender_name: senderName,
-              content: text || "[وسائط]",
+              content: text || `[${mediaType}]`,
               media_url: mediaUrl,
               media_type: mediaType,
               status: fromMe ? "sent" : "received",
@@ -436,7 +440,7 @@ class WhatsAppBaileysManager {
               created_at: new Date().toISOString(),
             };
 
-            // 3. BROADCAST REAL-TIME EVENT TO ALL ACTIVE SSE CLIENTS
+            // 3. BROADCAST REAL-TIME EVENT OVER SSE
             this.emitEvent({
               type: "new_message",
               data: savedMsg,
@@ -464,9 +468,6 @@ class WhatsAppBaileysManager {
     return this.getStatus();
   }
 
-  /**
-   * Handle Smart Auto-Reply with Night Mode & Working Hours support
-   */
   private async handleAutoReply(jid: string, customer: { id: string; full_name: string } | null): Promise<void> {
     try {
       await ensureWhatsAppTables();
@@ -484,11 +485,9 @@ class WhatsAppBaileysManager {
       let replyMessageTemplate = "";
 
       if (isNight && settings.is_night_mode_enabled && settings.night_message) {
-        // NIGHT MODE ACTIVE: Always reply, or reply if no bot response in the last 15 minutes
         replyMessageTemplate = settings.night_message;
 
         if (settings.always_reply_night) {
-          // Check if we already sent a message in the last 15 minutes to avoid rapid-fire loops
           const recentNight = await db.query(
             `SELECT id FROM whatsapp_messages
              WHERE chat_jid = $1 AND from_me = true AND created_at >= NOW() - INTERVAL '15 minutes'
@@ -510,10 +509,8 @@ class WhatsAppBaileysManager {
           }
         }
       } else if (!isNight && settings.is_auto_reply_enabled && settings.welcome_message) {
-        // DAYTIME AUTO-REPLY ACTIVE
         replyMessageTemplate = settings.welcome_message;
 
-        // Check if customer contacted us in the last 6 hours
         const recentDay = await db.query(
           `SELECT id FROM whatsapp_messages
            WHERE chat_jid = $1 AND from_me = true AND created_at >= NOW() - INTERVAL '6 hours'
@@ -529,7 +526,6 @@ class WhatsAppBaileysManager {
         const custName = customer?.full_name || "عزيزتي";
         const finalMessage = replyMessageTemplate.replace(/\{اسم_العميلة\}/g, custName);
 
-        // Realistic delay (1.5 seconds)
         setTimeout(async () => {
           await this.sendMessage(jid, finalMessage);
         }, 1500);
@@ -539,9 +535,6 @@ class WhatsAppBaileysManager {
     }
   }
 
-  /**
-   * Send text or media message via Baileys socket.
-   */
   public async sendMessage(
     to: string,
     text: string,
@@ -569,11 +562,12 @@ class WhatsAppBaileysManager {
 
       if (mediaFile) {
         mediaType = mediaFile.type;
-        const safeExt = mediaFile.type === "image" ? ".jpg" : mediaFile.type === "audio" ? ".mp3" : mediaFile.type === "video" ? ".mp4" : ".pdf";
-        const savedFileName = `out_${Date.now()}_${Math.random().toString(36).substring(2, 6)}${safeExt}`;
-        if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-        fs.writeFileSync(path.join(UPLOAD_DIR, savedFileName), mediaFile.buffer);
-        mediaUrl = `/uploads/whatsapp/${savedFileName}`;
+        // Save persistent media
+        mediaUrl = await saveMedia({
+          buffer: mediaFile.buffer,
+          mimeType: mediaFile.mimetype,
+          fileName: mediaFile.fileName || `file_${Date.now()}`,
+        });
 
         if (mediaFile.type === "image") {
           sentMsg = await this.sock.sendMessage(jid, { image: mediaFile.buffer, caption: text.trim() || undefined });
@@ -637,7 +631,6 @@ class WhatsAppBaileysManager {
         created_at: new Date().toISOString(),
       };
 
-      // Broadcast to real-time clients
       this.emitEvent({
         type: "new_message",
         data: savedMsg,
@@ -714,10 +707,10 @@ export async function getBaileysChats(filter = "all"): Promise<WhatsAppChat[]> {
       c.customer_id,
       cust.full_name AS customer_name,
       cust.customer_code,
+      COALESCE(cust.image_url, c.image_url) AS image_url,
       c.unread_count,
       c.last_message,
       c.last_message_at::text,
-      c.image_url,
       c.is_pinned,
       c.is_archived
     FROM whatsapp_chats c

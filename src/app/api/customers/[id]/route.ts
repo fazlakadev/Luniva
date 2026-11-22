@@ -38,6 +38,22 @@ export async function PATCH(request: Request, { params }: Context) {
   try {
     const { id } = await params;
     const body = await request.formData();
+
+    // 1. Photo-only quick upload support
+    const hasPhoto = body.has("photo");
+    const hasDetails = body.has("fullName") || body.has("phone");
+    if (hasPhoto && !hasDetails) {
+      const imageUrl = await uploadImage(body.get("photo"));
+      if (!imageUrl) return NextResponse.json({ error: "لم يتم تحديد صورة صالحة." }, { status: 400 });
+      await ensureCustomersTable();
+      const res = await db.query(
+        "UPDATE customers SET image_url = $1 WHERE id = $2 RETURNING id, full_name, phone, customer_code, address, image_url, created_at",
+        [imageUrl, id],
+      );
+      if (!res.rowCount) return NextResponse.json({ error: "العميلة غير موجودة." }, { status: 404 });
+      return NextResponse.json({ customer: res.rows[0], imageUrl });
+    }
+
     const fullName = String(body.get("fullName") ?? "").trim();
     const phone = String(body.get("phone") ?? "").trim();
     const address = String(body.get("address") ?? "").trim();

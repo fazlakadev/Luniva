@@ -38,6 +38,11 @@ import {
   Image as ImageIcon,
   Moon,
   Sun,
+  X,
+  UserPlus,
+  Camera,
+  Mic,
+  Video,
 } from "lucide-react";
 import { useToast } from "@/components/toast";
 import {
@@ -167,6 +172,93 @@ export default function WhatsAppHub({
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [fileInputAccept, setFileInputAccept] = useState<string>("image/*,video/*,audio/*,.pdf,.doc,.docx");
+
+  // New Chat Modal State & Contacts Search
+  const [isNewChatOpen, setIsNewChatOpen] = useState(false);
+  const [contacts, setContacts] = useState<Array<{
+    id: string;
+    full_name: string;
+    phone: string;
+    customer_code: string | null;
+    image_url: string | null;
+    open_balance: number;
+  }>>([]);
+  const [isLoadingContacts, setIsLoadingContacts] = useState(false);
+  const [contactsQuery, setContactsQuery] = useState("");
+  const [manualPhoneInput, setManualPhoneInput] = useState("");
+
+  const fetchContacts = async (query = "") => {
+    setIsLoadingContacts(true);
+    try {
+      const res = await fetch(`/api/whatsapp/baileys/contacts?q=${encodeURIComponent(query)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setContacts(Array.isArray(data) ? data : []);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingContacts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isNewChatOpen) return;
+    const t = setTimeout(() => {
+      fetchContacts(contactsQuery);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [contactsQuery, isNewChatOpen]);
+
+  const handleStartChatWithContact = (contact: {
+    id?: string;
+    full_name?: string;
+    phone: string;
+    customer_code?: string | null;
+    image_url?: string | null;
+  }) => {
+    const cleanPhone = formatWhatsAppPhone(contact.phone);
+    if (!cleanPhone || cleanPhone.length < 9) {
+      toast.error("رقم غير صالح", "يرجى التحقق من صحة رقم الهاتف.");
+      return;
+    }
+
+    const jid = `${cleanPhone}@s.whatsapp.net`;
+    const existing = chats.find((c) => c.jid === jid || c.jid.replace(/\D/g, "") === cleanPhone);
+
+    if (existing) {
+      setSelectedChatJid(existing.jid);
+    } else {
+      const newChat: WhatsAppChat = {
+        jid,
+        name: contact.full_name || cleanPhone,
+        phone: cleanPhone,
+        customer_id: contact.id || null,
+        customer_name: contact.full_name || null,
+        customer_code: contact.customer_code || null,
+        unread_count: 0,
+        last_message: null,
+        last_message_at: null,
+        image_url: contact.image_url || null,
+      };
+      setChats((prev) => [newChat, ...prev]);
+      setSelectedChatJid(jid);
+    }
+
+    setIsNewChatOpen(false);
+    setManualPhoneInput("");
+    setContactsQuery("");
+    toast.success("تم فتح المحادثة", `جاهز للمراسلة عبر واتساب مع ${contact.full_name || cleanPhone}`);
+  };
+
+  const handleStartManualChat = () => {
+    if (!manualPhoneInput.trim()) {
+      toast.error("مطلوب إدخال رقم الهاتف", "يرجى كتابة رقم الهاتف للبدء.");
+      return;
+    }
+    handleStartChatWithContact({ phone: manualPhoneInput.trim() });
+  };
 
   // Fetch chats list
   const fetchChats = async () => {
@@ -715,6 +807,28 @@ export default function WhatsAppHub({
           <div className="flex flex-col rounded-2xl border border-border bg-card shadow-sm lg:col-span-4 h-[720px]">
             {/* Search and Filters */}
             <div className="p-4 border-b border-border space-y-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewChatOpen(true);
+                    fetchContacts("");
+                  }}
+                  className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary py-2 px-3 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition"
+                >
+                  <Plus className="h-4 w-4" />
+                  بدء محادثة جديدة
+                </button>
+                <button
+                  type="button"
+                  onClick={fetchChats}
+                  className="rounded-xl border border-input p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                  title="تحديث المحادثات"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </button>
+              </div>
+
               <div className="relative">
                 <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <input
@@ -759,10 +873,21 @@ export default function WhatsAppHub({
               {filteredChats.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground">
                   <MessageSquare className="h-10 w-10 stroke-[1.5] text-muted-foreground/40 mb-2" />
-                  <p className="text-sm font-medium">لا توجد محادثات مطابقة</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    ستظهر المحادثات هنا فورياً عند وصول أو إرسال أي رسالة عبر واتساب
+                  <p className="text-sm font-semibold text-foreground">لا توجد محادثات مطابقة</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1 mb-4">
+                    يمكنكِ بدء محادثة جديدة فوراً مع أي عميلة مسجلة أو رقم هاتف
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsNewChatOpen(true);
+                      fetchContacts("");
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition"
+                  >
+                    <Plus className="h-4 w-4" />
+                    بدء محادثة الآن
+                  </button>
                 </div>
               ) : (
                 filteredChats.map((c) => {
@@ -1020,17 +1145,45 @@ export default function WhatsAppHub({
                       type="file"
                       ref={fileInputRef}
                       onChange={handleFileSelect}
-                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx"
+                      accept={fileInputAccept}
                       className="hidden"
                     />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground transition"
-                      title="إرفاق صورة، فيديو، أو تسجيل صوتي"
-                    >
-                      <Paperclip className="h-5 w-5" />
-                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFileInputAccept("image/*");
+                          setTimeout(() => fileInputRef.current?.click(), 30);
+                        }}
+                        className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground hover:border-primary/50 transition"
+                        title="إرسال صورة"
+                      >
+                        <ImageIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFileInputAccept("audio/*");
+                          setTimeout(() => fileInputRef.current?.click(), 30);
+                        }}
+                        className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground hover:border-primary/50 transition"
+                        title="إرسال تسجيل صوتي"
+                      >
+                        <Mic className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFileInputAccept(".pdf,.doc,.docx,.xls,.xlsx,video/*");
+                          setTimeout(() => fileInputRef.current?.click(), 30);
+                        }}
+                        className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border border-input bg-background text-muted-foreground hover:bg-muted hover:text-foreground hover:border-primary/50 transition"
+                        title="إرفاق مستند أو فيديو"
+                      >
+                        <Paperclip className="h-4 w-4" />
+                      </button>
+                    </div>
 
                     <textarea
                       value={messageInput}
@@ -1066,10 +1219,21 @@ export default function WhatsAppHub({
             ) : (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
                 <Smartphone className="h-12 w-12 text-muted-foreground/30 mb-3" />
-                <h3 className="text-base font-bold text-foreground">حددي محادثة للبدء</h3>
-                <p className="text-xs text-muted-foreground max-w-sm mt-1">
-                  يمكنكِ اختيار أي محادثة من القائمة الجانبية لقراءة الرسائل والرد مباشرة عبر واتساب
+                <h3 className="text-base font-bold text-foreground">اختاري محادثة أو ابدئي محادثة جديدة</h3>
+                <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4">
+                  يمكنكِ اختيار أي محادثة من القائمة أو بدء محادثة جديدة مباشرة مع أي عميلة مسجلة أو رقم هاتف
                 </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsNewChatOpen(true);
+                    fetchContacts("");
+                  }}
+                  className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition"
+                >
+                  <Plus className="h-4 w-4" />
+                  بدء محادثة جديدة مع عميلة
+                </button>
               </div>
             )}
           </div>
@@ -1833,6 +1997,157 @@ export default function WhatsAppHub({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ========================================================================= */}
+      {/* NEW CONVERSATION MODAL (SELECT CONTACT OR DIRECT PHONE) */}
+      {/* ========================================================================= */}
+      {isNewChatOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl space-y-5 text-right">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border/80 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                  <UserPlus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">بدء محادثة واتساب جديدة</h3>
+                  <p className="text-xs text-muted-foreground">
+                    اختاري عميلة من المسجلات أو اكتبي رقم هاتف مباشرة
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsNewChatOpen(false)}
+                className="rounded-xl p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Direct Phone Input Box */}
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2">
+              <label className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Phone className="h-4 w-4 text-primary" />
+                مراسلة رقم هاتف مباشرة:
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="مثال: 01012345678 أو 201012345678"
+                  dir="ltr"
+                  value={manualPhoneInput}
+                  onChange={(e) => setManualPhoneInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleStartManualChat();
+                    }
+                  }}
+                  className="flex-1 rounded-xl border border-input bg-background px-3 py-2 text-sm font-mono focus:border-primary focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleStartManualChat}
+                  className="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition"
+                >
+                  بدء
+                </button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="relative text-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/60"></div>
+              </div>
+              <span className="relative bg-card px-3 text-xs font-semibold text-muted-foreground">
+                أو اختاري من العميلات المسجلات
+              </span>
+            </div>
+
+            {/* Contacts Search Bar */}
+            <div className="relative">
+              <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="ابحثي بالاسم، رقم الهاتف، أو كود العميلة..."
+                value={contactsQuery}
+                onChange={(e) => setContactsQuery(e.target.value)}
+                className="w-full rounded-xl border border-input bg-background pr-9 pl-4 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
+            {/* Contacts Scrollable List */}
+            <div className="max-h-64 overflow-y-auto divide-y divide-border/40 rounded-2xl border border-border/60 bg-muted/5">
+              {isLoadingContacts ? (
+                <div className="flex items-center justify-center p-8 text-xs text-muted-foreground">
+                  <RefreshCw className="h-4 w-4 animate-spin ml-2 text-primary" />
+                  جاري تحميل العميلات...
+                </div>
+              ) : contacts.length === 0 ? (
+                <div className="p-8 text-center text-xs text-muted-foreground">
+                  لا توجد عميلات مطابقة للبحث
+                </div>
+              ) : (
+                contacts.map((contact) => (
+                  <div
+                    key={contact.id}
+                    className="flex items-center justify-between p-3 hover:bg-muted/40 transition gap-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm ring-1 ring-border/50">
+                        {contact.image_url ? (
+                          <img
+                            src={contact.image_url}
+                            alt={contact.full_name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          contact.full_name.charAt(0)
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="text-sm font-bold text-foreground truncate">
+                            {contact.full_name}
+                          </h4>
+                          {contact.customer_code && (
+                            <span className="rounded bg-primary/10 px-1.5 py-0.2 text-[10px] font-semibold text-primary">
+                              {contact.customer_code}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 mt-0.5 text-xs text-muted-foreground">
+                          <span dir="ltr" className="font-mono">
+                            {contact.phone}
+                          </span>
+                          {Number(contact.open_balance) > 0 && (
+                            <span className="text-[10px] font-bold text-rose-500">
+                              (مستحق: {formatMoney(contact.open_balance)})
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleStartChatWithContact(contact)}
+                      className="inline-flex items-center gap-1 rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary hover:text-primary-foreground transition shrink-0"
+                    >
+                      <MessageSquare className="h-3.5 w-3.5" />
+                      محادثة
+                    </button>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

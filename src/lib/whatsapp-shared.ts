@@ -119,7 +119,7 @@ export type WhatsAppSessionInfo = {
 };
 
 export type WhatsAppChat = {
-  id: string;
+  id?: string;
   jid: string;
   name: string | null;
   phone: string | null;
@@ -130,9 +130,9 @@ export type WhatsAppChat = {
   image_url?: string | null;
   unread_count: number;
   last_message: string | null;
-  last_message_at: string;
-  is_pinned: boolean;
-  is_archived: boolean;
+  last_message_at: string | null;
+  is_pinned?: boolean;
+  is_archived?: boolean;
 };
 
 export type WhatsAppMessage = {

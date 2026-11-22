@@ -20,6 +20,7 @@ import {
 import DeleteButton from "@/components/delete-button";
 import InvoiceCta from "@/components/invoice-cta";
 import ZoomableImage from "@/components/zoomable-image";
+import CustomerAvatarUploader from "@/components/customer-avatar-uploader";
 import CustomerAppointmentScheduler from "@/components/customer-appointment-scheduler";
 import CustomerWhatsAppBox from "@/components/customer-whatsapp-box";
 import CustomerLiveChat from "@/components/customer-live-chat";
@@ -136,20 +137,11 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         <div className="relative px-5 pb-7 sm:px-8">
           <div className="-mt-16 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-5">
-              <div
-                className="grid h-32 w-32 shrink-0 place-items-center overflow-hidden rounded-[2rem] border-4 text-3xl font-extrabold shadow-xl"
-                style={{
-                  borderColor: "var(--surface)",
-                  background: "var(--brand-soft)",
-                  color: "var(--brand-strong)",
-                }}
-              >
-                {customer.image_url ? (
-                  <ZoomableImage src={customer.image_url} alt={customer.full_name} className="h-full w-full" />
-                ) : (
-                  initials
-                )}
-              </div>
+              <CustomerAvatarUploader
+                customerId={id}
+                initialImageUrl={customer.image_url}
+                customerName={customer.full_name}
+              />
               <div className="min-w-0 pb-1">
                 <div className="flex flex-wrap items-center gap-2 mb-2">
                   <span className="badge badge-brand">

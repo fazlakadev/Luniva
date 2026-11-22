@@ -810,3 +810,19 @@ export function ensureContactMessagesTable() {
     `);
   });
 }
+
+export function ensureMediaTable() {
+  return runOnce("app_media", async () => {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS app_media (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        file_name VARCHAR(255),
+        mime_type VARCHAR(120) NOT NULL,
+        data BYTEA NOT NULL,
+        size_bytes INTEGER NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_app_media_created ON app_media(created_at DESC);
+    `);
+  });
+}
