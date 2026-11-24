@@ -127,7 +127,7 @@ export default function AboutPage() {
               </span>
               <h1 className="page-title text-[2.2rem] font-black leading-[1.2] sm:text-[3.2rem]">
                 لونيفا.. أناقة مصرية
-                <span className="mt-1.5 block bg-gradient-to-l from-[var(--brand-strong)] via-purple-600 to-[var(--plum)] bg-clip-text text-transparent">
+                <span className="mt-1.5 block bg-gradient-to-l from-[var(--brand-strong)] via-[var(--lav)] to-[var(--plum)] bg-clip-text text-transparent">
                   بتفاصيل مدروسة وشفافية تامة
                 </span>
               </h1>
@@ -383,7 +383,7 @@ export default function AboutPage() {
           />
           <div
             aria-hidden="true"
-            className="pointer-events-none absolute -bottom-24 right-10 h-64 w-64 rounded-full opacity-30 blur-3xl bg-purple-500"
+            className="pointer-events-none absolute -bottom-24 right-10 h-64 w-64 rounded-full opacity-30 blur-3xl bg-[var(--lav)]"
           />
 
           <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">

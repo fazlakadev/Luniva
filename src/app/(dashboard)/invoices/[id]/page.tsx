@@ -64,6 +64,7 @@ export default async function InvoiceDetailPage({
     customer_name: invoice.customer_name,
     customer_phone: invoice.customer_phone,
     customer_address: invoice.customer_address,
+    customer_code: invoice.customer?.customer_code ?? null,
     delivery_area: invoice.delivery_area,
     subtotal: invoice.subtotal,
     discount_type: discountType,

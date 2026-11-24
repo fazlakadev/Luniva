@@ -110,35 +110,35 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
             transition={{ duration: reduced ? 0 : 0.35, ease }}
             className="pointer-events-auto relative mb-3 w-[min(92vw,22.5rem)] overflow-hidden rounded-[1.75rem] border shadow-2xl backdrop-blur-2xl"
             style={{
-              borderColor: "rgba(216, 180, 254, 0.4)",
-              background: "linear-gradient(165deg, rgba(38, 12, 38, 0.97) 0%, rgba(20, 5, 22, 0.98) 100%)",
-              boxShadow: "0 25px 60px -10px rgba(0, 0, 0, 0.75), 0 0 35px -5px rgba(168, 85, 247, 0.35)",
+              borderColor: "rgba(246, 206, 213, 0.35)",
+              background: "linear-gradient(165deg, rgba(45, 8, 16, 0.98) 0%, rgba(20, 3, 7, 0.98) 100%)",
+              boxShadow: "0 25px 60px -10px rgba(0, 0, 0, 0.75), 0 0 35px -5px rgba(128, 0, 32, 0.4)",
             }}
           >
             {/* Ambient Background Glows */}
             <span
               aria-hidden="true"
               className="pointer-events-none absolute -left-16 -top-16 h-48 w-48 rounded-full opacity-35 blur-3xl"
-              style={{ background: "#a855f7" }}
+              style={{ background: "#800020" }}
             />
             <span
               aria-hidden="true"
               className="pointer-events-none absolute -right-16 -bottom-16 h-48 w-48 rounded-full opacity-30 blur-3xl"
-              style={{ background: "#ec4899" }}
+              style={{ background: "#b83d58" }}
             />
 
             {/* Panel Header */}
-            <div className="relative flex items-center justify-between border-b border-purple-400/20 px-4 py-3.5">
+            <div className="relative flex items-center justify-between border-b border-rose-400/20 px-4 py-3.5">
               <div className="flex items-center gap-2.5 min-w-0">
                 <span
                   className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-white shadow-sm"
-                  style={{ background: "linear-gradient(135deg, #a855f7, #7c3aed)" }}
+                  style={{ background: "linear-gradient(135deg, #b83d58, #800020)" }}
                 >
                   <ShieldCheck size={16} />
                 </span>
                 <div className="min-w-0">
                   <p className="truncate text-xs font-black text-white">لوحة تحكم لونيفا</p>
-                  <p className="truncate text-[10px] font-bold text-purple-300">الإدارة السريعة الشاملة</p>
+                  <p className="truncate text-[10px] font-bold text-rose-200/80">الإدارة السريعة الشاملة</p>
                 </div>
               </div>
 
@@ -146,7 +146,7 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-purple-300/20 bg-purple-500/15 text-purple-200 transition hover:bg-purple-500/30 hover:text-white active:scale-90"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-rose-300/20 bg-rose-500/15 text-rose-200 transition hover:bg-rose-500/30 hover:text-white active:scale-90"
                 aria-label="إغلاق القائمة"
               >
                 <X size={14} />
@@ -160,8 +160,8 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
                 onClick={() => setIsOpen(false)}
                 className="group flex items-center justify-center gap-2 rounded-xl py-2.5 px-4 text-xs font-black text-white shadow-lg transition active:scale-[0.98]"
                 style={{
-                  background: "linear-gradient(135deg, #a855f7, #db2777)",
-                  boxShadow: "0 6px 20px -3px rgba(168, 85, 247, 0.5)",
+                  background: "linear-gradient(135deg, #b83d58, #800020)",
+                  boxShadow: "0 6px 20px -3px rgba(128, 0, 32, 0.5)",
                 }}
               >
                 <Plus size={16} className="transition-transform group-hover:rotate-90 duration-300" />
@@ -186,13 +186,13 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
                       className="group flex items-center gap-2.5 rounded-xl border p-2 text-right transition-all duration-200 active:scale-95"
                       style={{
                         background: active
-                          ? "rgba(168, 85, 247, 0.28)"
+                          ? "rgba(128, 0, 32, 0.35)"
                           : "rgba(255, 255, 255, 0.04)",
                         borderColor: active
-                          ? "rgba(216, 180, 254, 0.55)"
+                          ? "rgba(246, 206, 213, 0.5)"
                           : "rgba(255, 255, 255, 0.08)",
                         boxShadow: active
-                          ? "0 4px 12px -2px rgba(168, 85, 247, 0.3)"
+                          ? "0 4px 12px -2px rgba(128, 0, 32, 0.35)"
                           : "none",
                       }}
                     >
@@ -200,7 +200,7 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
                         className="grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-transform group-hover:scale-110"
                         style={{
                           background: active
-                            ? "linear-gradient(135deg, #a855f7, #7c3aed)"
+                            ? "linear-gradient(135deg, #b83d58, #800020)"
                             : "rgba(255, 255, 255, 0.08)",
                           color: "#fff",
                         }}
@@ -210,11 +210,11 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
                       <div className="min-w-0">
                         <p
                           className="truncate text-[11.5px] font-black"
-                          style={{ color: active ? "#ffffff" : "#f3e8ff" }}
+                          style={{ color: active ? "#ffffff" : "#fdf2f4" }}
                         >
                           {label}
                         </p>
-                        <p className="truncate text-[9px] font-medium text-purple-300/70">
+                        <p className="truncate text-[9px] font-medium text-rose-200/70">
                           {desc}
                         </p>
                       </div>
@@ -225,12 +225,12 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
             </div>
 
             {/* Panel Utilities Footer */}
-            <div className="relative flex items-center justify-between border-t border-purple-400/20 bg-purple-950/40 px-3.5 py-2.5 text-[10px]">
+            <div className="relative flex items-center justify-between border-t border-rose-400/20 bg-rose-950/40 px-3.5 py-2.5 text-[10px]">
               <Link
                 href="/"
                 target="_blank"
                 onClick={() => setIsOpen(false)}
-                className="flex items-center gap-1.5 rounded-lg border border-purple-300/25 bg-white/5 px-2.5 py-1.5 font-bold text-purple-200 transition hover:bg-white/10 active:scale-95"
+                className="flex items-center gap-1.5 rounded-lg border border-rose-300/25 bg-white/5 px-2.5 py-1.5 font-bold text-rose-200 transition hover:bg-white/10 active:scale-95"
               >
                 <ExternalLink size={12} />
                 معاينة المتجر
@@ -267,22 +267,22 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
         title={isOpen ? "إغلاق لوحة التحكم" : "لوحة التحكم"}
         className="pointer-events-auto group relative flex items-center gap-2.5 rounded-full border px-4 py-2.5 text-white shadow-2xl backdrop-blur-xl transition-all duration-300"
         style={{
-          background: "linear-gradient(135deg, rgba(124, 58, 237, 0.95) 0%, rgba(88, 28, 135, 0.98) 55%, rgba(112, 36, 89, 0.95) 100%)",
-          borderColor: "rgba(216, 180, 254, 0.45)",
+          background: "linear-gradient(135deg, rgba(140, 24, 45, 0.96) 0%, rgba(92, 10, 26, 0.98) 55%, rgba(61, 8, 18, 0.95) 100%)",
+          borderColor: "rgba(246, 206, 213, 0.45)",
           boxShadow: isOpen
-            ? "0 12px 30px -4px rgba(88, 28, 135, 0.7)"
-            : "0 12px 30px -4px rgba(88, 28, 135, 0.55), 0 0 20px -2px rgba(168, 85, 247, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35)",
+            ? "0 12px 30px -4px rgba(92, 10, 26, 0.7)"
+            : "0 12px 30px -4px rgba(92, 10, 26, 0.55), 0 0 20px -2px rgba(184, 61, 88, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.35)",
         }}
       >
         {/* Glow emblem icon */}
         <span
-          className="grid h-6 w-6 place-items-center rounded-lg shadow-sm text-purple-100"
+          className="grid h-6 w-6 place-items-center rounded-lg shadow-sm text-rose-100"
           style={{
             background: "rgba(255, 255, 255, 0.16)",
             border: "1px solid rgba(255, 255, 255, 0.25)",
           }}
         >
-          <Sparkles size={13} className="text-purple-200" />
+          <Sparkles size={13} className="text-rose-200" />
         </span>
 
         {/* Text and status dot */}
@@ -298,7 +298,7 @@ export default function AdminFloatingMenu({ onLogout }: AdminFloatingMenuProps) 
 
         {/* Dynamic Chevron / Toggle indicator */}
         <span
-          className="grid h-5 w-5 place-items-center rounded-full text-purple-200 transition-transform duration-300"
+          className="grid h-5 w-5 place-items-center rounded-full text-rose-200 transition-transform duration-300"
           style={{ transform: isOpen ? "rotate(180deg)" : "rotate(0deg)" }}
         >
           <ChevronDown size={14} />

@@ -18,11 +18,11 @@
   --brand-strong: #8e445b;
   --brand-soft: #f8e9ee;
   --brand-ring: rgba(169, 93, 115, 0.14);
-  --plum: #422837;
-  --lav: #5c498f;
-  --lav-strong: #493673;
-  --lav-soft: #e7e0f4;
-  --lav-ring: rgba(92, 73, 143, 0.16);
+  --plum: #380c14;
+  --lav: #800020;
+  --lav-strong: #540917;
+  --lav-soft: #fbf0f2;
+  --lav-ring: rgba(128, 0, 32, 0.16);
   --success: #3f8267;
   --success-soft: #e9f5ef;
   --warning: #a97832;
@@ -50,11 +50,11 @@ html.dark {
   --brand-strong: #f4c2cf;
   --brand-soft: #432e38;
   --brand-ring: rgba(231, 163, 182, 0.16);
-  --plum: #241820;
-  --lav: #b5a2df;
-  --lav-strong: #c6b4ec;
-  --lav-soft: #302840;
-  --lav-ring: rgba(181, 162, 223, 0.16);
+  --plum: #240a10;
+  --lav: #df8596;
+  --lav-strong: #f1aab7;
+  --lav-soft: #3d141d;
+  --lav-ring: rgba(223, 133, 150, 0.18);
   --success: #7fd0ad;
   --success-soft: #223a31;
   --warning: #e6bd77;
@@ -396,28 +396,36 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
 }
 
 @media print {
-  @page { size: A4; margin: 10mm; }
+  @page {
+    size: A4 portrait;
+    margin: 6mm 8mm;
+  }
 
   html, body {
     background: #fff !important;
     color: #2b2228 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    font-size: 11.5px !important;
   }
 
-  main {
+  main,
+  main > div,
+  .page-enter {
     padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
     background: #fff !important;
     overflow: visible !important;
   }
 
-  main > div {
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Site chrome and every control disappear, leaving only the document. */
+  /* Site chrome, navigations, sidebars and controls disappear */
   .site-header,
   .site-footer,
+  aside,
+  nav,
   button,
   [data-print-button],
   .print-hidden,
@@ -426,23 +434,31 @@ html.dark *::-webkit-scrollbar-thumb { background: #6d4957; background-clip: pad
   .mobile-scroll { display: none !important; }
 
   .invoice-sheet {
-    max-width: none !important;
-    border: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    border: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
     margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .invoice-sheet * {
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .invoice-sheet thead { display: table-header-group; }
   .invoice-sheet tr,
-  .invoice-sheet .invoice-item {
-    break-inside: avoid;
-    page-break-inside: avoid;
+  .invoice-sheet .invoice-item,
+  .invoice-sheet header,
+  .invoice-sheet section,
+  .invoice-sheet footer {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   a { color: inherit !important; text-decoration: none !important; }

@@ -74,10 +74,10 @@ export async function getInvoiceDetail(id: string) {
     ),
   ]);
 
-  let customer: { id: string; full_name: string; phone: string; address: string | null } | null = null;
+  let customer: { id: string; full_name: string; phone: string; address: string | null; customer_code: string | null } | null = null;
   if (invoice.customer_id) {
     const customerResult = await db.query(
-      "SELECT id, full_name, phone, address FROM customers WHERE id = $1",
+      "SELECT id, full_name, phone, address, customer_code FROM customers WHERE id = $1",
       [invoice.customer_id],
     );
     customer = customerResult.rows[0] ?? null;
