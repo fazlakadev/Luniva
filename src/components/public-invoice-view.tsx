@@ -371,10 +371,10 @@ export default function PublicInvoiceView({ data }: { data: PublicInvoiceData })
                 <p className="flex items-center gap-1.5"><CheckCircle2 size={12} className="shrink-0" style={{ color: "var(--success)" }} />حالة التوصيل محدَّثة من النظام</p>
               </div>
             </div>
-            <div className="shrink-0 self-center rounded-2xl p-3" style={{ background: "var(--brand-soft)", border: "1px solid var(--line)" }}>
-              <span className="grid h-36 w-36 place-items-center rounded-xl bg-white p-1.5 sm:h-40 sm:w-40" style={{ border: "1px solid var(--line)" }}>
+            <div className="shrink-0 self-center rounded-2xl p-3 bg-white" style={{ background: "#ffffff", border: "1px solid var(--line)" }}>
+              <span className="grid h-36 w-36 place-items-center rounded-xl bg-white p-2 sm:h-44 sm:w-44" style={{ border: "1px solid var(--line)", background: "#ffffff" }}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={data.qrImage} alt="رمز معاينة الفاتورة" className="h-full w-full rounded-lg" />
+                <img src={data.qrImage} alt="رمز معاينة الفاتورة" className="h-full w-full rounded-lg bg-white" style={{ background: "#ffffff" }} />
               </span>
             </div>
           </div>

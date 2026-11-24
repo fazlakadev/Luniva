@@ -582,27 +582,36 @@ export default function InvoiceDocument({ invoice }: { invoice: InvoiceDocumentD
 
           {invoice.qrImage && (
             <div
-              className="flex items-center gap-2.5 rounded-xl border p-2 bg-white shadow-2xs print:border-none print:p-0 print:shadow-none"
-              style={{ borderColor: LINE }}
+              className="flex items-center gap-3 rounded-2xl border-2 p-2.5 bg-white shadow-xs print:rounded-xl print:p-1.5 print:border print:shadow-none"
+              style={{ borderColor: LINE, background: "#ffffff" }}
             >
               <span
-                className="grid h-12 w-12 shrink-0 place-items-center rounded-lg bg-white p-0.5 print:h-11 print:w-11"
-                style={{ border: `1px solid ${LINE}` }}
+                className="grid h-24 w-24 sm:h-28 sm:w-28 shrink-0 place-items-center rounded-xl bg-white p-2 shadow-xs print:h-20 print:w-20 print:p-1"
+                style={{ border: `1.5px solid ${LINE}`, background: "#ffffff" }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={invoice.qrImage}
                   alt="رمز التحقق من الفاتورة"
-                  className="h-full w-full object-contain"
+                  className="h-full w-full object-contain bg-white"
+                  style={{ background: "#ffffff" }}
                 />
               </span>
-              <div className="min-w-0 text-right">
-                <p className="text-[10px] font-black print:text-[8px]" style={{ color: BRAND }}>
-                  امسحي رمز التحقق
+              <div className="min-w-0 text-right space-y-1">
+                <p className="flex items-center gap-1.5 text-xs font-black print:text-[9.5px]" style={{ color: BRAND }}>
+                  <QrCode size={14} className="shrink-0" />
+                  رمز الفاتورة الإلكترونية
                 </p>
-                <p className="text-[8px] leading-3 print:text-[7px]" style={{ color: MUTED }}>
-                  معاينة النسخة الرقمية ومتابعة الشحن
+                <p className="text-[10.5px] font-bold leading-relaxed text-ink print:text-[8px] print:leading-tight">
+                  امسحي الرمز بالهاتف للمعاينة ومتابعة الشحن والتوصيل.
                 </p>
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black print:text-[7.5px]"
+                  style={{ background: SUCCESS_SOFT, color: SUCCESS }}
+                >
+                  <ShieldCheck size={10} />
+                  نسخة رقمية موثقة
+                </span>
               </div>
             </div>
           )}

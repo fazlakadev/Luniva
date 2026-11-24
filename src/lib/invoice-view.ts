@@ -87,8 +87,8 @@ export async function invoiceQrDataUrl(url: string) {
   return QRCode.toDataURL(url, {
     errorCorrectionLevel: "H",
     margin: 2,
-    width: 320,
-    color: { dark: "#a95d73", light: "#ffffff" },
+    width: 480,
+    color: { dark: "#540917", light: "#ffffff" },
   });
 }
 

@@ -46,8 +46,8 @@ html.dark {
   --muted-2: #9f8d96;
   --line: #3b2d34;
   --line-strong: #4d3b44;
-  --brand: #e7a3b6;
-  --brand-strong: #f4c2cf;
+  --brand: #670a25;
+  --brand-strong: #4c0014;
   --brand-soft: #432e38;
   --brand-ring: rgba(231, 163, 182, 0.16);
   --plum: #240a10;
@@ -87,7 +87,7 @@ html.dark input, html.dark textarea, html.dark select { color: var(--ink); }
 html.dark input::placeholder, html.dark textarea::placeholder { color: var(--muted-2); }
 a, button, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 
-::selection { background: #e8b8c4; color: #382c32; }
+::selection { background: #7a4a5b; color: #fff5f8; }
 html.dark ::selection { background: #7a4a5b; color: #fff5f8; }
 
 * { scrollbar-width: thin; scrollbar-color: #bd8494 transparent; }

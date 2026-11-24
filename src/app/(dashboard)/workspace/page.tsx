@@ -252,7 +252,7 @@ export default async function WorkspacePage() {
             </div>
             <div
               className="ws-pulse__ring"
-              style={{ background: `conic-gradient(from -90deg, rgba(217, 201, 255, 0.96) 0 ${collectionRate}%, rgba(255, 255, 255, 0.14) ${collectionRate}% 100%)` }}
+              style={{ background: `conic-gradient(from -90deg, rgba(100, 4, 57, 0.96) 0 ${collectionRate}%, rgba(255, 255, 255, 0.14) ${collectionRate}% 100%)` }}
             >
               <div className="ws-pulse__ring-core">
                 <strong>{formatNumber(collectionRate)}%</strong>
