@@ -63,15 +63,15 @@ export type InvoiceDocumentData = {
   deliveryStatus?: DeliveryStatus;
 };
 
-const INK = "#2b2228";
-const INK_SOFT = "#4a3c44";
-const MUTED = "#7a6770";
-const LINE = "#eadcdf";
-const LINE_LIGHT = "#f3ebed";
-const BRAND = "#800020"; // Classic Royal Burgundy
-const BRAND_STRONG = "#540917"; // Deep Burgundy
-const BRAND_SOFT = "#fbf0f2"; // Soft Burgundy Tint
-const SURFACE_SOFT = "#fdf9fa";
+const INK = "#23181d";
+const INK_SOFT = "#44343b";
+const MUTED = "#6f5f66";
+const LINE = "#ebdce0";
+const LINE_LIGHT = "#f5ebed";
+const BRAND = "#9e2a44"; // Vibrant Burgundy
+const BRAND_STRONG = "#821c33"; // Rich Burgundy
+const BRAND_SOFT = "#fdf5f7"; // Crisp Soft Tint
+const SURFACE_SOFT = "#fdf8f9";
 const SUCCESS = "#2d7a58";
 const SUCCESS_SOFT = "#edf8f2";
 const WARNING = "#a06c28";

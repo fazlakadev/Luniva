@@ -278,55 +278,70 @@ export default function WhatsAppHub({
 
   // REAL-TIME SSE STREAM SUBSCRIPTION
   useEffect(() => {
-    const es = new EventSource("/api/whatsapp/baileys/stream");
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/whatsapp/baileys/stream");
 
-    es.onmessage = (e) => {
-      try {
-        const event = JSON.parse(e.data);
-        if (event.type === "new_message") {
-          const newMsg: WhatsAppMessage = event.data;
+      es.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (event.type === "new_message") {
+            const newMsg: WhatsAppMessage = event.data;
 
-          // 1. If currently viewing this chat, immediately append to message thread
-          setSelectedChatJid((currentJid) => {
-            if (currentJid && (newMsg.chat_jid === currentJid || newMsg.chat_jid.replace(/\D/g, "") === currentJid.replace(/\D/g, ""))) {
-              setMessages((prev) => {
-                if (prev.some((m) => m.message_id === newMsg.message_id || m.id === newMsg.id)) {
-                  return prev;
-                }
-                return [...prev, newMsg];
-              });
-            }
-            return currentJid;
-          });
+            // 1. If currently viewing this chat, immediately append to message thread
+            setSelectedChatJid((currentJid) => {
+              if (currentJid && (newMsg.chat_jid === currentJid || newMsg.chat_jid.replace(/\D/g, "") === currentJid.replace(/\D/g, ""))) {
+                setMessages((prev) => {
+                  if (prev.some((m) => m.message_id === newMsg.message_id || m.id === newMsg.id)) {
+                    return prev;
+                  }
+                  return [...prev, newMsg];
+                });
+              }
+              return currentJid;
+            });
 
-          // 2. Update chats list in real time
-          setChats((prevChats) => {
-            const exists = prevChats.some((c) => c.jid === newMsg.chat_jid);
-            if (exists) {
-              return prevChats.map((c) =>
-                c.jid === newMsg.chat_jid
-                  ? {
-                      ...c,
-                      last_message: newMsg.content,
-                      last_message_at: newMsg.created_at,
-                      unread_count: newMsg.from_me ? c.unread_count : (c.unread_count || 0) + 1,
-                    }
-                  : c,
-              );
-            } else if (event.chat) {
-              return [event.chat as WhatsAppChat, ...prevChats];
-            }
-            return prevChats;
-          });
-        } else if (event.type === "status_update") {
-          setSession(event.data);
+            // 2. Update chats list in real time
+            setChats((prevChats) => {
+              const exists = prevChats.some((c) => c.jid === newMsg.chat_jid);
+              if (exists) {
+                return prevChats.map((c) =>
+                  c.jid === newMsg.chat_jid
+                    ? {
+                        ...c,
+                        last_message: newMsg.content,
+                        last_message_at: newMsg.created_at,
+                        unread_count: newMsg.from_me ? c.unread_count : (c.unread_count || 0) + 1,
+                      }
+                    : c,
+                );
+              } else if (event.chat) {
+                return [event.chat as WhatsAppChat, ...prevChats];
+              }
+              return prevChats;
+            });
+          } else if (event.type === "status_update") {
+            setSession(event.data);
+          }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
-      }
-    };
+      };
 
-    return () => es.close();
+      es.onerror = () => {
+        // Prevent infinite reconnection loop if stream endpoint times out or errors
+        if (es) {
+          es.close();
+          es = null;
+        }
+      };
+    } catch {
+      // ignore
+    }
+
+    return () => {
+      if (es) es.close();
+    };
   }, []);
 
   // Fetch messages when selected chat changes

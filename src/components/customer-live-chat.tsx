@@ -76,32 +76,54 @@ export default function CustomerLiveChat({
     fetchMessages();
   }, [chatJid]);
 
-  // 2. Real-time Live SSE Stream Subscription
+  // 2. Real-time Live SSE Stream Subscription with safe error cutoff
   useEffect(() => {
     if (!chatJid) return;
-    const es = new EventSource("/api/whatsapp/baileys/stream");
+    let es: EventSource | null = null;
+    try {
+      es = new EventSource("/api/whatsapp/baileys/stream");
 
-    es.onmessage = (e) => {
-      try {
-        const event = JSON.parse(e.data);
-        if (event.type === "new_message") {
-          const newMsg: WhatsAppMessage = event.data;
-          // Check if this message belongs to our active customer chat
-          if (newMsg.chat_jid === chatJid || newMsg.chat_jid.replace(/\D/g, "") === cleanPhone) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.message_id === newMsg.message_id || m.id === newMsg.id)) {
-                return prev;
-              }
-              return [...prev, newMsg];
-            });
+      es.onmessage = (e) => {
+        try {
+          const event = JSON.parse(e.data);
+          if (event.type === "new_message") {
+            const newMsg: WhatsAppMessage = event.data;
+            if (newMsg.chat_jid === chatJid || newMsg.chat_jid.replace(/\D/g, "") === cleanPhone) {
+              setMessages((prev) => {
+                if (prev.some((m) => m.message_id === newMsg.message_id || m.id === newMsg.id)) {
+                  return prev;
+                }
+                return [...prev, newMsg];
+              });
+            }
           }
+        } catch {
+          // ignore
         }
-      } catch {
-        // ignore
-      }
-    };
+      };
 
-    return () => es.close();
+      es.onerror = () => {
+        // Prevent infinite reconnection storm if SSE drops
+        if (es) {
+          es.close();
+          es = null;
+        }
+      };
+    } catch {
+      // ignore
+    }
+
+    // Lightweight fallback polling only when tab is active and visible
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchMessages();
+      }
+    }, 12000);
+
+    return () => {
+      if (es) es.close();
+      clearInterval(interval);
+    };
   }, [chatJid, cleanPhone]);
 
   // Scroll to bottom on new messages
