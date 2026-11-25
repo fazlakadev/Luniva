@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import PublicCatalog from "@/components/public-catalog";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export const metadata: Metadata = {
   title: "لونيفا | الرئيسية والكتالوج",

@@ -1,3 +1,4 @@
+import { unstable_cache, revalidatePath } from "next/cache";
 import { db, ensureInvoiceTables } from "@/lib/db";
 
 export type CompanySettings = {
@@ -24,21 +25,42 @@ function asText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
-export async function getSettings(): Promise<CompanySettings> {
-  await ensureInvoiceTables();
-  const result = await db.query("SELECT key, value FROM app_settings");
-  const values = new Map(result.rows.map((row) => [String(row.key), row.value]));
-  const terms = Number(values.get("payment_terms_days"));
-  return {
-    companyName: asText(values.get("company_name")) || defaultSettings.companyName,
-    companyTagline: asText(values.get("company_tagline")) || defaultSettings.companyTagline,
-    companyPhone: asText(values.get("company_phone")),
-    companyAddress: asText(values.get("company_address")),
-    taxNumber: asText(values.get("tax_number")),
-    receiptFooter: asText(values.get("receipt_footer")) || defaultSettings.receiptFooter,
-    paymentTermsDays: Number.isFinite(terms) && terms >= 0 && terms <= 365 ? Math.trunc(terms) : defaultSettings.paymentTermsDays,
-  };
+async function fetchSettings(): Promise<CompanySettings> {
+  try {
+    const result = await db.query("SELECT key, value FROM app_settings");
+    const values = new Map(result.rows.map((row) => [String(row.key), row.value]));
+    const terms = Number(values.get("payment_terms_days"));
+    return {
+      companyName: asText(values.get("company_name")) || defaultSettings.companyName,
+      companyTagline: asText(values.get("company_tagline")) || defaultSettings.companyTagline,
+      companyPhone: asText(values.get("company_phone")),
+      companyAddress: asText(values.get("company_address")),
+      taxNumber: asText(values.get("tax_number")),
+      receiptFooter: asText(values.get("receipt_footer")) || defaultSettings.receiptFooter,
+      paymentTermsDays: Number.isFinite(terms) && terms >= 0 && terms <= 365 ? Math.trunc(terms) : defaultSettings.paymentTermsDays,
+    };
+  } catch {
+    await ensureInvoiceTables();
+    const result = await db.query("SELECT key, value FROM app_settings");
+    const values = new Map(result.rows.map((row) => [String(row.key), row.value]));
+    const terms = Number(values.get("payment_terms_days"));
+    return {
+      companyName: asText(values.get("company_name")) || defaultSettings.companyName,
+      companyTagline: asText(values.get("company_tagline")) || defaultSettings.companyTagline,
+      companyPhone: asText(values.get("company_phone")),
+      companyAddress: asText(values.get("company_address")),
+      taxNumber: asText(values.get("tax_number")),
+      receiptFooter: asText(values.get("receipt_footer")) || defaultSettings.receiptFooter,
+      paymentTermsDays: Number.isFinite(terms) && terms >= 0 && terms <= 365 ? Math.trunc(terms) : defaultSettings.paymentTermsDays,
+    };
+  }
 }
+
+export const getSettings = unstable_cache(
+  fetchSettings,
+  ["luniva_app_settings_cache"],
+  { revalidate: 120, tags: ["settings"] }
+);
 
 export function normalizeSettingsPayload(raw: unknown): CompanySettings {
   const body = (raw ?? {}) as Record<string, unknown>;
@@ -72,5 +94,8 @@ export async function saveSettings(input: CompanySettings): Promise<CompanySetti
       [key, JSON.stringify(value)],
     );
   }
+  try {
+    revalidatePath("/", "layout");
+  } catch {}
   return input;
 }

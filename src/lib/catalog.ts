@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db, ensurePackagesTables } from "@/lib/db";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -128,14 +129,25 @@ export type PublicCatalogData = {
   loadError: boolean;
 };
 
+const getCachedCatalog = unstable_cache(
+  async () => getPublicCatalog(),
+  ["luniva_public_catalog_cache"],
+  { revalidate: 60, tags: ["catalog"] }
+);
+
 /** Loads the display-only catalog and keeps page wrappers free of error plumbing. */
 export async function loadPublicCatalog(): Promise<PublicCatalogData> {
   try {
-    const { products, packages } = await getPublicCatalog();
+    const { products, packages } = await getCachedCatalog();
     return { products, packages, loadError: false };
   } catch (error) {
-    console.error("Public catalog failed to load", error);
-    return { products: [], packages: [], loadError: true };
+    try {
+      const { products, packages } = await getPublicCatalog();
+      return { products, packages, loadError: false };
+    } catch (directError) {
+      console.error("Public catalog failed to load", directError || error);
+      return { products: [], packages: [], loadError: true };
+    }
   }
 }
 

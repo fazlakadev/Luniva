@@ -1,8 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowUpLeft } from "lucide-react";
-import ClothingRailHero, { type RailGarment } from "@/components/ui/product-rail-gallery";
+import type { RailGarment } from "@/components/ui/product-rail-gallery";
+
+const ClothingRailHero = dynamic(() => import("@/components/ui/product-rail-gallery"), {
+  ssr: false,
+  loading: () => null,
+});
 
 // صور مكشوفة الخلفية للوجه الأمامي والخلفي والجانبي على مقاس واحد،
 // حتى تحافظ القطعة على حجمها أثناء الدوران.

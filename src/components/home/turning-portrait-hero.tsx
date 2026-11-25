@@ -145,7 +145,7 @@ function Hochzaehler({ bis, aktiv }: { bis: number; aktiv: boolean }) {
 export function TurningPortraitHero() {
   const reduce = useReducedMotion();
   const ref = useRef<HTMLElement>(null);
-  const imBild = useInView(ref, { once: true, amount: 0.35 });
+  const imBild = useInView(ref, { amount: 0.05 });
 
   const leinwand = useRef<HTMLCanvasElement>(null);
   const bilder = useRef<(HTMLImageElement | undefined)[]>([]);
@@ -202,9 +202,13 @@ export function TurningPortraitHero() {
     ctx.globalAlpha = 1;
   }, []);
 
-  // Loading: the middle frame first, then every sixth, then the gaps.
+  // Loading: middle frame first. On mobile/touch or reduced motion, load only 1 frame!
   useEffect(() => {
     let lebt = true;
+    const isTouch =
+      typeof window !== "undefined" &&
+      (window.matchMedia("(hover: none)").matches || window.innerWidth < 768);
+
     const hole = (i: number) =>
       new Promise<void>((fertig) => {
         if (bilder.current[i]) return fertig();
@@ -229,21 +233,15 @@ export function TurningPortraitHero() {
 
     (async () => {
       await hole(MITTE);
+      // On mobile or touch devices, 1 frame is optimal and avoids 121 network requests!
+      if (isTouch || reduce) {
+        return;
+      }
       const grob: number[] = [];
       for (let i = 0; i < ANZAHL; i += SCHRITT) grob.push(i);
-      await reihe(grob, 6);
-      /* From here the coarse grid is in and the turn may follow the pointer.
-         Before that every move would be a jump from one loaded frame to the
-         next: measured, after one second not a single frame had arrived,
-         after three seconds 109 of 122. Anyone moving the mouse straight away
-         used to get that coarse version. Now the figure holds its middle
-         until the grid is there, and the turn eases in afterwards, because
-         the lag catches up in small steps anyway. */
+      await reihe(grob, 4);
       folgt.current = true;
       if (zeigerX.current !== null) setzeZiel(zeigerX.current);
-      if (reduce) return;
-      const rest = Array.from({ length: ANZAHL }, (_, i) => i).filter((i) => !bilder.current[i]);
-      await reihe(rest, 8);
     })();
 
     return () => {
@@ -260,16 +258,12 @@ export function TurningPortraitHero() {
   }, [zeichne]);
 
   useEffect(() => {
-    if (reduce) {
-      zeichne(MITTE);
+    if (reduce || !imBild) {
+      zeichne(stand.current);
       return;
     }
     let frame = 0;
     const lauf = (t: number) => {
-      // With no pointer the turn breathes slowly around its last position.
-      // While the grid loads the same applies: the figure holds its middle
-      // instead of following the pointer. None of that is visible until
-      // enough frames are there, before that there is only one to draw.
       if (!folgt.current || (letzteBewegung.current && t - letzteBewegung.current > RUHE_MS)) {
         ziel.current = mitteRuhe.current + Math.sin(t * 0.00043) * 5;
       }
@@ -283,7 +277,7 @@ export function TurningPortraitHero() {
     };
     frame = requestAnimationFrame(lauf);
     return () => cancelAnimationFrame(frame);
-  }, [reduce, zeichne]);
+  }, [reduce, imBild, zeichne]);
 
   const bewegen = (e: ReactPointerEvent<HTMLElement>) => {
     if (reduce || e.pointerType !== "mouse" || !ref.current) return;
